@@ -11,6 +11,16 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key-change-me")
 DEBUG = os.environ.get("DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
+# CSRF_TRUSTED_ORIGINS must include scheme (https://)
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "https://localhost:8000").split(",")
+    if origin.strip()
+]
+
+# Trust the proxy header to detect HTTPS (Render/most PaaS terminate TLS)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
