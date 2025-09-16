@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Products</h3>
+  <div>
+    <a href="{% url 'movement_create' %}" class="btn btn-outline-light btn-sm">Stock In/Out</a>
+    <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm">Add Product</a>
+  </div>
+</div>
+<form class="mb-3">
+  <input class="form-control" name="q" placeholder="Search by name, SKU, category, supplier..." value="{{ q }}">
+</form>
+<div class="card p-2">
+<table class="table table-hover align-middle mb-0">
+  <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Supplier</th><th class="text-end">Qty</th><th class="text-end">Price</th><th></th></tr></thead>
+  <tbody>
+    {% for p in products %}
+    <tr>
+      <td>{{ p.sku }}</td>
+      <td>{{ p.name }}</td>
+      <td>{{ p.category }}</td>
+      <td>{{ p.supplier }}</td>
+      <td class="text-end {% if p.quantity <= 5 %}text-warning{% endif %}">{{ p.quantity }}</td>
+      <td class="text-end">{{ p.price }}</td>
+      <td class="text-end">
+        <a class="btn btn-sm btn-outline-primary text-dark" href="{% url 'product_edit' p.pk %}">Edit</a>
+        {% if user.is_superuser %}
+        <a class="btn btn-sm btn-outline-danger" href="{% url 'product_delete' p.pk %}">Delete</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" class="text-center">No products</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+  {% if products.paginator %}
+  <div class="p-2">
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if products.has_previous %}
+        <li class="page-item"><a class="page-link" href="?q={{ q }}&low={{ low }}&page={{ products.previous_page_number }}">Prev</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Prev</span></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ products.number }} of {{ products.paginator.num_pages }}</span></li>
+        {% if products.has_next %}
+        <li class="page-item"><a class="page-link" href="?q={{ q }}&low={{ low }}&page={{ products.next_page_number }}">Next</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

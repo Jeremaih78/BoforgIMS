@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h3 class="mb-0">Sales</h3>
+  <div class="d-flex gap-2">
+    <a class="btn btn-primary btn-sm" href="{% url 'quotation_create' %}"><i class="bi bi-file-earmark-plus me-1"></i>New Quotation</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'invoice_create' %}"><i class="bi bi-receipt me-1"></i>New Invoice</a>
+  </div>
+</div>
+<form class="mb-3" method="get">
+  <div class="input-group">
+    <span class="input-group-text bg-transparent text-light"><i class="bi bi-search"></i></span>
+    <input class="form-control" name="q" placeholder="Search by number, customer, or status..." value="{{ q }}">
+    <button class="btn btn-outline-light" type="submit">Search</button>
+  </div>
+  <small class="text-secondary">Tip: try "Pending" or "Overdue"</small>
+</form>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 id="quotations" class="mb-0">Quotations</h5>
+      </div>
+      <table class="table table-sm mt-2">
+        <thead><tr><th>No</th><th>Customer</th><th>Date</th><th>Total</th><th></th></tr></thead>
+        <tbody>
+          {% for x in quotations %}
+          <tr><td>{{ x.number }}</td><td>{{ x.customer }}</td><td>{{ x.date }}</td><td>{{ x.total }}</td>
+          <td class="text-end"><a class="btn btn-outline-light btn-sm" href="{% url 'quotation_edit' x.id %}">Open</a></td></tr>
+          {% empty %}<tr><td colspan="5" class="text-center">None</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      {% if quotations.paginator %}
+      <nav>
+        <ul class="pagination pagination-sm">
+          {% if quotations.has_previous %}
+          <li class="page-item"><a class="page-link" href="?q={{ q }}&q_page={{ quotations.previous_page_number }}#quotations">Prev</a></li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Prev</span></li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Page {{ quotations.number }} of {{ quotations.paginator.num_pages }}</span></li>
+          {% if quotations.has_next %}
+          <li class="page-item"><a class="page-link" href="?q={{ q }}&q_page={{ quotations.next_page_number }}#quotations">Next</a></li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 id="invoices" class="mb-0">Invoices</h5>
+      </div>
+      <table class="table table-sm mt-2">
+        <thead><tr><th>No</th><th>Customer</th><th>Date</th><th>Status</th><th>Total</th><th></th></tr></thead>
+        <tbody>
+          {% for x in invoices %}
+          <tr><td>{{ x.number }}</td><td>{{ x.customer }}</td><td>{{ x.date }}</td><td>{{ x.status }}</td><td>{{ x.total }}</td>
+          <td class="text-end"><a class="btn btn-outline-light btn-sm" href="{% url 'invoice_edit' x.id %}">Open</a></td></tr>
+          {% empty %}<tr><td colspan="6" class="text-center">None</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      {% if invoices.paginator %}
+      <nav>
+        <ul class="pagination pagination-sm">
+          {% if invoices.has_previous %}
+          <li class="page-item"><a class="page-link" href="?q={{ q }}&i_page={{ invoices.previous_page_number }}#invoices">Prev</a></li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Prev</span></li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Page {{ invoices.number }} of {{ invoices.paginator.num_pages }}</span></li>
+          {% if invoices.has_next %}
+          <li class="page-item"><a class="page-link" href="?q={{ q }}&i_page={{ invoices.next_page_number }}#invoices">Next</a></li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-3 col-6">
+    <a href="{% url 'product_list' %}" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Products</div>
+          <i class="bi bi-box-seam fs-4 text-info"></i>
+        </div>
+        <div class="display-6">{{ stats.products }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="{% url 'product_list' %}?low=1" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Low Stock (≤5)</div>
+          <i class="bi bi-exclamation-triangle fs-4 text-warning"></i>
+        </div>
+        <div class="display-6">{{ stats.low_stock }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="{% url 'sales_home' %}?q=Pending#invoices" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Pending Invoices</div>
+          <i class="bi bi-clock-history fs-4 text-primary"></i>
+        </div>
+        <div class="display-6">{{ stats.pending_invoices }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="{% url 'sales_home' %}?q=Overdue#invoices" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Overdue</div>
+          <i class="bi bi-exclamation-octagon fs-4 text-danger"></i>
+        </div>
+        <div class="display-6">{{ stats.overdue_invoices }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="{% url 'sales_summary' %}" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Sales (MTD)</div>
+          <i class="bi bi-cash-coin fs-4 text-success"></i>
+        </div>
+        <div class="display-6">{{ stats.sales_mtd }}</div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Invoice {{ invoice.number }}</h3>
+  <div class="d-flex gap-2">
+    <a class="btn btn-sm btn-primary text-white" href="{% url 'invoice_pdf' invoice.id %}?preview=1" target="_blank">Print PDF</a>
+    <a class="btn btn-sm btn-primary text-white" href="{% url 'invoice_pdf' invoice.id %}">Download PDF</a>
+  </div>
+</div>
+<div class="card p-3 mb-3">
+  <div class="row"><div class="col">Customer: <strong>{{ invoice.customer }}</strong></div><div class="col">Date: {{ invoice.date }}</div><div class="col">Due: {{ invoice.due_date }}</div><div class="col">Status: {{ invoice.status }}</div></div>
+</div>
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="card p-3 form-card">
+      <h5>Add Item</h5>
+      <form method="post">{% csrf_token %}
+        {{ item_form.as_p }}
+        <button class="btn btn-primary" name="add_item">Add</button>
+      </form>
+    </div>
+    <div class="card p-3 mt-3">
+      <h5>Items</h5>
+      <table class="table">
+        <thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+        <tbody>{% for it in invoice.items.all %}
+          <tr><td>{{ it.product|default:it.description }}</td><td class="text-end">{{ it.quantity }}</td><td class="text-end">{{ it.unit_price }}</td><td class="text-end">{{ it.total }}</td></tr>
+        {% endfor %}</tbody>
+        <tfoot><tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ invoice.total }}</th></tr></tfoot>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 form-card">
+      <h5>Add Payment</h5>
+      <form method="post">{% csrf_token %}
+        {{ pay_form.as_p }}
+        <button class="btn btn-primary" name="add_payment">Record</button>
+      </form>
+    </div>
+    <div class="card p-3 mt-3">
+      <h5>Payments</h5>
+      <ul class="list-group">
+        {% for p in invoice.payments.all %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ p.date }} - {{ p.method }}
+          <span>{{ p.amount }}</span>
+        </li>
+        {% empty %}<li class="list-group-item">No payments</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

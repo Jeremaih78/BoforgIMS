@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Expenses</h3>
+  <div class="d-flex gap-2">
+    <a href="{% url 'expense_create' %}" class="btn btn-primary btn-sm">New Expense</a>
+    <a href="{% url 'expenses_report' %}?from={{ q_from }}&to={{ q_to }}" class="btn btn-outline-light btn-sm">Report</a>
+  </div>
+</div>
+<form method="get" class="mb-3">
+  <div class="row g-2">
+    <div class="col-auto">
+      <input type="date" class="form-control" name="from" value="{{ q_from }}">
+    </div>
+    <div class="col-auto">
+      <input type="date" class="form-control" name="to" value="{{ q_to }}">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary">Filter</button>
+    </div>
+  </div>
+</form>
+<div class="card p-3">
+  <table class="table table-sm">
+    <thead><tr><th>Date</th><th>Doc #</th><th>Payee</th><th>Category</th><th class="text-end">Amount</th><th>Posted</th></tr></thead>
+    <tbody>
+      {% for e in expenses %}
+      <tr>
+        <td>{{ e.date }}</td>
+        <td>{{ e.doc_no }}</td>
+        <td>{{ e.payee }}</td>
+        <td>{{ e.category }}</td>
+        <td class="text-end">{{ e.amount }}</td>
+        <td>{{ e.posted }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center">No expenses</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if expenses.paginator %}
+  <nav>
+    <ul class="pagination pagination-sm">
+      {% if expenses.has_previous %}
+      <li class="page-item"><a class="page-link" href="?from={{ q_from }}&to={{ q_to }}&page={{ expenses.previous_page_number }}">Prev</a></li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Prev</span></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Page {{ expenses.number }} of {{ expenses.paginator.num_pages }}</span></li>
+      {% if expenses.has_next %}
+      <li class="page-item"><a class="page-link" href="?from={{ q_from }}&to={{ q_to }}&page={{ expenses.next_page_number }}">Next</a></li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Next</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

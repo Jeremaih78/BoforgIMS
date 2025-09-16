@@ -1,0 +1,80 @@
+:root {
+  --bg: #0e1a24;
+  --bg-2: #0f2435;
+  --text: #eaf3fb;
+  --muted: #a9c1d6;
+  --primary: #4da3ff;
+  --primary-2: #2d88ff;
+  --card: #13283c;
+  --danger: #ff6b6b;
+  --success: #27d17f;
+}
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); }
+h1, h2, h3, h4, h5, h6, p, label, small, span, li, th, td { color: var(--text); }
+
+.app { min-height: 100%; }
+.sidebar {
+  width: 260px;
+  background: var(--bg-2);
+  border-right: 1px solid rgba(255,255,255,.06);
+}
+.sidebar .brand {
+  font-weight: 700;
+  letter-spacing: .4px;
+  color: var(--text) !important;
+}
+.sidebar .brand * { color: var(--text) !important; }
+.sidebar .nav-link { color: var(--muted); }
+.sidebar .nav-link.active, .sidebar .nav-link:hover { color: var(--text); background: rgba(255,255,255,.06); }
+
+.content {
+  background: var(--bg);
+}
+
+.topbar { background: rgba(255,255,255,.02); border-bottom: 1px solid rgba(255,255,255,.06); }
+
+.card, .table-wrapper { background: var(--card); border: none; border-radius: 16px; color: var(--text); }
+.card * { color: inherit; }
+.table { color: var(--text); }
+.table thead th { color: var(--muted); }
+
+/* Forms (default: dark) */
+form p { margin-bottom: .9rem; }
+form p > label { display: block; margin-bottom: .35rem; color: var(--muted); }
+.form-control, .form-select, .form-check-input, .input-group-text {
+  background: var(--bg-2);
+  color: var(--text);
+  border-color: rgba(255,255,255,.18);
+}
+.form-control::placeholder { color: #c6d6e3; opacity: .7; }
+.form-control:focus, .form-select:focus { box-shadow: 0 0 0 .2rem rgba(77,163,255,.15); border-color: var(--primary); }
+.form-check-label { color: var(--text); }
+
+/* Light forms: black text on white background */
+.form-card { background: #ffffff !important; color: #111 !important; }
+.form-card *, .form-card label, .form-card h1, .form-card h2, .form-card h3, .form-card h4, .form-card h5, .form-card h6 { color: #111 !important; }
+.form-card .form-control, .form-card .form-select, .form-card .input-group-text {
+  background: #ffffff; color: #111; border-color: #cdd6df;
+}
+.form-card .form-control::placeholder { color: #6c757d; opacity: 1; }
+.form-card .list-group, .form-card .list-group-item { background: #ffffff; color: #111; }
+
+.btn-primary { background: var(--primary); border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-2); border-color: var(--primary-2); }
+.btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,.3); color: var(--text); }
+.btn-secondary:hover { background: rgba(255,255,255,.08); color: var(--text); }
+.btn-outline-light { border-color: rgba(255,255,255,.3); color: var(--text); }
+
+.click-card { text-decoration: none; color: inherit; display: block; }
+.click-card .card { transition: transform .08s ease, box-shadow .2s ease; }
+.click-card:hover .card { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,.25); }
+
+@media (max-width: 991.98px) {
+  .sidebar { width: 100%; }
+}
+
+/* Lists */
+.list-group { --bs-list-group-bg: var(--card); }
+.list-group-item { background: var(--bg-2); color: var(--text); border-color: rgba(255,255,255,.08); }

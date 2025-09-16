@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Accounting</h3>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-light btn-sm" href="{% url 'sales_summary' %}">Sales Summary</a>
+    <a class="btn btn-outline-light btn-sm" href="{% url 'inventory_valuation' %}">Inventory Valuation</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <div class="h6">Quick Links</div>
+      <ul class="mb-0">
+        <li><a href="{% url 'sales_summary' %}">Sales Summary (PDF downloadable)</a></li>
+        <li><a href="{% url 'inventory_valuation' %}">Inventory Valuation (PDF downloadable)</a></li>
+        <li><a href="{% url 'expense_list' %}">Expenses</a> · <a href="{% url 'expense_create' %}">Quick Add</a></li>
+        <li><a href="{% url 'expenses_report' %}">Expenses by Category (PDF downloadable)</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% load static %}
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{font-family:Arial, sans-serif; font-size:12px;}
+.table{width:100%; border-collapse: collapse;}
+.table th,.table td{border:1px solid #ccc; padding:6px;}
+.right{text-align:right;}
+</style></head><body>
+<h2>Expenses by Category</h2>
+<table class="table">
+<thead><tr><th>Category</th><th class="right">Total</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr><td>{{ r.category__name }}</td><td class="right">{{ r.total }}</td></tr>
+{% endfor %}
+</tbody>
+<tfoot><tr><th class="right">Grand Total</th><th class="right">{{ grand }}</th></tr></tfoot>
+</table>
+</body></html>
+
