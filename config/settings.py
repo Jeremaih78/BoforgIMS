@@ -14,7 +14,7 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 # CSRF_TRUSTED_ORIGINS must include scheme (https://)
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "https://localhost:8000").split(",")
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "https://boforgims1.onrender.com").split(",")
     if origin.strip()
 ]
 
