@@ -8,8 +8,8 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("SECRET_KEY")
-DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+SECRET_KEY = 'kgd$wg@0t_hw)lkys-@6ez=kgpwcqk5%f$sk+q(lf)xmo#k6se'
+DEBUG = True
 ALLOWED_HOSTS = ['72.60.20.46', '127.0.0.1', 'your-domain-name.com']
 
 # CSRF_TRUSTED_ORIGINS must include scheme (https://)
