@@ -1,4 +1,4 @@
-\
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -69,13 +69,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # DATABASES["default"] = dj_database_url.parse("postgresql://boforg_ims_user:FCj0L3Xf5pWnrAvzQiZEF1xmO4lHpC9n@dpg-d36255ali9vc738s4bd0-a.oregon-postgres.render.com/boforg_ims")
 
-database_url = os.environ.get("DATABASE_URL")
-DATABASES = {
-    "default": dj_database_url.parse(
-        database_url,
-        conn_max_age=60,
-    )
-}
+# database_url = os.environ.get("DATABASE_URL")
+# DATABASES = {
+#     "default": dj_database_url.parse(
+#         database_url,
+#         conn_max_age=60,
+#     )
+# }
 
 DATABASES = {
     'default': {
@@ -86,6 +86,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
