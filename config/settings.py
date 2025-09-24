@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'kgd$wg@0t_hw)lkys-@6ez=kgpwcqk5%f$sk+q(lf)xmo#k6se'
 DEBUG = True
-ALLOWED_HOSTS = ['72.60.20.46', '127.0.0.1', 'your-domain-name.com']
+ALLOWED_HOSTS = ['72.60.20.46', '127.0.0.1', 'boforg.co.zw']
 
 # CSRF_TRUSTED_ORIGINS must include scheme (https://)
 CSRF_TRUSTED_ORIGINS = [
