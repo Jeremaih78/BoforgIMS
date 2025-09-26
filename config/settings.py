@@ -1,4 +1,3 @@
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -9,13 +8,13 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'kgd$wg@0t_hw)lkys-@6ez=kgpwcqk5%f$sk+q(lf)xmo#k6se'
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['72.60.20.46', '127.0.0.1', 'boforg.co.zw']
 
 # CSRF_TRUSTED_ORIGINS must include scheme (https://)
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "https://boforgims1.onrender.com").split(",")
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "https://boforg.co.zw").split(",")
     if origin.strip()
 ]
 
@@ -35,6 +34,7 @@ INSTALLED_APPS = [
     'customers',
     'users',
     'accounting',
+    'legal',
 ]
 
 MIDDLEWARE = [
