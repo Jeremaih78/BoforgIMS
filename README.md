@@ -50,3 +50,27 @@ Create two groups in the admin:
 - **Staff** – can add/edit products, create quotations & invoices
 
 Assign users to groups via `/admin/`.
+## Legal pages & Meta data deletion
+
+Public URLs:
+- Privacy: https://boforg.co.zw/legal/privacy/
+- Terms: https://boforg.co.zw/legal/terms/
+- Data Deletion (instructions): https://boforg.co.zw/legal/data-deletion/
+- Deletion Callback (POST): https://boforg.co.zw/legal/facebook-data-deletion/
+
+Environment:
+- META_APP_SECRET="<SET_THIS_VALUE_FROM_META_APP_DASHBOARD>"
+- PUBLIC_BASE_URL="https://boforg.co.zw"
+
+To refresh secrets on Linux (systemd):
+- Add `Environment="META_APP_SECRET=..."` to the unit or drop-in, or `export META_APP_SECRET=...` in the shell before running `python manage.py` for ad-hoc use.
+
+Restart services after updating secrets:
+- sudo systemctl restart gunicorn-ims
+- sudo systemctl reload nginx
+
+Meta App Review fields:
+- Privacy Policy URL: https://boforg.co.zw/legal/privacy/
+- Terms of Service URL: https://boforg.co.zw/legal/terms/
+- Data Deletion Instructions: https://boforg.co.zw/legal/data-deletion/
+- Data Deletion Callback (optional): https://boforg.co.zw/legal/facebook-data-deletion/

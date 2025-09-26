@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
@@ -8,8 +8,10 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'kgd$wg@0t_hw)lkys-@6ez=kgpwcqk5%f$sk+q(lf)xmo#k6se'
-DEBUG = False
-ALLOWED_HOSTS = ['72.60.20.46', '127.0.0.1', 'boforg.co.zw']
+DEBUG = True
+ALLOWED_HOSTS = ['boforg.co.zw', 'www.boforg.co.zw', 'localhost', '127.0.0.1']
+
+PUBLIC_BASE_URL = 'https://boforg.co.zw'
 
 # CSRF_TRUSTED_ORIGINS must include scheme (https://)
 CSRF_TRUSTED_ORIGINS = [
@@ -118,3 +120,4 @@ ACCOUNTING_COGS_METHOD = os.environ.get("ACCOUNTING_COGS_METHOD", "MOVING_AVERAG
 ACCOUNTING_POST_COGS_ON = os.environ.get("ACCOUNTING_POST_COGS_ON", "PAYMENT")
 DEFAULT_TAX_RATE_ID = os.environ.get("DEFAULT_TAX_RATE_ID")
 PERIOD_CLOSE_ENFORCED = os.environ.get("PERIOD_CLOSE_ENFORCED", "1") == "1"
+
