@@ -8,6 +8,8 @@ from .views import (
 )
 
 
+app_name = "legal"
+
 urlpatterns = [
     path("privacy/", PrivacyView.as_view(), name="privacy"),
     path("terms/", TermsView.as_view(), name="terms"),

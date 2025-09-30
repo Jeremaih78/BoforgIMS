@@ -2,7 +2,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Customers</h3>
-  <a href="{% url 'customer_create' %}" class="btn btn-primary btn-sm">Add Customer</a>
+  <a href="{% url 'ims:customers:customer_create' %}" class="btn btn-primary btn-sm">Add Customer</a>
 </div>
 <form class="mb-3">
   <input class="form-control" name="q" placeholder="Search by name, email, phone..." value="{{ q }}">
@@ -15,7 +15,7 @@
     <tr>
       <td>{{ c.name }}</td><td>{{ c.email }}</td><td>{{ c.phone }}</td><td>{{ c.address }}</td>
       <td class="text-end">
-        <a class="btn btn-sm btn-outline-primary text-dark" href="{% url 'customer_edit' c.pk %}">Edit</a>
+        <a class="btn btn-sm btn-outline-primary text-dark" href="{% url 'ims:customers:customer_edit' c.pk %}">Edit</a>
       </td>
     </tr>
     {% empty %}<tr><td colspan="5" class="text-center">No customers</td></tr>{% endfor %}

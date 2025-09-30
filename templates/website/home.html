@@ -1,0 +1,278 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Boforg Technologies Private Limited | Printing, AI &amp; E-Commerce</title>
+  <meta name="description" content="Heat press machines, vinyl cutters, sublimation printers, laptops, and AI software solutions in Zimbabwe.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body class="bg-white text-gray-900">
+  <header class="sticky top-0 bg-white/80 backdrop-blur z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold">Boforg Technologies</a>
+      <nav class="hidden md:flex gap-6 text-sm font-medium">
+        <a href="/shop/" class="hover:text-blue-600">Shop</a>
+        <a href="#services" class="hover:text-blue-600">Services</a>
+        <a href="#contact" class="hover:text-blue-600">Contact</a>
+      </nav>
+      <div class="flex items-center gap-3 text-sm">
+        <a href="/shop/cart/" class="border rounded-xl px-3 py-1 hover:bg-gray-50">Cart</a>
+        <a href="{{ company.cta_whatsapp }}" class="bg-blue-600 text-white rounded-xl px-3 py-1">WhatsApp</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="bg-gradient-to-br from-blue-50 to-white">
+      <div class="max-w-7xl mx-auto px-4 py-16 grid md:grid-cols-2 gap-10 items-center">
+        <div>
+          <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">
+            Powering Zimbabwe&rsquo;s Creators &amp; Businesses
+          </h1>
+          <p class="mt-4 text-lg text-gray-700">
+            From heat presses &amp; vinyl cutters to AI-powered software and e-commerce—Boforg is your backbone for growth.
+          </p>
+          <div class="mt-6 flex gap-3">
+            <a href="/shop/" class="bg-blue-600 text-white px-5 py-3 rounded-2xl">Shop Best Sellers</a>
+            <a href="{{ company.cta_whatsapp }}" class="px-5 py-3 rounded-2xl border">Contact Us</a>
+          </div>
+          <dl class="mt-8 grid grid-cols-2 gap-4 text-sm text-gray-600">
+            <div>
+              <dt class="font-semibold text-gray-800">Address</dt>
+              <dd>{{ company.address }}</dd>
+            </div>
+            <div>
+              <dt class="font-semibold text-gray-800">Phone</dt>
+              <dd>{{ company.phone }}</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="rounded-3xl shadow-lg overflow-hidden bg-gray-100 aspect-square md:aspect-[4/3]">
+          <img src="{% static 'website/hero.jpg' %}" alt="Boforg equipment and software" class="w-full h-full object-cover" onerror="this.remove();">
+        </div>
+      </div>
+    </section>
+
+    <section class="max-w-7xl mx-auto px-4 py-12">
+      <div class="grid md:grid-cols-3 gap-6 text-sm">
+        <div class="p-6 border rounded-3xl shadow-sm">
+          <h3 class="font-semibold text-lg">Printing Excellence</h3>
+          <p class="mt-2 text-gray-600">Certified partner for premium heat presses, sublimation printers, and finishing tools.</p>
+        </div>
+        <div class="p-6 border rounded-3xl shadow-sm">
+          <h3 class="font-semibold text-lg">AI-Ready Operations</h3>
+          <p class="mt-2 text-gray-600">Unlock predictive inventory and sales insights powered by our IMS and AI studio.</p>
+        </div>
+        <div class="p-6 border rounded-3xl shadow-sm">
+          <h3 class="font-semibold text-lg">Nationwide Support</h3>
+          <p class="mt-2 text-gray-600">On-site training and responsive support teams across Zimbabwe.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="max-w-7xl mx-auto px-4 py-12">
+      <div class="flex items-end justify-between">
+        <h2 class="text-2xl font-bold">Featured Categories</h2>
+        <a href="/shop/" class="text-blue-600 text-sm">View all</a>
+      </div>
+      {% if featured_categories %}
+      {% with hero=featured_categories|first %}
+      <div class="mt-6 grid gap-6 lg:grid-cols-3">
+        <a href="/shop/?category={{ hero.slug }}" class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white p-8 flex flex-col justify-between min-h-[260px]">
+          <div>
+            <span class="text-xs uppercase tracking-[0.2em] text-white/70">Featured spotlight</span>
+            <h3 class="mt-4 text-2xl font-semibold">{{ hero.name }}</h3>
+            <p class="mt-4 text-sm text-white/80 max-w-xs">Discover the equipment and supplies creators love most in this collection.</p>
+          </div>
+          <div class="mt-8 flex items-center justify-between text-sm">
+            <span class="text-white/90">{{ hero.product_count }} products</span>
+            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 text-white text-xs uppercase tracking-wide">Shop now <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+          <div class="pointer-events-none absolute -bottom-20 -right-14 h-56 w-56 rounded-full bg-white/10 blur-3xl"></div>
+        </a>
+        <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% for cat in featured_categories|slice:"1:4" %}
+          {% cycle 'rose' 'emerald' 'amber' 'indigo' as accent_color silent %}
+          {% with accent=accent_color %}
+          <a href="/shop/?category={{ cat.slug }}" class="group relative overflow-hidden rounded-2xl border border-{{ accent }}-100 bg-{{ accent }}-50 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-semibold text-gray-900 group-hover:text-{{ accent }}-700 transition">{{ cat.name }}</h3>
+              <span class="text-xs font-medium text-{{ accent }}-700 bg-{{ accent }}-100/80 group-hover:bg-{{ accent }}-200/80 px-3 py-1 rounded-full">{{ cat.product_count }} items</span>
+            </div>
+            <p class="mt-3 text-sm text-gray-600">Curated supplies and hardware to keep your production line moving.</p>
+            <div class="mt-6 flex items-center justify-between text-xs font-medium text-gray-500">
+              <span>Tap to explore</span>
+              <span class="inline-flex items-center gap-1 text-{{ accent }}-700">Browse <svg class="w-3 h-3" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <div class="absolute -right-12 top-1/2 h-32 w-32 -translate-y-1/2 rounded-full bg-{{ accent }}-200/40 group-hover:bg-{{ accent }}-200/60 transition"></div>
+          </a>
+          {% endwith %}
+          {% empty %}
+          <p class="text-sm text-gray-500">No additional categories yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+      {% endwith %}
+      {% else %}
+      <p class="mt-6 text-sm text-gray-500">No categories yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 py-12">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold">Best Sellers</h2>
+          <a href="/shop/" class="text-blue-600 text-sm">Browse more</a>
+        </div>
+        <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {% for p in top_sellers|slice:":4" %}
+          <div class="rounded-2xl border bg-white p-4 flex flex-col">
+            <a href="/shop/products/{{ p.slug }}/">
+              <div class="aspect-square bg-gray-100 rounded-xl overflow-hidden">
+                <img src="{{ p.get_primary_image_url }}" alt="{{ p.name }}" class="w-full h-full object-cover">
+              </div>
+              <div class="mt-3 font-semibold text-gray-900">{{ p.name }}</div>
+              <div class="text-blue-700 font-bold mt-1">${{ p.price }}</div>
+            </a>
+            <form hx-post="/shop/cart/add/" hx-target="#cart-counter" hx-swap="outerHTML" class="mt-3">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{{ p.id }}">
+              <button class="w-full border rounded-xl py-2 hover:bg-blue-600 hover:text-white transition">Add to Cart</button>
+            </form>
+          </div>
+          {% empty %}
+          <p class="text-sm text-gray-500">No products available right now.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="max-w-7xl mx-auto px-4 py-12">
+      <div class="flex items-center justify-between">
+        <h2 class="text-2xl font-bold">New Arrivals</h2>
+      </div>
+      <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        {% for p in new_arrivals|slice:":4" %}
+        <div class="rounded-2xl border p-4 flex flex-col">
+          <a href="/shop/products/{{ p.slug }}/">
+            <div class="aspect-square bg-gray-100 rounded-xl overflow-hidden">
+              <img src="{{ p.get_primary_image_url }}" alt="{{ p.name }}" class="w-full h-full object-cover">
+            </div>
+            <div class="mt-3 font-semibold text-gray-900">{{ p.name }}</div>
+            <div class="text-blue-700 font-bold mt-1">${{ p.price }}</div>
+          </a>
+          <form hx-post="/shop/cart/add/" hx-target="#cart-counter" hx-swap="outerHTML" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{{ p.id }}">
+            <button class="w-full border rounded-xl py-2 hover:bg-blue-600 hover:text-white transition">Add to Cart</button>
+          </form>
+        </div>
+        {% empty %}
+        <p class="text-sm text-gray-500">Stay tuned for the latest arrivals.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="services" class="bg-gray-900 text-white">
+      <div class="max-w-7xl mx-auto px-4 py-16">
+        <h2 class="text-2xl font-bold">Services</h2>
+        <div class="mt-8 grid md:grid-cols-3 gap-6">
+          {% for service in services %}
+          <div class="bg-gray-800 rounded-3xl p-6">
+            <h3 class="text-lg font-semibold">{{ service.title }}</h3>
+            <p class="mt-3 text-gray-300">{{ service.description }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="max-w-7xl mx-auto px-4 py-16">
+      <div class="flex items-center justify-between">
+        <h2 class="text-2xl font-bold">Trusted by Creators &amp; Brands</h2>
+        <a href="/shop/" class="text-blue-600 text-sm">Partner with us</a>
+      </div>
+      <div class="mt-8 grid grid-cols-2 md:grid-cols-6 gap-6 text-center text-sm text-gray-500 uppercase tracking-wide">
+        {% for brand in partner_brands %}
+        <div class="border rounded-3xl py-6 px-3 bg-gray-50">{{ brand }}</div>
+        {% empty %}
+        <div class="text-gray-400">Add your brand here.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="bg-gray-50">
+      <div class="max-w-5xl mx-auto px-4 py-16 text-center">
+        <h2 class="text-2xl font-bold">What Customers Say</h2>
+        <div class="mt-8 grid md:grid-cols-3 gap-6">
+          {% for testimonial in testimonials %}
+          <figure class="rounded-3xl border bg-white p-6 text-sm">
+            <blockquote class="text-gray-700">“{{ testimonial.quote }}”</blockquote>
+            <figcaption class="mt-4 font-semibold text-gray-900">{{ testimonial.name }}<span class="block text-gray-500 text-xs">{{ testimonial.role }}</span></figcaption>
+          </figure>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section id="newsletter" class="max-w-5xl mx-auto px-4 py-16 text-center">
+      <h2 class="text-2xl font-bold">Join the Newsletter</h2>
+      <p class="text-gray-600 mt-3">Be first to know about new hardware demos and AI software launches.</p>
+      {% if messages %}
+      <div class="mt-4 space-y-3">
+        {% for message in messages %}
+        <div class="px-4 py-3 rounded-xl text-sm {% if 'success' in message.tags %}bg-blue-50 text-blue-700{% elif 'error' in message.tags %}bg-red-50 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <form method="post" action="/website/newsletter/subscribe/" class="mt-6 flex flex-col md:flex-row gap-3 justify-center">
+        {% csrf_token %}
+        <input name="email" type="email" placeholder="Your email" class="border rounded-xl px-4 py-3 w-full md:w-96" required>
+        <button class="bg-blue-600 text-white rounded-xl px-6 py-3">Subscribe</button>
+      </form>
+    </section>
+  </main>
+
+  <footer id="contact" class="border-t bg-gray-900 text-gray-100">
+    <div class="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-4 gap-8 text-sm">
+      <div>
+        <div class="font-bold text-lg">Boforg Technologies</div>
+        <p class="text-gray-400 mt-3">Printing hardware, laptops, and AI software solutions for African businesses.</p>
+      </div>
+      <div>
+        <div class="font-semibold mb-3 text-white">Explore</div>
+        <ul class="space-y-2">
+          <li><a class="hover:text-blue-300" href="/shop/">Shop</a></li>
+          <li><a class="hover:text-blue-300" href="/ims/">IMS</a></li>
+          <li><a class="hover:text-blue-300" href="/legal/privacy/">Privacy</a></li>
+          <li><a class="hover:text-blue-300" href="/legal/terms/">Terms</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-semibold mb-3 text-white">Contact</div>
+        <ul class="space-y-2">
+          <li>{{ company.address }}</li>
+          <li>{{ company.phone }}</li>
+          <li><a class="hover:text-blue-300" href="mailto:{{ company.email }}">{{ company.email }}</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="font-semibold mb-3 text-white">Talk to Sales</div>
+        <p class="text-gray-400">Let us scope your hardware deployment or AI project.</p>
+        <a href="{{ company.cta_whatsapp }}" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl mt-4">
+          WhatsApp
+        </a>
+      </div>
+    </div>
+    <div class="text-center text-xs text-gray-500 pb-6">&copy; {{ now|date:"Y" }} {{ company.name }}. All rights reserved.</div>
+  </footer>
+
+  <div id="cart-counter" class="hidden"></div>
+</body>
+</html>

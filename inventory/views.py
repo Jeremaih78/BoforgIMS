@@ -24,20 +24,20 @@ def product_list(request):
 
 @login_required
 def product_create(request):
-    form = ProductForm(request.POST or None)
+    form = ProductForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        return redirect('product_list')
-    return render(request,'inventory/product_form.html',{'form':form})
+        return redirect('ims:inventory:product_list')
+    return render(request, 'inventory/product_form.html', {'form': form, 'product': form.instance})
 
 @login_required
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    form = ProductForm(request.POST or None, instance=product)
+    form = ProductForm(request.POST or None, request.FILES or None, instance=product)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        return redirect('product_list')
-    return render(request,'inventory/product_form.html',{'form':form})
+        return redirect('ims:inventory:product_list')
+    return render(request, 'inventory/product_form.html', {'form': form, 'product': product})
 
 @login_required
 def product_delete(request, pk):
@@ -46,7 +46,7 @@ def product_delete(request, pk):
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden('Only admin can delete products')
     product.delete()
-    return redirect('product_list')
+    return redirect('ims:inventory:product_list')
 
 @login_required
 def movement_create(request):
@@ -55,5 +55,5 @@ def movement_create(request):
         m = form.save(commit=False)
         m.user = request.user
         m.save()
-        return redirect('product_list')
+        return redirect('ims:inventory:product_list')
     return render(request,'inventory/movement_form.html',{'form':form})

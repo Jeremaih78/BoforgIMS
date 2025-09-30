@@ -3,28 +3,84 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Quotation {{ quotation.number }}</h3>
   <div class="d-flex gap-2">
-    <a class="btn btn-sm btn-primary text-white" href="{% url 'quotation_pdf' quotation.id %}?preview=1" target="_blank">Print PDF</a>
-    <a class="btn btn-sm btn-primary text-white" href="{% url 'quotation_pdf' quotation.id %}">Download PDF</a>
-    <a class="btn btn-sm btn-primary" href="{% url 'quotation_to_invoice' quotation.id %}">Convert to Invoice</a>
+    <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:quotation_pdf' quotation.id %}?preview=1" target="_blank">Print PDF</a>
+    <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:quotation_pdf' quotation.id %}">Download PDF</a>
+    <a class="btn btn-sm btn-primary" href="{% url 'ims:sales:quotation_to_invoice' quotation.id %}">Convert to Invoice</a>
   </div>
 </div>
 <div class="card p-3 mb-3">
-  <div class="row"><div class="col">Customer: <strong>{{ quotation.customer }}</strong></div><div class="col">Date: {{ quotation.date }}</div></div>
+  <div class="row">
+    <div class="col">Customer: <strong>{{ quotation.customer }}</strong></div>
+    <div class="col">Date: {{ quotation.date }}</div>
+  </div>
 </div>
-<div class="card p-3 form-card">
-  <h5>Add Item</h5>
-  <form method="post">{% csrf_token %}
-    {{ item_form.as_p }}
-    <button class="btn btn-primary">Add</button>
-  </form>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card p-3 form-card h-100">
+      <h5>Add Product Line</h5>
+      <form method="post">{% csrf_token %}
+        {{ item_form.as_p }}
+        <button class="btn btn-primary" name="add_line" value="1">Add Product</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-3 form-card h-100">
+      <h5>Add Combo</h5>
+      <form method="post" class="row g-3">{% csrf_token %}
+        <div class="col-12">
+          <label class="form-label" for="{{ combo_form.combo.id_for_label }}">Combo</label>
+          <select name="{{ combo_form.combo.html_name }}" id="{{ combo_form.combo.id_for_label }}" class="form-select">
+            {% for option in combo_options %}
+            <option value="{{ option.combo.id }}">
+              {{ option.combo.sku }} - {{ option.combo.name }} (Price: {{ option.price }} | Available: {{ option.available }})
+            </option>
+            {% endfor %}
+          </select>
+          {% if combo_form.combo.errors %}
+          <div class="text-danger small">{{ combo_form.combo.errors|join:', ' }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="{{ combo_form.quantity.id_for_label }}">Quantity</label>
+          <input type="number" step="1" min="1" name="{{ combo_form.quantity.html_name }}" id="{{ combo_form.quantity.id_for_label }}" class="form-control" value="{{ combo_form.quantity.value|default:1 }}">
+          {% if combo_form.quantity.errors %}
+          <div class="text-danger small">{{ combo_form.quantity.errors|join:', ' }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+          <button class="btn btn-outline-primary" name="add_combo" value="1">Add Combo</button>
+        </div>
+      </form>
+      <div class="mt-3 small text-secondary">Combos auto-expand in quotes for clarity; stock is unaffected until invoicing.</div>
+    </div>
+  </div>
 </div>
 <div class="card p-3 mt-3">
-  <h5>Items</h5>
-  <table class="table">
-    <thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
-    <tbody>{% for it in quotation.items.all %}
-      <tr><td>{{ it.product|default:it.description }}</td><td class="text-end">{{ it.quantity }}</td><td class="text-end">{{ it.unit_price }}</td><td class="text-end">{{ it.total }}</td></tr>
-    {% endfor %}</tbody>
+  <h5>Lines</h5>
+  <table class="table align-middle">
+    <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>
+          {% if line.product %}
+          {{ line.product.name }} ({{ line.product.sku }})
+          {% if line.description and line.description != line.product.name %}
+          <div class="small text-muted">{{ line.description }}</div>
+          {% endif %}
+          {% else %}
+          <span class="badge text-bg-warning me-1">ADJUSTMENT</span> {{ line.description|default:'Combo discount' }}
+          {% endif %}
+        </td>
+        <td class="text-end">{{ line.quantity }}</td>
+        <td class="text-end">{{ line.unit_price }}</td>
+        <td class="text-end">{{ line.line_total }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-center">No lines yet</td></tr>
+      {% endfor %}
+    </tbody>
     <tfoot><tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ quotation.total }}</th></tr></tfoot>
   </table>
 </div>

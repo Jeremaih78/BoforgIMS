@@ -69,7 +69,7 @@ def expense_create(request):
             exp.save(update_fields=['posted'])
         except Exception:
             pass
-        return redirect('expense_list')
+        return redirect('ims:accounting:expense_list')
     return render(request, 'accounting/expense_form.html', {'form': form})
 
 
@@ -119,8 +119,7 @@ def sales_summary(request):
         qs = qs.annotate(p=TruncYear('date'))
     else:
         qs = qs.annotate(p=TruncMonth('date'))
-    data = qs.values('p').annotate(total=Sum('items__unit_price') + Sum('items__quantity')*0).order_by('p')
-    # Above is a lightweight sum; for accuracy, sum invoice totals in Python
+    data = qs.values('p').annotate(total=Sum('lines__line_total')).order_by('p')
     sums = {}
     for inv in Invoice.objects.order_by('date'):
         if period == 'daily':

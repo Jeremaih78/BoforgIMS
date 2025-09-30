@@ -9,7 +9,7 @@ from django.db.models import Sum, Q
 from django.utils import timezone
 
 from inventory.models import Product
-from .models import Invoice, InvoiceItem, StockReservation, PriceRule
+from sales.models import Invoice, StockReservation, PriceRule
 
 
 @dataclass
@@ -27,7 +27,6 @@ class PricingService:
         qs = PriceRule.objects.filter(is_active=True).filter(
             Q(product__isnull=True) | Q(product=product) | Q(category=product.category)
         )
-        # NOTE: extremely simple filter; broaden by category/time/min_qty.
         qs = qs.filter(min_qty__lte=qty)
         qs = qs.filter(Q(start_at__isnull=True) | Q(start_at__lte=now))
         qs = qs.filter(Q(end_at__isnull=True) | Q(end_at__gte=now))
@@ -58,45 +57,41 @@ class StockService:
     @staticmethod
     @transaction.atomic
     def reserve_stock(invoice: Invoice, force: bool = False) -> None:
-        # Create/update reservations based on invoice items
-        for it in invoice.items.select_related('product'):
-            p = it.product
-            if not p or not p.track_inventory:
+        for line in invoice.items.select_related('product'):
+            product = line.product
+            if not product or not product.track_inventory:
                 continue
-            qty = int(it.quantity)
-            # Lock product row
-            p = Product.objects.select_for_update().get(pk=p.pk)
-            available = (p.quantity or 0) - (p.reserved or 0)
+            qty = int(line.quantity)
+            product = Product.objects.select_for_update().get(pk=product.pk)
+            available = (product.quantity or 0) - (product.reserved or 0)
             if available < qty and not force:
-                raise ValueError(f"Insufficient stock for {p.sku}: need {qty}, available {available}")
-            # Upsert reservation
-            res, _ = StockReservation.objects.get_or_create(invoice=invoice, product=p, defaults={'quantity': 0})
+                raise ValueError(f"Insufficient stock for {product.sku}: need {qty}, available {available}")
+            res, _ = StockReservation.objects.get_or_create(invoice=invoice, product=product, defaults={'quantity': 0})
             delta = qty - res.quantity
             if delta != 0:
                 res.quantity = qty
                 res.save()
-                p.reserved = (p.reserved or 0) + delta
-                p.save(update_fields=['reserved'])
+                product.reserved = (product.reserved or 0) + delta
+                product.save(update_fields=['reserved'])
 
     @staticmethod
     @transaction.atomic
     def release_reservation(invoice: Invoice) -> None:
         for res in StockReservation.objects.select_for_update().filter(invoice=invoice).select_related('product'):
-            p = Product.objects.select_for_update().get(pk=res.product_id)
-            p.reserved = max(0, (p.reserved or 0) - int(res.quantity))
-            p.save(update_fields=['reserved'])
+            product = Product.objects.select_for_update().get(pk=res.product_id)
+            product.reserved = max(0, (product.reserved or 0) - int(res.quantity))
+            product.save(update_fields=['reserved'])
         StockReservation.objects.filter(invoice=invoice).delete()
 
     @staticmethod
     @transaction.atomic
     def finalize_sale(invoice: Invoice) -> None:
-        # apply reservations into actual stock deduction
         for res in StockReservation.objects.select_for_update().filter(invoice=invoice).select_related('product'):
-            p = Product.objects.select_for_update().get(pk=res.product_id)
+            product = Product.objects.select_for_update().get(pk=res.product_id)
             qty = int(res.quantity)
-            p.quantity = (p.quantity or 0) - qty
-            p.reserved = max(0, (p.reserved or 0) - qty)
-            p.save(update_fields=['quantity', 'reserved'])
+            product.quantity = (product.quantity or 0) - qty
+            product.reserved = max(0, (product.reserved or 0) - qty)
+            product.save(update_fields=['quantity', 'reserved'])
         StockReservation.objects.filter(invoice=invoice).delete()
 
     @staticmethod

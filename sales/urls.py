@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+
+app_name = 'sales'
+
 urlpatterns = [
     path('', views.sales_home, name='sales_home'),
     path('quotation/new/', views.quotation_create, name='quotation_create'),

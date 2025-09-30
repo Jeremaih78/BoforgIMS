@@ -3,8 +3,8 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h3 class="mb-0">Sales</h3>
   <div class="d-flex gap-2">
-    <a class="btn btn-primary btn-sm" href="{% url 'quotation_create' %}"><i class="bi bi-file-earmark-plus me-1"></i>New Quotation</a>
-    <a class="btn btn-primary btn-sm" href="{% url 'invoice_create' %}"><i class="bi bi-receipt me-1"></i>New Invoice</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'ims:sales:quotation_create' %}"><i class="bi bi-file-earmark-plus me-1"></i>New Quotation</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'ims:sales:invoice_create' %}"><i class="bi bi-receipt me-1"></i>New Invoice</a>
   </div>
 </div>
 <form class="mb-3" method="get">
@@ -26,7 +26,7 @@
         <tbody>
           {% for x in quotations %}
           <tr><td>{{ x.number }}</td><td>{{ x.customer }}</td><td>{{ x.date }}</td><td>{{ x.total }}</td>
-          <td class="text-end"><a class="btn btn-outline-light btn-sm" href="{% url 'quotation_edit' x.id %}">Open</a></td></tr>
+          <td class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'ims:sales:quotation_edit' x.id %}">Open</a></td></tr>
           {% empty %}<tr><td colspan="5" class="text-center">None</td></tr>{% endfor %}
         </tbody>
       </table>
@@ -59,7 +59,7 @@
         <tbody>
           {% for x in invoices %}
           <tr><td>{{ x.number }}</td><td>{{ x.customer }}</td><td>{{ x.date }}</td><td>{{ x.status }}</td><td>{{ x.total }}</td>
-          <td class="text-end"><a class="btn btn-outline-light btn-sm" href="{% url 'invoice_edit' x.id %}">Open</a></td></tr>
+          <td class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'ims:sales:invoice_edit' x.id %}">Open</a></td></tr>
           {% empty %}<tr><td colspan="6" class="text-center">None</td></tr>{% endfor %}
         </tbody>
       </table>

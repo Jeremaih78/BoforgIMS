@@ -1,0 +1,82 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Checkout | Boforg Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <header class="bg-white shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="/shop/" class="text-lg font-semibold">Boforg Shop</a>
+      <nav class="flex gap-5 text-sm font-medium">
+        <a href="/" class="hover:text-blue-600">Home</a>
+        <a href="/shop/" class="hover:text-blue-600">Shop</a>
+        <a href="/shop/cart/" class="hover:text-blue-600">Cart</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-10">
+    <h1 class="text-3xl font-bold">Secure Checkout</h1>
+    <p class="mt-2 text-sm text-gray-600">Enter your details and confirm your order. You will be redirected to Paynow to complete payment.</p>
+
+    <div class="mt-8 grid md:grid-cols-[1.6fr_1fr] gap-8">
+      <section class="bg-white border rounded-3xl shadow-sm p-6">
+        <h2 class="text-xl font-semibold">Contact</h2>
+        <form method="post" class="mt-6 space-y-4">
+          {% csrf_token %}
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Full Name</label>
+            {{ form.full_name.as_widget(attrs={'class': 'mt-1 w-full border rounded-xl px-3 py-2'}) }}
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Email</label>
+            {{ form.email.as_widget(attrs={'class': 'mt-1 w-full border rounded-xl px-3 py-2'}) }}
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Notes (optional)</label>
+            {{ form.notes.as_widget(attrs={'class': 'mt-1 w-full border rounded-xl px-3 py-2'}) }}
+          </div>
+          {% if form.errors %}
+          <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            {{ form.errors }}
+          </div>
+          {% endif %}
+          <button class="w-full bg-blue-600 text-white py-3 rounded-2xl font-semibold">Pay with Paynow</button>
+        </form>
+      </section>
+
+      <aside class="bg-white border rounded-3xl shadow-sm p-6">
+        <h2 class="text-xl font-semibold">Order Summary</h2>
+        <ul class="mt-4 space-y-3 text-sm">
+          {% for item in items %}
+          <li class="flex justify-between">
+            <span>{{ item.product.name }} × {{ item.quantity }}</span>
+            <span>${{ item.line_total }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="mt-6 flex justify-between text-lg font-semibold">
+          <span>Total</span>
+          <span>${{ subtotal }}</span>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">A secure Paynow window will open to complete payment.</p>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="border-t bg-white">
+    <div class="max-w-5xl mx-auto px-4 py-10 text-sm text-gray-500 flex justify-between">
+      <div>&copy; {% now "Y" %} Boforg Technologies Private Limited.</div>
+      <div class="flex gap-4">
+        <a class="hover:text-blue-600" href="/legal/privacy/">Privacy</a>
+        <a class="hover:text-blue-600" href="/legal/terms/">Terms</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

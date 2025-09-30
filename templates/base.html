@@ -17,12 +17,12 @@
           <img src="{% static 'img/logo_white.png' %}" height="36" class="me-2"> Boforg IMS
         </a>
         <div class="list-group list-group-flush">
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/inventory/"><i class="bi bi-box-seam me-2"></i>Inventory</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/sales/"><i class="bi bi-receipt me-2"></i>Sales</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/customers/"><i class="bi bi-people me-2"></i>Customers</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/sales/"><i class="bi bi-receipt me-2"></i>Sales</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/customers/"><i class="bi bi-people me-2"></i>Customers</a>
           {% if user.is_superuser %}
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/accounting/"><i class="bi bi-cash-coin me-2"></i>Accounting</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/accounting/"><i class="bi bi-cash-coin me-2"></i>Accounting</a>
           {% endif %}
         </div>
       </aside>

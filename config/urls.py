@@ -1,14 +1,17 @@
 from django.contrib import admin
-from django.urls import path, include
-from users.views import dashboard
+from django.urls import include, path
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('', include(('website.urls', 'website'), namespace='website')),
+    path('shop/', include(('shop.urls', 'shop'), namespace='shop')),
+    path('legal/', include(('legal.urls', 'legal'), namespace='legal')),
+    path('ims/', include(('ims.urls', 'ims'), namespace='ims')),
     path('accounts/', include('django.contrib.auth.urls')),
-    path('', dashboard, name='dashboard'),
-    path('inventory/', include('inventory.urls')),
-    path('customers/', include('customers.urls')),
-    path('sales/', include('sales.urls')),
-    path('accounting/', include('accounting.urls')),
-    path('legal/', include('legal.urls')),
+    path('admin/', admin.site.urls),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

@@ -1,17 +1,95 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
+  <div class="col-md-8 col-lg-6">
     <div class="card p-4 form-card">
       <h4 class="mb-3">Product</h4>
-      <form method="post">{% csrf_token %}
-        {{ form.as_p }}
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {% for hidden in form.hidden_fields %}
+          {{ hidden }}
+        {% endfor %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% for field in form.visible_fields %}
+          {% if field.name == 'remove_image' %}
+            {% if product.pk %}
+              {% if product.image or product.image_url %}
+                <div class="form-check mb-3">
+                  {{ field }}
+                  <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {% for error in field.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endif %}
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% if field.name == 'image' %}
+          <img id="imagePreview"
+               data-current="{% if product.image %}{{ product.image.url }}{% elif product.image_url %}{{ product.image_url }}{% endif %}"
+               style="max-height:200px; margin-top:8px; {% if not product.image and not product.image_url %}display:none;{% else %}display:block;{% endif %}"
+               class="img-fluid rounded border"/>
+          {% endif %}
+          {% endif %}
+        {% endfor %}
         <div class="d-flex gap-2">
-          <button class="btn btn-primary">Save</button>
-          <a href="{% url 'product_list' %}" class="btn btn-secondary">Cancel</a>
+          <button class="btn btn-primary" type="submit">Save</button>
+          <a href="{% url 'ims:inventory:product_list' %}" class="btn btn-secondary">Cancel</a>
         </div>
       </form>
     </div>
   </div>
-  </div>
+</div>
+<script>
+  const input = document.getElementById('id_image');
+  const preview = document.getElementById('imagePreview');
+  if (input && preview) {
+    const initialSrc = preview.dataset.current || '';
+    if (initialSrc) {
+      preview.src = initialSrc;
+      preview.style.display = 'block';
+    }
+    let objectUrl = null;
+    input.addEventListener('change', () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+      }
+      const files = input.files || [];
+      const file = files.length ? files[0] : null;
+      if (file) {
+        objectUrl = URL.createObjectURL(file);
+        preview.src = objectUrl;
+        preview.style.display = 'block';
+      } else if (initialSrc) {
+        preview.src = initialSrc;
+        preview.style.display = 'block';
+      } else {
+        preview.removeAttribute('src');
+        preview.style.display = 'none';
+      }
+    });
+    window.addEventListener('beforeunload', () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    });
+  }
+</script>
 {% endblock %}

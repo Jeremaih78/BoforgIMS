@@ -10,7 +10,7 @@ def dashboard(request):
     # Sales MTD for quick accounting glance
     today = timezone.now().date()
     month_start = today.replace(day=1)
-    sales_mtd = Invoice.objects.filter(date__gte=month_start).aggregate(s=Sum('items__unit_price'))['s'] or 0
+    sales_mtd = Invoice.objects.filter(date__gte=month_start).aggregate(s=Sum('lines__line_total'))['s'] or 0
     stats = {
         'products': Product.objects.count(),
         'low_stock': Product.objects.filter(quantity__lte=5).count(),

@@ -21,7 +21,7 @@ def customer_create(request):
     form = CustomerForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        return redirect('customer_list')
+        return redirect('ims:customers:customer_list')
     return render(request,'customers/customer_form.html',{'form':form})
 
 @login_required
@@ -30,5 +30,5 @@ def customer_edit(request, pk):
     form = CustomerForm(request.POST or None, instance=c)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        return redirect('customer_list')
+        return redirect('ims:customers:customer_list')
     return render(request,'customers/customer_form.html',{'form':form})
