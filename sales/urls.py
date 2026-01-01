@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .api import InvoiceLineSerialAPIView
 
 app_name = 'sales'
 
@@ -12,4 +13,6 @@ urlpatterns = [
     path('invoice/new/', views.invoice_create, name='invoice_create'),
     path('invoice/<int:pk>/', views.invoice_edit, name='invoice_edit'),
     path('invoice/<int:pk>/pdf/', views.invoice_pdf, name='invoice_pdf'),
+    path('invoice/line/<int:line_id>/serials/', views.invoice_line_serials, name='invoice_line_serials'),
+    path('api/invoice-lines/<int:line_id>/serials/', InvoiceLineSerialAPIView.as_view(), name='invoice_line_serials_api'),
 ]

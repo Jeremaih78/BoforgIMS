@@ -1,9 +1,10 @@
 from decimal import Decimal
 
 from django import forms
+from django.db.models import Q
 
 from .models import Quotation, Invoice, Payment, DocumentLine
-from inventory.models import Combo
+from inventory.models import Combo, ProductUnit
 
 
 class QuotationForm(forms.ModelForm):
@@ -71,4 +72,29 @@ class PaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
         fields = ['invoice', 'amount', 'date', 'method', 'note']
+
+
+class InvoiceLineSerialAssignmentForm(forms.Form):
+    serials = forms.ModelMultipleChoiceField(
+        queryset=ProductUnit.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+    )
+
+    def __init__(self, *args, line: DocumentLine, **kwargs):
+        self.line = line
+        super().__init__(*args, **kwargs)
+        qs = ProductUnit.objects.filter(product=line.product).filter(
+            Q(status=ProductUnit.STATUS_AVAILABLE) | Q(sale_line=line)
+        )
+        self.fields['serials'].queryset = qs
+        self.fields['serials'].label = f'Assign {int(line.quantity)} serials'
+        self.fields['serials'].initial = line.product_units.values_list('id', flat=True)
+
+    def clean_serials(self):
+        serials = self.cleaned_data['serials']
+        required = int(self.line.quantity)
+        if len(serials) != required:
+            raise forms.ValidationError(f'{self.line.product} requires exactly {required} serial numbers.')
+        return serials
 

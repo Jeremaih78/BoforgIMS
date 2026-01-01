@@ -19,6 +19,8 @@
         <div class="list-group list-group-flush">
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/shipments/"><i class="bi bi-truck me-2"></i>Shipments</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/shipments/dashboard/"><i class="bi bi-graph-up me-2"></i>Shipment Dashboard</a>
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/sales/"><i class="bi bi-receipt me-2"></i>Sales</a>
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/customers/"><i class="bi bi-people me-2"></i>Customers</a>
           {% if user.is_superuser %}
@@ -57,12 +59,12 @@
 
     <nav class="navbar navbar-dark bg-dark d-lg-none fixed-bottom">
       <div class="container-fluid justify-content-around">
-        <a class="navbar-brand" href="/"><i class="bi bi-speedometer2"></i></a>
-        <a class="navbar-brand" href="/inventory/"><i class="bi bi-box-seam"></i></a>
-        <a class="navbar-brand" href="/sales/"><i class="bi bi-receipt"></i></a>
-        <a class="navbar-brand" href="/customers/"><i class="bi bi-people"></i></a>
+        <a class="navbar-brand" href="/ims/"><i class="bi bi-speedometer2"></i></a>
+        <a class="navbar-brand" href="/ims/inventory/"><i class="bi bi-box-seam"></i></a>
+        <a class="navbar-brand" href="/ims/inventory/shipments/"><i class="bi bi-truck"></i></a>
+        <a class="navbar-brand" href="/ims/sales/"><i class="bi bi-receipt"></i></a>
         {% if user.is_superuser %}
-        <a class="navbar-brand" href="/accounting/"><i class="bi bi-cash-coin"></i></a>
+        <a class="navbar-brand" href="/ims/accounting/"><i class="bi bi-cash-coin"></i></a>
         {% endif %}
       </div>
     </nav>

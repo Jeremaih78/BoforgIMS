@@ -125,6 +125,7 @@ class JournalEntry(models.Model):
         ("PAYMENT", "Payment"),
         ("BILL", "Supplier Bill"),
         ("EXPENSE", "Expense"),
+        ("SHIPMENT", "Shipment"),
         ("ADJUSTMENT", "Adjustment"),
     ]
 

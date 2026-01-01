@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Product, Combo, ComboItem
+from .models import Product, Combo, ComboItem, Shipment, ShipmentItem
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -73,3 +73,53 @@ class ComboSerializer(serializers.ModelSerializer):
 
     def get_computed_price(self, obj):
         return obj.compute_price()
+
+
+class ShipmentItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_sku = serializers.CharField(source='product.sku', read_only=True)
+    remaining = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ShipmentItem
+        fields = [
+            'id',
+            'product',
+            'product_name',
+            'product_sku',
+            'quantity_expected',
+            'quantity_received',
+            'unit_purchase_price',
+            'tracking_mode',
+            'landed_unit_cost',
+            'remaining',
+        ]
+
+    def get_remaining(self, obj):
+        return max(obj.quantity_expected - obj.quantity_received, 0)
+
+
+class ShipmentSerializer(serializers.ModelSerializer):
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    items = ShipmentItemSerializer(many=True, read_only=True)
+    total_cost_base = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Shipment
+        fields = [
+            'id',
+            'shipment_code',
+            'supplier',
+            'supplier_name',
+            'status',
+            'shipping_method',
+            'incoterm',
+            'eta_date',
+            'arrival_date',
+            'allocation_basis',
+            'total_cost_base',
+            'items',
+        ]
+
+    def get_total_cost_base(self, obj):
+        return obj.total_cost_base

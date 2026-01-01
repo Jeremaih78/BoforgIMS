@@ -66,6 +66,13 @@
               {% if line.description and line.description != line.product.name %}
               <div class="small text-muted">{{ line.description }}</div>
               {% endif %}
+              {% if line.product.is_serial_tracked %}
+              <div class="small mt-1">
+                <span class="badge text-bg-info me-1">Serial Required</span>
+                Assigned {{ line.product_units.count }} / {{ line.quantity|floatformat:"0" }}
+                <a class="ms-2" href="{% url 'ims:sales:invoice_line_serials' line.id %}">Manage Serials</a>
+              </div>
+              {% endif %}
               {% else %}
               <span class="badge text-bg-warning me-1">ADJUSTMENT</span> {{ line.description|default:'Combo discount' }}
               {% endif %}

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0">Shipment {{ shipment.shipment_code }}</h3>
+    <div class="text-muted small">Status: {{ shipment.get_status_display }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'ims:inventory:shipment_list' %}">Back</a>
+    {% if shipment.status == shipment.STATUS_ARRIVED or shipment.status == shipment.STATUS_CLEARED %}
+    <a class="btn btn-primary text-white" href="{% url 'ims:inventory:shipment_receive' shipment.id %}">Receive Items</a>
+    {% endif %}
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card p-3 mb-3">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="text-muted small">Supplier</div>
+          <strong>{{ shipment.supplier }}</strong>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">Route</div>
+          <strong>{{ shipment.origin_country }} → {{ shipment.destination_country }}</strong>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">Method / Incoterm</div>
+          <strong>{{ shipment.get_shipping_method_display }} / {{ shipment.incoterm }}</strong>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">ETA</div>
+          <strong>{{ shipment.eta_date|default:'-' }}</strong>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">Arrival</div>
+          <strong>{{ shipment.arrival_date|default:'-' }}</strong>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">Allocation Basis</div>
+          <strong>{{ shipment.get_allocation_basis_display }}</strong>
+        </div>
+      </div>
+    </div>
+    <div class="card p-3 mb-3">
+      <h5 class="mb-3">Items</h5>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="text-end">Expected</th>
+              <th class="text-end">Received</th>
+              <th class="text-end">Unit Price</th>
+              <th class="text-end">Landed Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in shipment.items.all %}
+            <tr>
+              <td>{{ item.product }}</td>
+              <td class="text-end">{{ item.quantity_expected }}</td>
+              <td class="text-end">{{ item.quantity_received }}</td>
+              <td class="text-end">{{ item.unit_purchase_price }}</td>
+              <td class="text-end">{{ item.landed_unit_cost|default:'-' }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center">No items yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card p-3 mb-3">
+      <h5 class="mb-3">Costs</h5>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th>Type</th><th>Description</th><th class="text-end">Amount</th><th class="text-end">Base</th><th>Allocated</th></tr></thead>
+          <tbody>
+            {% for cost in shipment.costs.all %}
+            <tr>
+              <td>{{ cost.get_cost_type_display }}</td>
+              <td>{{ cost.description|default:'-' }}</td>
+              <td class="text-end">{{ cost.amount }} {{ cost.currency }}</td>
+              <td class="text-end">{{ cost.amount_base }}</td>
+              <td>
+                {% if cost.allocated %}
+                <span class="badge text-bg-success">Allocated</span>
+                {% else %}
+                <span class="badge text-bg-warning">Pending</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center">No costs captured.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-2 text-end">
+        <strong>Total Landed Cost:</strong> {{ cost_breakdown.total_cost_base }}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3 mb-3">
+      <h5 class="mb-3">Add Item</h5>
+      <form method="post">{% csrf_token %}
+        {{ item_form.as_p }}
+        <button class="btn btn-primary w-100" name="add_item" value="1">Add Item</button>
+      </form>
+    </div>
+    <div class="card p-3 mb-3">
+      <h5 class="mb-3">Add Cost</h5>
+      <form method="post">{% csrf_token %}
+        {{ cost_form.as_p }}
+        <button class="btn btn-outline-primary w-100" name="add_cost" value="1">Add Cost</button>
+      </form>
+    </div>
+    <div class="card p-3">
+      <h5 class="mb-3">Update Status</h5>
+      <form method="post">{% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Status</label>
+          <select class="form-select" name="status">
+            {% for value,label in shipment.STATUS_CHOICES %}
+            <option value="{{ value }}" {% if shipment.status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Note</label>
+          <textarea class="form-control" name="note" rows="2"></textarea>
+        </div>
+        <button class="btn btn-outline-secondary w-100" name="update_status" value="1">Update</button>
+      </form>
+      <hr>
+      <p class="small text-muted mb-0">
+        Costs allocated: {{ shipment.are_costs_allocated|yesno:"Yes,No" }}<br>
+        Fully received: {{ shipment.is_fully_received|yesno:"Yes,No" }}
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

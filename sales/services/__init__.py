@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models import Sum, Q
 from django.utils import timezone
 
-from inventory.models import Product
+from inventory.models import Product, ProductUnit
 from sales.models import Invoice, StockReservation, PriceRule
 
 
@@ -82,10 +82,23 @@ class StockService:
             product.reserved = max(0, (product.reserved or 0) - int(res.quantity))
             product.save(update_fields=['reserved'])
         StockReservation.objects.filter(invoice=invoice).delete()
+        ProductUnit.objects.filter(sale_line__invoice=invoice, status=ProductUnit.STATUS_RESERVED).update(
+            sale_line=None,
+            status=ProductUnit.STATUS_AVAILABLE,
+            sold_at=None,
+        )
 
     @staticmethod
     @transaction.atomic
     def finalize_sale(invoice: Invoice) -> None:
+        serial_lines = invoice.items.select_related('product').filter(product__tracking_mode=Product.TRACK_SERIAL)
+        for line in serial_lines:
+            required = int(line.quantity)
+            units = list(ProductUnit.objects.select_for_update().filter(sale_line=line))
+            if len(units) != required:
+                raise ValueError(f'{line.product} requires {required} serial numbers before finalizing.')
+            for unit in units:
+                unit.mark_sold(line)
         for res in StockReservation.objects.select_for_update().filter(invoice=invoice).select_related('product'):
             product = Product.objects.select_for_update().get(pk=res.product_id)
             qty = int(res.quantity)

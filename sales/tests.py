@@ -4,7 +4,16 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from customers.models import Customer
-from inventory.models import Category, Product, Combo, ComboItem
+from inventory.models import (
+    Category,
+    Product,
+    Combo,
+    ComboItem,
+    Supplier,
+    Shipment,
+    ShipmentItem,
+    ProductUnit,
+)
 from inventory.services.combos import add_combo_to_invoice, add_combo_to_quotation, combo_available_quantity
 from sales.models import Quotation, Invoice
 from sales.services import StockService
@@ -118,3 +127,72 @@ class ComboIntegrationTests(TestCase):
         self.assertEqual(self.product_b.quantity, initial_b - 2)
         self.assertEqual(discount_lines.count(), 1)
         self.assertIsNone(discount_lines.first().product)
+
+
+class SerialFulfillmentTests(TestCase):
+    def setUp(self):
+        self.customer = Customer.objects.create(name='Serial Buyer')
+        self.supplier = Supplier.objects.create(name='Global Supplier')
+        self.serial_product = Product.objects.create(
+            name='Laptop',
+            sku='LPT-100',
+            price=Decimal('1200.00'),
+            quantity=2,
+            tracking_mode=Product.TRACK_SERIAL,
+        )
+        self.shipment = Shipment.objects.create(
+            supplier=self.supplier,
+            origin_country='CN',
+            destination_country='ZW',
+            incoterm=Shipment.INCOTERM_FOB,
+            shipping_method=Shipment.METHOD_AIR,
+            status=Shipment.STATUS_ARRIVED,
+        )
+        self.shipment_item = ShipmentItem.objects.create(
+            shipment=self.shipment,
+            product=self.serial_product,
+            quantity_expected=2,
+            quantity_received=2,
+            unit_purchase_price=Decimal('600.00'),
+            tracking_mode=Product.TRACK_SERIAL,
+        )
+        ProductUnit.objects.create(
+            serial_number='SN-A',
+            product=self.serial_product,
+            shipment=self.shipment,
+            shipment_item=self.shipment_item,
+            landed_cost=Decimal('650.00'),
+        )
+        ProductUnit.objects.create(
+            serial_number='SN-B',
+            product=self.serial_product,
+            shipment=self.shipment,
+            shipment_item=self.shipment_item,
+            landed_cost=Decimal('650.00'),
+        )
+
+    def test_invoice_finalization_requires_serial_assignment(self):
+        invoice = Invoice.objects.create(customer=self.customer)
+        line = invoice.lines.create(
+            product=self.serial_product,
+            description='Serial Laptop',
+            quantity=Decimal('2'),
+            unit_price=Decimal('1200.00'),
+            tax_rate_percent=Decimal('0'),
+            line_total=Decimal('2400.00'),
+        )
+        StockService.reserve_stock(invoice)
+        with self.assertRaises(ValueError):
+            StockService.finalize_sale(invoice)
+        units = list(ProductUnit.objects.filter(product=self.serial_product))
+        for unit in units:
+            unit.sale_line = line
+            unit.status = ProductUnit.STATUS_RESERVED
+            unit.save(update_fields=['sale_line', 'status'])
+        StockService.finalize_sale(invoice)
+        self.serial_product.refresh_from_db()
+        self.assertEqual(self.serial_product.quantity, 0)
+        for unit in units:
+            unit.refresh_from_db()
+            self.assertEqual(unit.status, ProductUnit.STATUS_SOLD)
+            self.assertEqual(unit.sale_line, line)

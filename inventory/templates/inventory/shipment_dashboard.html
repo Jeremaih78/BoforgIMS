@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Shipment Dashboard</h3>
+  <a class="btn btn-outline-secondary" href="{% url 'ims:inventory:shipment_list' %}">Back to Shipments</a>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Recent Shipments</h5>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Code</th><th>Supplier</th><th>Status</th><th>Total Cost</th></tr></thead>
+          <tbody>
+            {% for shipment in recent_shipments %}
+            <tr>
+              <td><a href="{% url 'ims:inventory:shipment_detail' shipment.id %}">{{ shipment.shipment_code }}</a></td>
+              <td>{{ shipment.supplier }}</td>
+              <td>{{ shipment.get_status_display }}</td>
+              <td>{{ shipment.total_cost_base }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center">No shipments.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Cost Breakdown (Recent)</h5>
+      {% for summary in cost_summaries %}
+      <div class="mb-3">
+        <div class="d-flex justify-content-between">
+          <strong>{{ summary.shipment.shipment_code }}</strong>
+          <span>{{ summary.total_cost_base }}</span>
+        </div>
+        <div class="small text-muted">
+          {% for row in summary.breakdown %}
+            {{ row.cost_type }}: {{ row.total }}{% if not forloop.last %}, {% endif %}
+          {% empty %}
+            No costs yet.
+          {% endfor %}
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted">No cost data.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Supplier Defect Rate</h5>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead><tr><th>Supplier</th><th class="text-end">Faulty Units</th><th class="text-end">Rate</th></tr></thead>
+          <tbody>
+            {% for row in supplier_stats %}
+            <tr>
+              <td>{{ row.supplier }}</td>
+              <td class="text-end">{{ row.faulty_units }}/{{ row.total_units }}</td>
+              <td class="text-end">{{ row.fault_rate }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center">No supplier data.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Shipment Delays</h5>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead><tr><th>Shipment</th><th>ETA</th><th>Arrival</th><th class="text-end">Delay (days)</th></tr></thead>
+          <tbody>
+            {% for row in delays %}
+            <tr>
+              <td>{{ row.shipment.shipment_code }}</td>
+              <td>{{ row.eta_date }}</td>
+              <td>{{ row.arrival_date }}</td>
+              <td class="text-end">{{ row.delay_days }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center">No delay data yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <h5 class="mb-3">Landed Cost by Product</h5>
+      <form method="post" class="mb-3">{% csrf_token %}
+        {{ product_form.as_p }}
+        <button class="btn btn-outline-primary" name="lookup_product" value="1">Show</button>
+      </form>
+      {% if landed_rows %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead><tr><th>Shipment</th><th class="text-end">Quantity</th><th class="text-end">Landed Total</th></tr></thead>
+          <tbody>
+            {% for row in landed_rows %}
+            <tr>
+              <td>{{ row.shipment__shipment_code }}</td>
+              <td class="text-end">{{ row.quantity }}</td>
+              <td class="text-end">{{ row.landed_total }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <h5 class="mb-3">Serial Profit Lookup</h5>
+      <form method="post" class="mb-3">{% csrf_token %}
+        {{ serial_form.as_p }}
+        <button class="btn btn-outline-primary" name="lookup_serial" value="1">Lookup</button>
+      </form>
+      {% if serial_result %}
+      <div class="border rounded p-3">
+        <div><strong>Product:</strong> {{ serial_result.product }}</div>
+        <div><strong>Landed Cost:</strong> {{ serial_result.landed_cost }}</div>
+        <div><strong>Sale Amount:</strong> {{ serial_result.sale_amount|default:'-' }}</div>
+        <div><strong>Profit:</strong> {{ serial_result.profit|default:'-' }}</div>
+        <div><strong>Invoice:</strong> {{ serial_result.invoice|default:'Not sold' }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

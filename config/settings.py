@@ -9,7 +9,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'kgd$wg@0t_hw)lkys-@6ez=kgpwcqk5%f$sk+q(lf)xmo#k6se')
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get(
     'DJANGO_ALLOWED_HOSTS',
@@ -81,34 +81,34 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 # Developmentr DATABASES
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
-#         'USER': os.environ.get('POSTGRES_USER', 'boforg'),
-#         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2024'),
-#         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-#         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
+        'USER': os.environ.get('POSTGRES_USER', 'boforg'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2024'),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+    }
+}
 
 # Production Databases
 
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=60, ssl_require=not DEBUG),
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
-            'USER': os.environ.get('POSTGRES_USER', 'boforg'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2024'),
-            'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-        }
-    }
+# if DATABASE_URL:
+#     DATABASES = {
+#         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=60, ssl_require=not DEBUG),
+#     }
+# else:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
+#             'USER': os.environ.get('POSTGRES_USER', 'boforg'),
+#             'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2024'),
+#             'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+#             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+#         }
+#     }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -185,9 +185,30 @@ X_FRAME_OPTIONS = 'DENY'
 CACHE_TTL_HOME = int(os.environ.get('CACHE_TTL_HOME', '300'))
 CACHE_TTL_CATALOG = int(os.environ.get('CACHE_TTL_CATALOG', '120'))
 
+# -----------------------------Development======================================
+# SECURE_SSL_REDIRECT =  False 
+# SESSION_COOKIE_SECURE =  False
+# CSRF_COOKIE_SECURE =  False
+# CSRF_COOKIE_HTTPONLY = False
+# SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000')) if not DEBUG else 0
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+# SECURE_HSTS_PRELOAD = False
+# SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+# X_FRAME_OPTIONS = 'DENY'
+
+# CACHE_TTL_HOME = int(os.environ.get('CACHE_TTL_HOME', '300'))
+# CACHE_TTL_CATALOG = int(os.environ.get('CACHE_TTL_CATALOG', '120'))
+
 # Accounting settings
 BASE_CURRENCY_CODE = os.environ.get('BASE_CURRENCY_CODE', 'USD')
 ACCOUNTING_COGS_METHOD = os.environ.get('ACCOUNTING_COGS_METHOD', 'MOVING_AVERAGE')
 ACCOUNTING_POST_COGS_ON = os.environ.get('ACCOUNTING_POST_COGS_ON', 'PAYMENT')
 DEFAULT_TAX_RATE_ID = os.environ.get('DEFAULT_TAX_RATE_ID')
 PERIOD_CLOSE_ENFORCED = os.environ.get('PERIOD_CLOSE_ENFORCED', '1') == '1'
+SHIPMENT_INVENTORY_ACCOUNT = os.environ.get('SHIPMENT_INVENTORY_ACCOUNT', '1300')
+SHIPMENT_CLEARING_ACCOUNT = os.environ.get('SHIPMENT_CLEARING_ACCOUNT', '2000')
+
+if DEBUG:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False

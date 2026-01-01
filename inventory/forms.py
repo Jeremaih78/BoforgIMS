@@ -2,7 +2,13 @@ from django import forms
 from django.core.exceptions import ValidationError
 from PIL import Image
 
-from .models import Product, StockMovement
+from .models import (
+    Product,
+    StockMovement,
+    Shipment,
+    ShipmentItem,
+    ShipmentCost,
+)
 
 
 class ProductForm(forms.ModelForm):
@@ -22,6 +28,7 @@ class ProductForm(forms.ModelForm):
             'quantity',
             'reserved',
             'track_inventory',
+            'tracking_mode',
             'reorder_level',
             'tax_rate',
             'description',
@@ -95,3 +102,96 @@ class StockMovementForm(forms.ModelForm):
     class Meta:
         model = StockMovement
         fields = ['product', 'movement_type', 'quantity', 'unit_cost', 'note']
+
+
+class ShipmentForm(forms.ModelForm):
+    class Meta:
+        model = Shipment
+        fields = [
+            'supplier',
+            'origin_country',
+            'destination_country',
+            'incoterm',
+            'shipping_method',
+            'eta_date',
+            'arrival_date',
+            'allocation_basis',
+            'status',
+        ]
+
+
+class ShipmentItemForm(forms.ModelForm):
+    class Meta:
+        model = ShipmentItem
+        fields = [
+            'product',
+            'quantity_expected',
+            'unit_purchase_price',
+            'hs_code',
+            'tracking_mode',
+        ]
+
+    def __init__(self, *args, shipment=None, **kwargs):
+        self.shipment = shipment
+        super().__init__(*args, **kwargs)
+        self.fields['tracking_mode'].widget.attrs['class'] = 'form-select'
+
+    def clean(self):
+        cleaned = super().clean()
+        product = cleaned.get('product')
+        if product and not cleaned.get('tracking_mode'):
+            cleaned['tracking_mode'] = product.tracking_mode
+        return cleaned
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        if self.shipment:
+            obj.shipment = self.shipment
+        if commit:
+            obj.save()
+        return obj
+
+
+class ShipmentCostForm(forms.ModelForm):
+    class Meta:
+        model = ShipmentCost
+        fields = ['cost_type', 'description', 'amount', 'currency', 'fx_rate']
+
+
+class ShipmentItemReceiptForm(forms.Form):
+    item_id = forms.IntegerField(widget=forms.HiddenInput)
+    quantity = forms.IntegerField(min_value=0)
+    serials = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False)
+
+    def __init__(self, *args, item: ShipmentItem, **kwargs):
+        self.item = item
+        super().__init__(*args, **kwargs)
+        self.fields['item_id'].initial = item.id
+        self.fields['quantity'].initial = max(item.quantity_expected - item.quantity_received, 0)
+        if not item.requires_serials:
+            self.fields['serials'].widget = forms.HiddenInput()
+            self.fields['serials'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        quantity = cleaned.get('quantity') or 0
+        remaining = max(self.item.quantity_expected - self.item.quantity_received, 0)
+        if quantity > remaining:
+            raise ValidationError(f'Cannot receive more than {remaining} units for {self.item.product}.')
+        serials_raw = cleaned.get('serials') or ''
+        serials = [s.strip() for s in serials_raw.replace(',', '\n').splitlines() if s.strip()]
+        if self.item.requires_serials:
+            if quantity == 0:
+                serials = []
+            if quantity != len(serials):
+                raise ValidationError(f'{self.item.product} requires {quantity} serial numbers.')
+        cleaned['serial_list'] = serials
+        return cleaned
+
+
+class ProductLandedCostForm(forms.Form):
+    product = forms.ModelChoiceField(queryset=Product.objects.filter(is_active=True), required=True)
+
+
+class SerialProfitLookupForm(forms.Form):
+    serial_number = forms.CharField(max_length=120)

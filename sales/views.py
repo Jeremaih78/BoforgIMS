@@ -15,6 +15,7 @@ from .forms import (
     DocumentLineForm,
     PaymentForm,
     ComboSelectionForm,
+    InvoiceLineSerialAssignmentForm,
 )
 from .models import (
     Quotation,
@@ -23,7 +24,7 @@ from .models import (
     DocumentLine,
 )
 from .services import PricingService, StockService
-from inventory.models import Combo
+from inventory.models import Combo, ProductUnit
 from inventory.services.combos import (
     add_combo_to_invoice,
     add_combo_to_quotation,
@@ -278,6 +279,44 @@ def invoice_pdf(request, pk):
     disposition = 'inline' if (request.GET.get('preview') or request.GET.get('disposition') == 'inline') else 'attachment'
     response['Content-Disposition'] = f"{disposition}; filename=\"{invoice.number}.pdf\""
     return response
+
+
+@login_required
+def invoice_line_serials(request, line_id):
+    line = get_object_or_404(
+        DocumentLine.objects.select_related('invoice', 'product'),
+        pk=line_id,
+    )
+    if not line.invoice:
+        messages.error(request, 'Serial assignments are only available for invoices.')
+        return redirect('ims:sales:sales_home')
+    if not line.product or not line.product.is_serial_tracked:
+        messages.error(request, 'This line does not require serial assignments.')
+        return redirect('ims:sales:invoice_edit', line.invoice_id)
+    form = InvoiceLineSerialAssignmentForm(request.POST or None, line=line)
+    if request.method == 'POST' and form.is_valid():
+        selected = list(form.cleaned_data['serials'])
+        selected_ids = [unit.id for unit in selected]
+        ProductUnit.objects.filter(sale_line=line).exclude(id__in=selected_ids).update(
+            sale_line=None,
+            status=ProductUnit.STATUS_AVAILABLE,
+            sold_at=None,
+        )
+        for unit in selected:
+            unit.sale_line = line
+            unit.status = ProductUnit.STATUS_RESERVED
+            unit.save(update_fields=['sale_line', 'status', 'updated_at'])
+        messages.success(request, 'Serial numbers updated.')
+        return redirect('ims:sales:invoice_edit', line.invoice_id)
+    return render(
+        request,
+        'sales/invoice_line_serials.html',
+        {
+            'line': line,
+            'invoice': line.invoice,
+            'form': form,
+        },
+    )
 
 
 

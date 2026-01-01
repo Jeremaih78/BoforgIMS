@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0">Receive {{ shipment.shipment_code }}</h3>
+    <div class="text-muted small">Supplier: {{ shipment.supplier }}</div>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'ims:inventory:shipment_detail' shipment.id %}">Back to Shipment</a>
+</div>
+<div class="card p-4">
+  <div class="alert alert-info">All shipment items must be fully received to unlock inventory.</div>
+  <form method="post">
+    {% csrf_token %}
+    {% for form in forms %}
+    <div class="border rounded p-3 mb-3">
+      <h5 class="mb-2">{{ form.item.product }} ({{ form.item.product.sku }})</h5>
+      <div class="small text-muted mb-2">
+        Expected: {{ form.item.quantity_expected }} |
+        Received: {{ form.item.quantity_received }}
+        {% if form.item.requires_serials %}
+        | Tracking: Serial numbers required
+        {% endif %}
+      </div>
+      {{ form.as_p }}
+    </div>
+    {% empty %}
+    <p>All items already received.</p>
+    {% endfor %}
+    {% if forms %}
+    <button class="btn btn-primary">Submit Receipt</button>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
