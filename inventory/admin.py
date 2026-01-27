@@ -100,6 +100,7 @@ class ShipmentItemInline(admin.TabularInline):
 class ShipmentCostInline(admin.TabularInline):
     model = ShipmentCost
     extra = 0
+    fields = ('cost_type', 'description', 'amount', 'currency', 'fx_rate', 'supporting_document', 'allocated')
 
 
 @admin.register(Shipment)
@@ -129,7 +130,7 @@ class ShipmentAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Shipment', {
             'fields': (
-                'shipment_code',
+                ('shipment_code', 'name'),
                 'supplier',
                 ('origin_country', 'destination_country'),
                 ('incoterm', 'shipping_method'),

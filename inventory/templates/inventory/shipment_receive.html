@@ -7,7 +7,7 @@
   </div>
   <a class="btn btn-outline-secondary" href="{% url 'ims:inventory:shipment_detail' shipment.id %}">Back to Shipment</a>
 </div>
-<div class="card p-4">
+<div class="card p-4 shipment-form">
   <div class="alert alert-info">All shipment items must be fully received to unlock inventory.</div>
   <form method="post">
     {% csrf_token %}

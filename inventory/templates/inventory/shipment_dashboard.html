@@ -10,11 +10,19 @@
       <h5 class="mb-3">Recent Shipments</h5>
       <div class="table-responsive">
         <table class="table table-sm align-middle">
-          <thead><tr><th>Code</th><th>Supplier</th><th>Status</th><th>Total Cost</th></tr></thead>
+          <thead><tr><th>Shipment</th><th>Supplier</th><th>Status</th><th>Total Cost</th></tr></thead>
           <tbody>
-            {% for shipment in recent_shipments %}
+            {% for shipment in recent_shipments_page %}
             <tr>
-              <td><a href="{% url 'ims:inventory:shipment_detail' shipment.id %}">{{ shipment.shipment_code }}</a></td>
+              <td>
+                <a href="{% url 'ims:inventory:shipment_detail' shipment.id %}">
+                  {% if shipment.name %}
+                  {{ shipment.name }} - {{ shipment.shipment_code }}
+                  {% else %}
+                  {{ shipment.shipment_code }}
+                  {% endif %}
+                </a>
+              </td>
               <td>{{ shipment.supplier }}</td>
               <td>{{ shipment.get_status_display }}</td>
               <td>{{ shipment.total_cost_base }}</td>
@@ -25,6 +33,27 @@
           </tbody>
         </table>
       </div>
+      {% if recent_shipments_page.has_other_pages %}
+      <nav class="mt-2">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if not recent_shipments_page.has_previous %}disabled{% endif %}">
+            {% if recent_shipments_page.has_previous %}
+            <a class="page-link" href="?{{ ship_page_query }}{{ recent_shipments_page.previous_page_number }}">Previous</a>
+            {% else %}
+            <span class="page-link">Previous</span>
+            {% endif %}
+          </li>
+          <li class="page-item disabled"><span class="page-link">Page {{ recent_shipments_page.number }} of {{ recent_shipments_page.paginator.num_pages }}</span></li>
+          <li class="page-item {% if not recent_shipments_page.has_next %}disabled{% endif %}">
+            {% if recent_shipments_page.has_next %}
+            <a class="page-link" href="?{{ ship_page_query }}{{ recent_shipments_page.next_page_number }}">Next</a>
+            {% else %}
+            <span class="page-link">Next</span>
+            {% endif %}
+          </li>
+        </ul>
+      </nav>
+      {% endif %}
     </div>
   </div>
   <div class="col-lg-6">
@@ -33,7 +62,13 @@
       {% for summary in cost_summaries %}
       <div class="mb-3">
         <div class="d-flex justify-content-between">
-          <strong>{{ summary.shipment.shipment_code }}</strong>
+          <strong>
+            {% if summary.shipment.name %}
+            {{ summary.shipment.name }} - {{ summary.shipment.shipment_code }}
+            {% else %}
+            {{ summary.shipment.shipment_code }}
+            {% endif %}
+          </strong>
           <span>{{ summary.total_cost_base }}</span>
         </div>
         <div class="small text-muted">
@@ -58,7 +93,7 @@
         <table class="table table-sm">
           <thead><tr><th>Supplier</th><th class="text-end">Faulty Units</th><th class="text-end">Rate</th></tr></thead>
           <tbody>
-            {% for row in supplier_stats %}
+            {% for row in supplier_stats_page %}
             <tr>
               <td>{{ row.supplier }}</td>
               <td class="text-end">{{ row.faulty_units }}/{{ row.total_units }}</td>
@@ -70,6 +105,27 @@
           </tbody>
         </table>
       </div>
+      {% if supplier_stats_page.has_other_pages %}
+      <nav class="mt-2">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if not supplier_stats_page.has_previous %}disabled{% endif %}">
+            {% if supplier_stats_page.has_previous %}
+            <a class="page-link" href="?{{ supplier_page_query }}{{ supplier_stats_page.previous_page_number }}">Previous</a>
+            {% else %}
+            <span class="page-link">Previous</span>
+            {% endif %}
+          </li>
+          <li class="page-item disabled"><span class="page-link">Page {{ supplier_stats_page.number }} of {{ supplier_stats_page.paginator.num_pages }}</span></li>
+          <li class="page-item {% if not supplier_stats_page.has_next %}disabled{% endif %}">
+            {% if supplier_stats_page.has_next %}
+            <a class="page-link" href="?{{ supplier_page_query }}{{ supplier_stats_page.next_page_number }}">Next</a>
+            {% else %}
+            <span class="page-link">Next</span>
+            {% endif %}
+          </li>
+        </ul>
+      </nav>
+      {% endif %}
     </div>
   </div>
   <div class="col-lg-6">
@@ -79,9 +135,15 @@
         <table class="table table-sm">
           <thead><tr><th>Shipment</th><th>ETA</th><th>Arrival</th><th class="text-end">Delay (days)</th></tr></thead>
           <tbody>
-            {% for row in delays %}
+            {% for row in delays_page %}
             <tr>
-              <td>{{ row.shipment.shipment_code }}</td>
+              <td>
+                {% if row.shipment.name %}
+                {{ row.shipment.name }} - {{ row.shipment.shipment_code }}
+                {% else %}
+                {{ row.shipment.shipment_code }}
+                {% endif %}
+              </td>
               <td>{{ row.eta_date }}</td>
               <td>{{ row.arrival_date }}</td>
               <td class="text-end">{{ row.delay_days }}</td>
@@ -92,6 +154,27 @@
           </tbody>
         </table>
       </div>
+      {% if delays_page.has_other_pages %}
+      <nav class="mt-2">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if not delays_page.has_previous %}disabled{% endif %}">
+            {% if delays_page.has_previous %}
+            <a class="page-link" href="?{{ delay_page_query }}{{ delays_page.previous_page_number }}">Previous</a>
+            {% else %}
+            <span class="page-link">Previous</span>
+            {% endif %}
+          </li>
+          <li class="page-item disabled"><span class="page-link">Page {{ delays_page.number }} of {{ delays_page.paginator.num_pages }}</span></li>
+          <li class="page-item {% if not delays_page.has_next %}disabled{% endif %}">
+            {% if delays_page.has_next %}
+            <a class="page-link" href="?{{ delay_page_query }}{{ delays_page.next_page_number }}">Next</a>
+            {% else %}
+            <span class="page-link">Next</span>
+            {% endif %}
+          </li>
+        </ul>
+      </nav>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -103,21 +186,44 @@
         {{ product_form.as_p }}
         <button class="btn btn-outline-primary" name="lookup_product" value="1">Show</button>
       </form>
-      {% if landed_rows %}
+      {% if landed_rows_page %}
       <div class="table-responsive">
         <table class="table table-sm">
           <thead><tr><th>Shipment</th><th class="text-end">Quantity</th><th class="text-end">Landed Total</th></tr></thead>
           <tbody>
-            {% for row in landed_rows %}
+            {% for row in landed_rows_page %}
             <tr>
               <td>{{ row.shipment__shipment_code }}</td>
               <td class="text-end">{{ row.quantity }}</td>
               <td class="text-end">{{ row.landed_total }}</td>
             </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center">No landed cost data.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% if landed_rows_page.has_other_pages %}
+      <nav class="mt-2">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if not landed_rows_page.has_previous %}disabled{% endif %}">
+            {% if landed_rows_page.has_previous %}
+            <a class="page-link" href="?{{ landed_page_query }}{{ landed_rows_page.previous_page_number }}">Previous</a>
+            {% else %}
+            <span class="page-link">Previous</span>
+            {% endif %}
+          </li>
+          <li class="page-item disabled"><span class="page-link">Page {{ landed_rows_page.number }} of {{ landed_rows_page.paginator.num_pages }}</span></li>
+          <li class="page-item {% if not landed_rows_page.has_next %}disabled{% endif %}">
+            {% if landed_rows_page.has_next %}
+            <a class="page-link" href="?{{ landed_page_query }}{{ landed_rows_page.next_page_number }}">Next</a>
+            {% else %}
+            <span class="page-link">Next</span>
+            {% endif %}
+          </li>
+        </ul>
+      </nav>
+      {% endif %}
       {% endif %}
     </div>
   </div>

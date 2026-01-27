@@ -286,6 +286,7 @@ def paynow_initiate(request):
         amount=order.total,
         return_url=return_url,
         result_url=result_url,
+        items=[(item.product_name, item.line_total) for item in order.items.all()],
     )
 
     payment.raw_response = response.get('raw', {})

@@ -31,15 +31,15 @@
           {% csrf_token %}
           <div>
             <label class="block text-sm font-medium text-gray-700">Full Name</label>
-            {{ form.full_name.as_widget(attrs={'class': 'mt-1 w-full border rounded-xl px-3 py-2'}) }}
+            {{ form.full_name }}
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Email</label>
-            {{ form.email.as_widget(attrs={'class': 'mt-1 w-full border rounded-xl px-3 py-2'}) }}
+            {{ form.email }}
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Notes (optional)</label>
-            {{ form.notes.as_widget(attrs={'class': 'mt-1 w-full border rounded-xl px-3 py-2'}) }}
+            {{ form.notes }}
           </div>
           {% if form.errors %}
           <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">

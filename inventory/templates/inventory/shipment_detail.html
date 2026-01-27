@@ -2,8 +2,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
+    {% if shipment.name %}
+    <h3 class="mb-0">{{ shipment.name }}</h3>
+    {% else %}
     <h3 class="mb-0">Shipment {{ shipment.shipment_code }}</h3>
-    <div class="text-muted small">Status: {{ shipment.get_status_display }}</div>
+    {% endif %}
+    <div class="text-white small">Code: {{ shipment.shipment_code }} | Status: {{ shipment.get_status_display }}</div>
   </div>
   <div class="d-flex gap-2">
     <a class="btn btn-outline-secondary" href="{% url 'ims:inventory:shipment_list' %}">Back</a>
@@ -51,21 +55,39 @@
               <th>Product</th>
               <th class="text-end">Expected</th>
               <th class="text-end">Received</th>
-              <th class="text-end">Unit Price</th>
+              <th class="text-end">Purchase Unit</th>
               <th class="text-end">Landed Unit</th>
+              <th class="text-end">Landed Total</th>
             </tr>
           </thead>
           <tbody>
-            {% for item in shipment.items.all %}
+            {% for item in items %}
             <tr>
               <td>{{ item.product }}</td>
               <td class="text-end">{{ item.quantity_expected }}</td>
               <td class="text-end">{{ item.quantity_received }}</td>
               <td class="text-end">{{ item.unit_purchase_price }}</td>
               <td class="text-end">{{ item.landed_unit_cost|default:'-' }}</td>
+              <td class="text-end">{{ item.landed_total_cost|default:'-' }}</td>
             </tr>
+            {% if item.requires_serials %}
+            <tr>
+              <td colspan="6">
+                <div class="small text-muted mb-2">Serial landed costs</div>
+                <div class="d-flex flex-wrap gap-2">
+                  {% for unit in item.units.all %}
+                  <span class="badge rounded-pill text-bg-light border border-primary text-primary">
+                    {{ unit.serial_number }} – {{ unit.landed_cost }}
+                  </span>
+                  {% empty %}
+                  <span class="text-muted">No serials recorded yet.</span>
+                  {% endfor %}
+                </div>
+              </td>
+            </tr>
+            {% endif %}
             {% empty %}
-            <tr><td colspan="5" class="text-center">No items yet.</td></tr>
+            <tr><td colspan="6" class="text-center">No items yet.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -75,12 +97,19 @@
       <h5 class="mb-3">Costs</h5>
       <div class="table-responsive">
         <table class="table align-middle">
-          <thead><tr><th>Type</th><th>Description</th><th class="text-end">Amount</th><th class="text-end">Base</th><th>Allocated</th></tr></thead>
+          <thead><tr><th>Type</th><th>Description</th><th>Document</th><th class="text-end">Amount</th><th class="text-end">Base</th><th>Allocated</th></tr></thead>
           <tbody>
-            {% for cost in shipment.costs.all %}
+            {% for cost in shipment_costs %}
             <tr>
               <td>{{ cost.get_cost_type_display }}</td>
               <td>{{ cost.description|default:'-' }}</td>
+              <td>
+                {% if cost.supporting_document %}
+                <a href="{{ cost.supporting_document.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-link px-0">View</a>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </td>
               <td class="text-end">{{ cost.amount }} {{ cost.currency }}</td>
               <td class="text-end">{{ cost.amount_base }}</td>
               <td>
@@ -92,7 +121,7 @@
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center">No costs captured.</td></tr>
+            <tr><td colspan="6" class="text-center">No costs captured.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -101,23 +130,67 @@
         <strong>Total Landed Cost:</strong> {{ cost_breakdown.total_cost_base }}
       </div>
     </div>
+    <div class="card p-3 mb-3">
+      <h5 class="mb-3">Landed Cost Summary</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-2">Total landed cost (including purchase)</div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Purchase cost</span>
+              <strong>{{ purchase_total }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Logistics &amp; duties</span>
+              <strong>{{ logistics_total }}</strong>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between">
+              <span class="fw-semibold">Grand total</span>
+              <strong>{{ grand_total }}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small mb-2">Total landed cost (excluding purchase)</div>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <tbody>
+                  {% for row in cost_totals_list %}
+                  <tr>
+                    <td>{{ row.label }}</td>
+                    <td class="text-end">{{ row.amount }}</td>
+                  </tr>
+                  {% endfor %}
+                  <tr class="table-light">
+                    <th>Total logistics</th>
+                    <th class="text-end">{{ logistics_total }}</th>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="col-lg-4">
-    <div class="card p-3 mb-3">
+    <div class="card p-3 mb-3 shipment-form">
       <h5 class="mb-3">Add Item</h5>
       <form method="post">{% csrf_token %}
         {{ item_form.as_p }}
         <button class="btn btn-primary w-100" name="add_item" value="1">Add Item</button>
       </form>
     </div>
-    <div class="card p-3 mb-3">
+    <div class="card p-3 mb-3 shipment-form">
       <h5 class="mb-3">Add Cost</h5>
-      <form method="post">{% csrf_token %}
+      <form method="post" enctype="multipart/form-data">{% csrf_token %}
         {{ cost_form.as_p }}
         <button class="btn btn-outline-primary w-100" name="add_cost" value="1">Add Cost</button>
       </form>
     </div>
-    <div class="card p-3">
+    <div class="card p-3 shipment-form">
       <h5 class="mb-3">Update Status</h5>
       <form method="post">{% csrf_token %}
         <div class="mb-3">

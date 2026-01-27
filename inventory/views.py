@@ -1,29 +1,40 @@
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db.models import Q
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import (
     ProductForm,
-    StockMovementForm,
-    ShipmentForm,
-    ShipmentItemForm,
-    ShipmentCostForm,
-    ShipmentItemReceiptForm,
     ProductLandedCostForm,
     SerialProfitLookupForm,
+    ShipmentCostForm,
+    ShipmentForm,
+    ShipmentItemForm,
+    ShipmentItemReceiptForm,
+    StockMovementForm,
 )
-from .models import Product, Category, Supplier, StockMovement, Shipment, ShipmentItem, ShipmentCost, ProductUnit
+from .models import (
+    Category,
+    Product,
+    ProductUnit,
+    Shipment,
+    ShipmentCost,
+    ShipmentItem,
+    StockMovement,
+    Supplier,
+)
 from .services import (
-    receive_shipment,
     ShipmentServiceError,
-    shipment_cost_summary,
     landed_cost_per_product,
-    supplier_defect_rate,
-    shipment_delay_report,
     profit_per_serial,
+    receive_shipment,
+    shipment_cost_summary,
+    shipment_delay_report,
+    supplier_defect_rate,
 )
 
 @login_required
@@ -126,7 +137,7 @@ def shipment_detail(request, pk):
                 messages.success(request, 'Shipment item added.')
                 return redirect('ims:inventory:shipment_detail', shipment.id)
         elif 'add_cost' in request.POST:
-            cost_form = ShipmentCostForm(request.POST, prefix='cost')
+            cost_form = ShipmentCostForm(request.POST, request.FILES, prefix='cost')
             if cost_form.is_valid():
                 cost = cost_form.save(commit=False)
                 cost.shipment = shipment
@@ -143,6 +154,25 @@ def shipment_detail(request, pk):
             except ValidationError as exc:
                 messages.error(request, '; '.join(exc.messages))
 
+    items = list(
+        shipment.items.select_related('product').prefetch_related('units').order_by('product__name')
+    )
+    costs = list(shipment.costs.all())
+    purchase_total = sum((item.received_value for item in items), Decimal('0.00'))
+    logistics_total = sum((cost.amount_base for cost in costs), Decimal('0.00'))
+    grand_total = purchase_total + logistics_total
+    cost_type_totals = {code: Decimal('0.00') for code, _ in ShipmentCost.TYPE_CHOICES}
+    for cost in costs:
+        if cost.cost_type in cost_type_totals:
+            cost_type_totals[cost.cost_type] += cost.amount_base
+    cost_totals_list = [
+        {
+            'code': code,
+            'label': label,
+            'amount': cost_type_totals.get(code, Decimal('0.00')),
+        }
+        for code, label in ShipmentCost.TYPE_CHOICES
+    ]
     cost_breakdown = shipment_cost_summary(shipment.id)
     return render(
         request,
@@ -152,6 +182,12 @@ def shipment_detail(request, pk):
             'item_form': item_form,
             'cost_form': cost_form,
             'cost_breakdown': cost_breakdown,
+            'items': items,
+            'shipment_costs': costs,
+            'purchase_total': purchase_total,
+            'logistics_total': logistics_total,
+            'grand_total': grand_total,
+            'cost_totals_list': cost_totals_list,
         },
     )
 
@@ -204,47 +240,76 @@ def shipment_receive(request, pk):
 
 @login_required
 def shipment_dashboard(request):
-    product_form = ProductLandedCostForm(
-        request.POST if request.method == 'POST' and 'lookup_product' in request.POST else None,
-        prefix='product',
-    )
+    def paginate_items(items, param_name):
+        paginator = Paginator(items, 5)
+        page_number = request.GET.get(param_name)
+        return paginator.get_page(page_number)
+
+    def pagination_query(param_name):
+        querydict = request.GET.copy()
+        querydict.pop(param_name, None)
+        base = querydict.urlencode()
+        return f"{base}&{param_name}=" if base else f"{param_name}="
+
+    product_id = request.GET.get('product_id')
+    product_initial = {'product': product_id} if product_id else None
+    if request.method == 'POST' and 'lookup_product' in request.POST:
+        product_form = ProductLandedCostForm(request.POST, prefix='product')
+    else:
+        product_form = ProductLandedCostForm(initial=product_initial, prefix='product')
     serial_form = SerialProfitLookupForm(
         request.POST if request.method == 'POST' and 'lookup_serial' in request.POST else None,
         prefix='serial',
     )
-    landed_rows = None
     serial_result = None
     if request.method == 'POST':
         if 'lookup_product' in request.POST and product_form.is_valid():
             product = product_form.cleaned_data['product']
-            landed_rows = list(landed_cost_per_product(product.id))
+            return redirect(f"{request.path}?product_id={product.id}")
         if 'lookup_serial' in request.POST and serial_form.is_valid():
             try:
                 serial_result = profit_per_serial(serial_form.cleaned_data['serial_number'])
             except ProductUnit.DoesNotExist:
                 serial_form.add_error('serial_number', 'Serial number not found.')
-    recent_shipments = Shipment.objects.select_related('supplier').order_by('-created_at')[:5]
+    landed_rows = None
+    if product_id:
+        try:
+            product_obj = Product.objects.get(pk=product_id)
+            landed_rows = list(landed_cost_per_product(product_obj.id))
+        except (Product.DoesNotExist, ValueError):
+            landed_rows = []
+    shipments_qs = Shipment.objects.select_related('supplier').order_by('-created_at')
+    recent_shipments_page = paginate_items(shipments_qs, 'ship_page')
     cost_summaries = [
         shipment_cost_summary(s.id)
-        for s in recent_shipments
+        for s in recent_shipments_page.object_list
     ]
-    supplier_stats = []
-    for supplier in Supplier.objects.all()[:5]:
+    suppliers_qs = Supplier.objects.order_by('name')
+    supplier_stats_page = paginate_items(suppliers_qs, 'supplier_page')
+    supplier_stats_rows = []
+    for supplier in supplier_stats_page.object_list:
         stats = supplier_defect_rate(supplier.id)
         stats['supplier'] = supplier
-        supplier_stats.append(stats)
-    delays = shipment_delay_report()
+        supplier_stats_rows.append(stats)
+    supplier_stats_page.object_list = supplier_stats_rows
+    delays_list = shipment_delay_report()
+    delays_page = paginate_items(delays_list, 'delay_page')
+    landed_rows_page = paginate_items(landed_rows, 'landed_page') if landed_rows is not None else None
     return render(
         request,
         'inventory/shipment_dashboard.html',
         {
-            'recent_shipments': recent_shipments,
+            'recent_shipments_page': recent_shipments_page,
+            'ship_page_query': pagination_query('ship_page'),
             'cost_summaries': cost_summaries,
-            'supplier_stats': supplier_stats,
-            'delays': delays,
+            'supplier_stats_page': supplier_stats_page,
+            'supplier_page_query': pagination_query('supplier_page'),
+            'delays_page': delays_page,
+            'delay_page_query': pagination_query('delay_page'),
             'product_form': product_form,
             'serial_form': serial_form,
-            'landed_rows': landed_rows,
+            'landed_rows_page': landed_rows_page,
+            'landed_page_query': pagination_query('landed_page'),
             'serial_result': serial_result,
         },
     )

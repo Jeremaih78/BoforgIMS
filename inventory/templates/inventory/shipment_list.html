@@ -3,7 +3,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Shipments</h3>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-secondary" href="{% url 'ims:inventory:shipment_dashboard' %}">Dashboard</a>
+    <a class="btn btn-outline-primary" href="{% url 'ims:inventory:shipment_dashboard' %}">Dashboard</a>
     <a class="btn btn-primary text-white" href="{% url 'ims:inventory:shipment_create' %}">New Shipment</a>
   </div>
 </div>
@@ -22,12 +22,13 @@
 </form>
 <div class="card p-3">
   <div class="table-responsive">
-    <table class="table align-middle">
-      <thead>
-        <tr>
-          <th>Code</th>
-          <th>Supplier</th>
-          <th>Status</th>
+    <table class="table align-middle shipments-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Code</th>
+              <th>Supplier</th>
+              <th>Status</th>
           <th>ETA</th>
           <th>Arrival</th>
           <th>Total Cost</th>
@@ -37,6 +38,7 @@
       <tbody>
         {% for shipment in shipments %}
         <tr>
+          <td>{{ shipment.name|default:'-' }}</td>
           <td><a href="{% url 'ims:inventory:shipment_detail' shipment.id %}">{{ shipment.shipment_code }}</a></td>
           <td>{{ shipment.supplier }}</td>
           <td>{{ shipment.get_status_display }}</td>
@@ -45,7 +47,7 @@
           <td>{{ shipment.total_cost_base }}</td>
           <td class="text-end">
             <div class="btn-group btn-group-sm">
-              <a class="btn btn-outline-secondary" href="{% url 'ims:inventory:shipment_detail' shipment.id %}">View</a>
+              <a class="btn btn-outline-primary" href="{% url 'ims:inventory:shipment_detail' shipment.id %}">View</a>
               {% if shipment.status == shipment.STATUS_ARRIVED or shipment.status == shipment.STATUS_CLEARED %}
               <a class="btn btn-outline-primary" href="{% url 'ims:inventory:shipment_receive' shipment.id %}">Receive</a>
               {% endif %}

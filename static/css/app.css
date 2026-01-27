@@ -37,8 +37,25 @@ h1, h2, h3, h4, h5, h6, p, label, small, span, li, th, td { color: var(--text); 
 
 .card, .table-wrapper { background: var(--card); border: none; border-radius: 16px; color: var(--text); }
 .card * { color: inherit; }
-.table { color: var(--text); }
-.table thead th { color: var(--muted); }
+.card .text-muted { color: rgba(255,255,255,.7) !important; }
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6 { color: var(--text); }
+.table {
+  color: var(--text);
+  background: #ffffff;
+}
+.table thead th {
+  color: #0b2c55;
+  border-color: #dde4ed;
+}
+.table tbody td,
+.table tbody th {
+  color: #0b2c55;
+  border-color: #dde4ed;
+}
+.table a {
+  color: var(--primary) !important;
+}
+.badge, .badge span, .badge strong { color: inherit !important; }
 
 /* Forms (default: dark) */
 form p { margin-bottom: .9rem; }
@@ -61,6 +78,42 @@ form p > label { display: block; margin-bottom: .35rem; color: var(--muted); }
 .form-card .form-control::placeholder { color: #6c757d; opacity: 1; }
 .form-card .list-group, .form-card .list-group-item { background: #ffffff; color: #111; }
 
+.shipment-form {
+  background: #ffffff !important;
+  color: #0b2c55 !important;
+  border: 1px solid rgba(77,163,255,.35) !important;
+}
+.shipment-form * {
+  color: #0b2c55 !important;
+}
+.shipment-form .form-control,
+.shipment-form .form-select,
+.shipment-form .input-group-text {
+  background: #ffffff;
+  color: #0b2c55 !important;
+  border-color: rgba(77,163,255,.45);
+}
+.shipment-form select,
+.shipment-form select.form-select,
+.shipment-form input,
+.shipment-form textarea {
+  background: #ffffff;
+  color: #0b2c55 !important;
+  border-color: rgba(77,163,255,.45);
+}
+.shipment-form select:focus,
+.shipment-form input:focus,
+.shipment-form textarea:focus {
+  color: #0b2c55 !important;
+}
+.shipment-form .form-control::placeholder {
+  color: rgba(77,163,255,.7);
+}
+.shipment-form .form-select option,
+.shipment-form select option {
+  color: #0b2c55;
+}
+
 .btn-primary { background: var(--primary); border-color: var(--primary); }
 .btn-primary:hover { background: var(--primary-2); border-color: var(--primary-2); }
 .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,.3); color: var(--text); }
@@ -78,3 +131,13 @@ form p > label { display: block; margin-bottom: .35rem; color: var(--muted); }
 /* Lists */
 .list-group { --bs-list-group-bg: var(--card); }
 .list-group-item { background: var(--bg-2); color: var(--text); border-color: rgba(255,255,255,.08); }
+
+
+/* my edits */
+a.btn.btn-force-white,
+a.btn.btn-force-white:visited,
+a.btn.btn-force-white:hover,
+a.btn.btn-force-white:focus,
+a.btn.btn-force-white:active {
+  color: #fff !important;
+}

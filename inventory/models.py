@@ -275,6 +275,7 @@ class Shipment(models.Model):
     }
 
     shipment_code = models.CharField(max_length=32, unique=True, db_index=True)
+    name = models.CharField(max_length=150, blank=True)
     supplier = models.ForeignKey(Supplier, related_name='shipments', on_delete=models.PROTECT)
     origin_country = models.CharField(max_length=80)
     destination_country = models.CharField(max_length=80)
@@ -298,7 +299,7 @@ class Shipment(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return self.shipment_code
+        return self.name or self.shipment_code
 
     def save(self, *args, **kwargs):
         if not self.shipment_code:
@@ -429,6 +430,7 @@ class ShipmentCost(models.Model):
     amount_base = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'), editable=False)
     allocated = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    supporting_document = models.FileField(upload_to='shipment_costs/%Y/%m/', blank=True, null=True)
 
     class Meta:
         ordering = ['shipment', '-created_at']

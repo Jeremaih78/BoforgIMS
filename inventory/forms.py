@@ -108,6 +108,7 @@ class ShipmentForm(forms.ModelForm):
     class Meta:
         model = Shipment
         fields = [
+            'name',
             'supplier',
             'origin_country',
             'destination_country',
@@ -155,7 +156,27 @@ class ShipmentItemForm(forms.ModelForm):
 class ShipmentCostForm(forms.ModelForm):
     class Meta:
         model = ShipmentCost
-        fields = ['cost_type', 'description', 'amount', 'currency', 'fx_rate']
+        fields = ['cost_type', 'description', 'amount', 'currency', 'fx_rate', 'supporting_document']
+        widgets = {
+            'supporting_document': forms.ClearableFileInput(attrs={
+                'accept': '.pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        doc_field = self.fields.get('supporting_document')
+        if doc_field:
+            doc_field.help_text = 'Optional file (PDF, image, Word, Excel up to 10MB).'
+
+    def clean_supporting_document(self):
+        upload = self.cleaned_data.get('supporting_document')
+        if upload:
+            max_size = 10 * 1024 * 1024  # 10 MB
+            size = getattr(upload, 'size', 0) or 0
+            if size > max_size:
+                raise ValidationError('Supporting document must be 10MB or smaller.')
+        return upload
 
 
 class ShipmentItemReceiptForm(forms.Form):
