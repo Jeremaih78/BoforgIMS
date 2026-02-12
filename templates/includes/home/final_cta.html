@@ -1,0 +1,16 @@
+<section id="cta" class="section final-cta">
+  <div class="container cta-band">
+    <div>
+      <h2>Ready to Start? Talk to a Boforg Advisor on WhatsApp.</h2>
+      <p class="muted">We'll recommend the right package and help you launch.</p>
+    </div>
+    <div class="cta-actions">
+      {% if wa_phone_clean %}
+      <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}">WhatsApp</a>
+      {% else %}
+      <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp</a>
+      {% endif %}
+      <a class="btn btn-secondary" href="#packages">View Packages</a>
+    </div>
+  </div>
+</section>

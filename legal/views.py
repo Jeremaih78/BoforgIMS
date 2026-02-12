@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.http import HttpResponseBadRequest, JsonResponse
+from django.shortcuts import render
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
@@ -22,6 +24,24 @@ class TermsView(TemplateView):
 
 class DataDeletionView(TemplateView):
     template_name = "legal/data_deletion.html"
+
+
+def _get_company_profile():
+    return {
+        "name": "Boforg Technologies Private Limited",
+        "phone": "+263786264994",
+        "email": "adriannzvimbo@gmail.com",
+        "address": "Robert Mugabe Street, Harare, Zimbabwe",
+        "cta_whatsapp": "https://wa.me/263786264994",
+    }
+
+
+def return_policy(request):
+    return render(
+        request,
+        "legal/return_policy.html",
+        {"now": timezone.now(), "company": _get_company_profile()},
+    )
 
 
 def _parse_signed_request(signed_request: str, app_secret: str):

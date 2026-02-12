@@ -1,0 +1,10 @@
+<div class="sticky-whatsapp" role="dialog" aria-label="WhatsApp support">
+  <div class="sticky-inner">
+    <span>Need help choosing? Chat with a Boforg advisor.</span>
+    {% if wa_phone_clean %}
+    <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}">WhatsApp Now</a>
+    {% else %}
+    <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp Now</a>
+    {% endif %}
+  </div>
+</div>

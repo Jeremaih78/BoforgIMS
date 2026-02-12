@@ -1,0 +1,79 @@
+<section id="packages" class="section packages">
+  <div class="container">
+    <div class="section-head">
+      <h2>Starter Packages</h2>
+      <p class="muted">Packages first, not blanks. Pick the right kit and we guide you step by step.</p>
+    </div>
+    <div class="card-grid three">
+      <article class="card">
+        <div class="card-badge">Beginner</div>
+        <h3>Starter Package</h3>
+        <p class="muted">Who it's for: First-time printers starting small.</p>
+        <ul class="checklist">
+          <li>Heat press machine</li>
+          <li>Sublimation printer + starter inks</li>
+          <li>Starter blanks (mugs, shirts)</li>
+          <li>Training + setup support</li>
+          <li>After-sales guidance</li>
+        </ul>
+        <div class="price">From $___</div>
+        {% with wa_text_pkg="Hi Boforg, I want the Starter Package to start my printing business." %}
+        {% if wa_phone_clean %}
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}">WhatsApp to Get This Package</a>
+        {% else %}
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp to Get This Package</a>
+        {% endif %}
+        {% endwith %}
+      </article>
+      <article class="card">
+        <div class="card-badge">Growth</div>
+        <h3>Business Package</h3>
+        <p class="muted">Who it's for: Growing shops ready for daily production.</p>
+        <ul class="checklist">
+          <li>Industrial heat press</li>
+          <li>Sublimation printer + bulk inks</li>
+          <li>Vinyl cutter + starter vinyl</li>
+          <li>Training + production workflow</li>
+          <li>After-sales support</li>
+        </ul>
+        <div class="price">From $___</div>
+        {% with wa_text_pkg="Hi Boforg, I want the Business Package to grow my printing business." %}
+        {% if wa_phone_clean %}
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}">WhatsApp to Get This Package</a>
+        {% else %}
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp to Get This Package</a>
+        {% endif %}
+        {% endwith %}
+      </article>
+      <article class="card">
+        <div class="card-badge">High Volume</div>
+        <h3>Pro Package</h3>
+        <p class="muted">Who it's for: High-volume production and serious growth.</p>
+        <ul class="checklist">
+          <li>Dual heat press setup</li>
+          <li>DTF printer + consumables</li>
+          <li>Vinyl cutter + advanced tools</li>
+          <li>Advanced training + SOPs</li>
+          <li>Priority support</li>
+        </ul>
+        <div class="price">From $___</div>
+        {% with wa_text_pkg="Hi Boforg, I want the Pro Package for high-volume printing." %}
+        {% if wa_phone_clean %}
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}">WhatsApp to Get This Package</a>
+        {% else %}
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp to Get This Package</a>
+        {% endif %}
+        {% endwith %}
+      </article>
+    </div>
+
+    <div class="starter-needs">
+      <h3>What you need to start</h3>
+      <ul class="checklist compact">
+        <li>Small working space or table</li>
+        <li>Stable power supply</li>
+        <li>Smartphone or laptop</li>
+      </ul>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,37 @@
+<header class="site-header" id="top">
+  <div class="container header-inner">
+    <a href="/" class="brand" aria-label="Boforg home">
+      <span class="brand-mark">Boforg</span>
+      <span class="brand-sub">Printing Business Start Kits</span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+      <span class="nav-toggle-icon" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+      <span class="nav-toggle-label">Menu</span>
+    </button>
+    <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+      <a href="#start">Start a Printing Business</a>
+      <a href="#packages">Starter Packages</a>
+      <a href="#training">Training &amp; Support</a>
+      <a href="#stories">Success Stories</a>
+      <details class="nav-more">
+        <summary>More</summary>
+        <div class="nav-dropdown" role="menu">
+          <a href="/shop/" role="menuitem">Shop</a>
+          <a href="#machines" role="menuitem">Services</a>
+          <a href="#cta" role="menuitem">Contact</a>
+        </div>
+      </details>
+    </nav>
+    <div class="nav-cta">
+      {% if wa_phone_clean %}
+      <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}">WhatsApp</a>
+      {% else %}
+      <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp</a>
+      {% endif %}
+    </div>
+  </div>
+</header>

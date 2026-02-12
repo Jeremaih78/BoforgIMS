@@ -1,0 +1,22 @@
+{% load static %}
+<section id="start" class="section hero">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Beginner-friendly printing business kits</p>
+      <h1>START YOUR OWN PRINTING BUSINESS -- EVEN IF YOU'VE NEVER DONE IT BEFORE</h1>
+      <p class="lead">We supply the machines, training, designs and support. You start printing and earning.</p>
+      <div class="hero-actions">
+        {% if wa_phone_clean %}
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}">WhatsApp an Advisor</a>
+        {% else %}
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp an Advisor</a>
+        {% endif %}
+        <a class="btn btn-secondary" href="#packages">See Starter Packages</a>
+      </div>
+      <div class="trust-line">Harare | Nationwide delivery | Training included | After-sales support</div>
+    </div>
+    <div class="hero-media" aria-hidden="true">
+      <img src="{% static 'website/hero.jpg' %}" alt="Printing equipment starter setup" width="560" height="420">
+    </div>
+  </div>
+</section>

@@ -1,0 +1,50 @@
+<footer class="site-footer" id="contact">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <div class="footer-title">Boforg Technologies</div>
+      <p class="muted">We help beginners start printing businesses with the right machines, training, and support.</p>
+      <div class="footer-points">
+        <span>Harare</span>
+        <span>Nationwide delivery</span>
+        <span>Training included</span>
+        <span>After-sales support</span>
+      </div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Explore</div>
+      <a href="#start">Start</a>
+      <a href="#packages">Packages</a>
+      <a href="#training">Training</a>
+      <a href="#stories">Success Stories</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Legal</div>
+      <a href="{% url 'return_policy' %}">Return &amp; Refund Policy</a>
+      <a href="{% url 'legal:privacy' %}">Privacy Policy</a>
+      <a href="{% url 'legal:terms' %}">Terms &amp; Conditions</a>
+      <a href="{% url 'legal:data_deletion' %}">Data Deletion</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Contact</div>
+      <div class="muted">{{ company.address|default:"Robert Mugabe Street, Harare" }}</div>
+      <div class="muted">{{ company.phone }}</div>
+      <a href="mailto:{{ company.email }}" class="muted">{{ company.email }}</a>
+      <div class="muted">Hours: {{ company.hours|default:"Mon-Sat 8am-5pm" }}</div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-heading">Talk to Us</div>
+      <p class="muted">Ready to start? We can recommend the right package on WhatsApp.</p>
+      {% if wa_phone_clean %}
+      <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}">WhatsApp</a>
+      {% else %}
+      <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp</a>
+      {% endif %}
+      <div class="footer-socials">
+        <a href="https://www.facebook.com/boforgtechnologies">Facebook</a>
+        <a href="https://www.instagram.com/boforg_technologies">Instagram</a>
+        <a href="https://www.tiktok.com/@boforgtechnologies">TikTok</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">&copy; {{ now|date:"Y" }} {{ company.name|default:"Boforg Technologies" }}. All rights reserved.</div>
+</footer>

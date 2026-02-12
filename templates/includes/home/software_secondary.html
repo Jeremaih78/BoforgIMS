@@ -1,0 +1,31 @@
+<section id="software" class="section software">
+  <div class="container">
+    <div class="section-head">
+      <h2>For Growing Businesses: AI &amp; Software</h2>
+      <p class="muted">Optional tools for teams ready to scale beyond printing.</p>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Websites</h3>
+        <p>Showcase products, collect orders, and build trust online.</p>
+      </div>
+      <div class="card">
+        <h3>Chatbots / Shopping Assistants</h3>
+        <p>Automate customer questions and guide purchases 24/7.</p>
+      </div>
+      <div class="card">
+        <h3>Digital Marketing</h3>
+        <p>Ad strategy and content to drive consistent sales.</p>
+      </div>
+    </div>
+    <div class="center">
+      {% with wa_text_software="I want software for my business." %}
+      {% if wa_phone_clean %}
+      <a class="btn btn-secondary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_software|urlencode }}">Talk to us about software</a>
+      {% else %}
+      <a class="btn btn-secondary" href="{{ company.cta_whatsapp }}">Talk to us about software</a>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+</section>

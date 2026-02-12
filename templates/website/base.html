@@ -1,0 +1,33 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Boforg Technologies | Start a Printing Business{% endblock %}</title>
+  <meta name="description" content="Start your printing business in Zimbabwe with the right machines, training, and support.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/home.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="site">
+  {% with wa_phone=company.whatsapp_e164|default:company.phone %}
+  {% with wa_phone_clean=wa_phone|cut:'+'|cut:' '|cut:'-'|cut:'('|cut:')' %}
+  {% with wa_text_general="Hi Boforg, I want to start a printing business. Please recommend a starter package." %}
+    {% include "includes/navbar.html" %}
+
+    <main id="main">
+      {% block content %}{% endblock %}
+    </main>
+
+    {% include "includes/footer.html" %}
+  {% endwith %}
+  {% endwith %}
+  {% endwith %}
+
+  {% block extra_js %}{% endblock %}
+  <script src="{% static 'js/home.js' %}"></script>
+</body>
+</html>
