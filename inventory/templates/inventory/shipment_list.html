@@ -44,7 +44,7 @@
           <td>{{ shipment.get_status_display }}</td>
           <td>{{ shipment.eta_date|default:'-' }}</td>
           <td>{{ shipment.arrival_date|default:'-' }}</td>
-          <td>{{ shipment.total_cost_base }}</td>
+          <td>{{ shipment.landed_total_cost }}</td>
           <td class="text-end">
             <div class="btn-group btn-group-sm">
               <a class="btn btn-outline-primary" href="{% url 'ims:inventory:shipment_detail' shipment.id %}">View</a>
