@@ -24,6 +24,7 @@
   <div class="table-responsive">
     <table class="table align-middle shipments-table">
           <thead>
+            
             <tr>
               <th>Name</th>
               <th>Code</th>
@@ -44,7 +45,7 @@
           <td>{{ shipment.get_status_display }}</td>
           <td>{{ shipment.eta_date|default:'-' }}</td>
           <td>{{ shipment.arrival_date|default:'-' }}</td>
-          <td>{{ shipment.landed_total_cost }}</td>
+          <td>{{ shipment.total_cost_base }}</td>
           <td class="text-end">
             <div class="btn-group btn-group-sm">
               <a class="btn btn-outline-primary" href="{% url 'ims:inventory:shipment_detail' shipment.id %}">View</a>
