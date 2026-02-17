@@ -344,17 +344,30 @@ button:focus-visible {
   color: var(--muted);
 }
 
-.story-card .avatar {
-  height: 120px;
-  border-radius: 16px;
-  background: var(--accent);
+.stories .story-card {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stories .story-card .avatar {
+  width: 100%;
+  height: clamp(220px, 28vw, 320px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.stories .story-card .avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.stories .story-card h3 {
+  margin: 0;
 }
 
 .faq {
@@ -595,5 +608,9 @@ section[id] {
 
   .section {
     padding: 52px 0;
+  }
+
+  .stories .story-card .avatar {
+    height: 260px;
   }
 }

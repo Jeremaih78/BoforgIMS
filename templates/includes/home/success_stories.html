@@ -1,3 +1,4 @@
+{% load static %}
 <section id="stories" class="section stories">
   <div class="container">
     <div class="section-head">
@@ -6,20 +7,26 @@
     </div>
     <div class="card-grid three">
       <article class="card story-card">
-        <div class="avatar" aria-hidden="true">Photo</div>
-        <h3>Student Name - City</h3>
+        <div class="avatar">
+          <img src="{% static 'img/1.jpeg' %}" alt="Boforg student success story 1" loading="lazy">
+        </div>
+        <h3>Kerrymore Print & Design - Harare</h3>
         <p class="muted">Started with: Starter Package</p>
         <p class="muted">First products: mugs, t-shirts</p>
       </article>
       <article class="card story-card">
-        <div class="avatar" aria-hidden="true">Photo</div>
-        <h3>Student Name - City</h3>
+        <div class="avatar">
+          <img src="{% static 'img/2.jpeg' %}" alt="Boforg student success story 2" loading="lazy">
+        </div>
+        <h3>The Just-World - Shamva</h3>
         <p class="muted">Started with: Business Package</p>
         <p class="muted">First products: caps, uniforms</p>
       </article>
       <article class="card story-card">
-        <div class="avatar" aria-hidden="true">Photo</div>
-        <h3>Student Name - City</h3>
+        <div class="avatar">
+          <img src="{% static 'img/3.jpeg' %}" alt="Boforg student success story 3" loading="lazy">
+        </div>
+        <h3>Natasha Creatives - Harare</h3>
         <p class="muted">Started with: Pro Package</p>
         <p class="muted">First products: bulk orders</p>
       </article>
