@@ -7,9 +7,9 @@
       <p class="lead">We supply the machines, training, designs and support. You start printing and earning.</p>
       <div class="hero-actions">
         {% if wa_phone_clean %}
-        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}">WhatsApp an Advisor</a>
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}" onclick="boforgTrackWhatsApp()">WhatsApp an Advisor</a>
         {% else %}
-        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp an Advisor</a>
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}" onclick="boforgTrackWhatsApp()">WhatsApp an Advisor</a>
         {% endif %}
         <a class="btn btn-secondary" href="#packages">See Starter Packages</a>
       </div>

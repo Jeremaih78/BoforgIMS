@@ -10,6 +10,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/home.css' %}?v=20260217-2">
+  {% if allow_analytics %}
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4D77P6R6XX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-4D77P6R6XX');
+  </script>
+  {% endif %}
   {% block extra_css %}{% endblock %}
 </head>
 <body class="site">
@@ -27,6 +38,9 @@
   {% endwith %}
   {% endwith %}
 
+  {% if allow_analytics %}
+  <script src="{% static 'js/analytics.js' %}"></script>
+  {% endif %}
   {% block extra_js %}{% endblock %}
   <script src="{% static 'js/home.js' %}"></script>
 </body>

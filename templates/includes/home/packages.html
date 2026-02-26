@@ -19,9 +19,9 @@
         <div class="price">From $699</div>
         {% with wa_text_pkg="Hi Boforg, I want the Starter Package to start my printing business." %}
         {% if wa_phone_clean %}
-        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}">WhatsApp to Get This Package</a>
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}" onclick="boforgTrackWhatsApp()">WhatsApp to Get This Package</a>
         {% else %}
-        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp to Get This Package</a>
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}" onclick="boforgTrackWhatsApp()">WhatsApp to Get This Package</a>
         {% endif %}
         {% endwith %}
       </article>
@@ -39,9 +39,9 @@
         <div class="price">From $1199</div>
         {% with wa_text_pkg="Hi Boforg, I want the Business Package to grow my printing business." %}
         {% if wa_phone_clean %}
-        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}">WhatsApp to Get This Package</a>
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}" onclick="boforgTrackWhatsApp()">WhatsApp to Get This Package</a>
         {% else %}
-        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp to Get This Package</a>
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}" onclick="boforgTrackWhatsApp()">WhatsApp to Get This Package</a>
         {% endif %}
         {% endwith %}
       </article>
@@ -59,9 +59,9 @@
         <div class="price">From $2149</div>
         {% with wa_text_pkg="Hi Boforg, I want the Pro Package for high-volume printing." %}
         {% if wa_phone_clean %}
-        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}">WhatsApp to Get This Package</a>
+        <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_pkg|urlencode }}" onclick="boforgTrackWhatsApp()">WhatsApp to Get This Package</a>
         {% else %}
-        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp to Get This Package</a>
+        <a class="btn btn-primary" href="{{ company.cta_whatsapp }}" onclick="boforgTrackWhatsApp()">WhatsApp to Get This Package</a>
         {% endif %}
         {% endwith %}
       </article>

@@ -6,9 +6,9 @@
     </div>
     <div class="cta-actions">
       {% if wa_phone_clean %}
-      <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}">WhatsApp</a>
+      <a class="btn btn-primary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_general|urlencode }}" onclick="boforgTrackWhatsApp()">WhatsApp</a>
       {% else %}
-      <a class="btn btn-primary" href="{{ company.cta_whatsapp }}">WhatsApp</a>
+      <a class="btn btn-primary" href="{{ company.cta_whatsapp }}" onclick="boforgTrackWhatsApp()">WhatsApp</a>
       {% endif %}
       <a class="btn btn-secondary" href="#packages">View Packages</a>
     </div>

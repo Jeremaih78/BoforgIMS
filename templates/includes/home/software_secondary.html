@@ -21,9 +21,9 @@
     <div class="center">
       {% with wa_text_software="I want software for my business." %}
       {% if wa_phone_clean %}
-      <a class="btn btn-secondary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_software|urlencode }}">Talk to us about software</a>
+      <a class="btn btn-secondary" href="https://wa.me/{{ wa_phone_clean }}?text={{ wa_text_software|urlencode }}" onclick="boforgTrackWhatsApp()">Talk to us about software</a>
       {% else %}
-      <a class="btn btn-secondary" href="{{ company.cta_whatsapp }}">Talk to us about software</a>
+      <a class="btn btn-secondary" href="{{ company.cta_whatsapp }}" onclick="boforgTrackWhatsApp()">Talk to us about software</a>
       {% endif %}
       {% endwith %}
     </div>
