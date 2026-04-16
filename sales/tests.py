@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from customers.models import Customer
 from inventory.models import (
@@ -15,7 +16,9 @@ from inventory.models import (
     ProductUnit,
 )
 from inventory.services.combos import add_combo_to_invoice, add_combo_to_quotation, combo_available_quantity
-from sales.models import Quotation, Invoice
+from sales.forms import InvoiceForm, QuotationForm
+from sales.invoice_status import get_invoice_status_context
+from sales.models import Quotation, Invoice, Payment, DocumentLine
 from sales.services import StockService
 
 
@@ -127,6 +130,126 @@ class ComboIntegrationTests(TestCase):
         self.assertEqual(self.product_b.quantity, initial_b - 2)
         self.assertEqual(discount_lines.count(), 1)
         self.assertIsNone(discount_lines.first().product)
+
+
+class InvoiceStatusDisplayTests(TestCase):
+    def test_invoice_status_context_maps_printable_labels(self):
+        class InvoiceStub:
+            def __init__(self, status):
+                self.status = status
+
+        cases = {
+            'PAID': ('PAID', 'paid'),
+            'PARTIALLY_PAID': ('PARTIALLY PAID', 'partially-paid'),
+            'SENT': ('UNPAID', 'unpaid'),
+            'UNPAID': ('UNPAID', 'unpaid'),
+            'PENDING': ('UNPAID', 'unpaid'),
+            'CONFIRMED': ('UNPAID', 'unpaid'),
+            'OVERDUE': ('OVERDUE', 'overdue'),
+            'VOID': ('VOID', 'void'),
+            'CANCELLED': ('VOID', 'void'),
+            'DRAFT': ('DRAFT', 'draft'),
+        }
+
+        for status, expected in cases.items():
+            context = get_invoice_status_context(InvoiceStub(status))
+            self.assertEqual(
+                (context['invoice_status_label'], context['invoice_status_class']),
+                expected,
+            )
+
+    def test_pending_invoice_with_partial_payment_prints_partially_paid(self):
+        customer = Customer.objects.create(name='Partial Customer')
+        invoice = Invoice.objects.create(customer=customer, status=Invoice.PENDING)
+        invoice.lines.create(
+            description='Service',
+            quantity=Decimal('1'),
+            unit_price=Decimal('100.00'),
+            tax_rate_percent=Decimal('0'),
+            line_total=Decimal('100.00'),
+        )
+        Payment.objects.create(invoice=invoice, amount=Decimal('25.00'), method='Cash')
+
+        context = get_invoice_status_context(invoice)
+
+        self.assertEqual(context['invoice_status_label'], 'PARTIALLY PAID')
+        self.assertEqual(context['invoice_status_class'], 'partially-paid')
+
+
+class SalesCustomerQuickCreateTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='sales-user', password='safe-pass')
+
+    def test_invoice_and_quotation_customer_fields_show_newest_first(self):
+        old_customer = Customer.objects.create(name='Old Customer')
+        new_customer = Customer.objects.create(name='New Customer')
+
+        invoice_ids = list(InvoiceForm().fields['customer'].queryset.values_list('id', flat=True))
+        quotation_ids = list(QuotationForm().fields['customer'].queryset.values_list('id', flat=True))
+
+        self.assertLess(invoice_ids.index(new_customer.id), invoice_ids.index(old_customer.id))
+        self.assertLess(quotation_ids.index(new_customer.id), quotation_ids.index(old_customer.id))
+
+    def test_quick_create_customer_returns_customer_for_dropdown(self):
+        self.client.login(username='sales-user', password='safe-pass')
+        response = self.client.post(
+            reverse('ims:customers:customer_quick_create'),
+            {
+                'name': 'Walk In Buyer',
+                'phone': '123',
+                'email': 'buyer@example.com',
+                'address': 'Shop counter',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['ok'])
+        self.assertEqual(data['customer']['name'], 'Walk In Buyer')
+        self.assertTrue(Customer.objects.filter(name='Walk In Buyer').exists())
+
+
+class SalesLineDeleteTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='line-user', password='safe-pass')
+        self.customer = Customer.objects.create(name='Line Customer')
+
+    def test_remove_quotation_line(self):
+        self.client.login(username='line-user', password='safe-pass')
+        quotation = Quotation.objects.create(customer=self.customer)
+        line = DocumentLine.objects.create(
+            quotation=quotation,
+            description='Wrong product',
+            quantity=Decimal('1'),
+            unit_price=Decimal('10.00'),
+            tax_rate_percent=Decimal('0'),
+            line_total=Decimal('10.00'),
+        )
+
+        response = self.client.post(reverse('ims:sales:quotation_line_delete', args=[quotation.id, line.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(DocumentLine.objects.filter(pk=line.id).exists())
+        self.assertEqual(quotation.total, Decimal('0'))
+
+    def test_remove_invoice_line(self):
+        self.client.login(username='line-user', password='safe-pass')
+        invoice = Invoice.objects.create(customer=self.customer)
+        line = DocumentLine.objects.create(
+            invoice=invoice,
+            description='Wrong product',
+            quantity=Decimal('1'),
+            unit_price=Decimal('25.00'),
+            tax_rate_percent=Decimal('0'),
+            line_total=Decimal('25.00'),
+        )
+
+        response = self.client.post(reverse('ims:sales:invoice_line_delete', args=[invoice.id, line.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(DocumentLine.objects.filter(pk=line.id).exists())
+        self.assertEqual(invoice.total, Decimal('0'))
 
 
 class SerialFulfillmentTests(TestCase):

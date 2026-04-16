@@ -4,10 +4,11 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.db.models import Q
+from django.views.decorators.http import require_POST
 
 from .forms import (
     QuotationForm,
@@ -23,6 +24,7 @@ from .models import (
     Payment,
     DocumentLine,
 )
+from .invoice_status import get_invoice_status_context
 from .services import PricingService, StockService
 from inventory.models import Combo, ProductUnit
 from inventory.services.combos import (
@@ -50,6 +52,10 @@ def sales_home(request):
     ip = request.GET.get('i_page')
     quo_pg = Paginator(quo_qs.order_by('-date', '-id'), 10).get_page(qp)
     inv_pg = Paginator(inv_qs.order_by('-date', '-id'), 10).get_page(ip)
+    for invoice in inv_pg:
+        status_context = get_invoice_status_context(invoice)
+        invoice.invoice_status_label = status_context['invoice_status_label']
+        invoice.invoice_status_class = status_context['invoice_status_class']
     return render(request, 'sales/home.html', {'invoices': inv_pg, 'quotations': quo_pg, 'q': q})
 
 
@@ -65,10 +71,18 @@ def quotation_create(request):
 @login_required
 def quotation_edit(request, pk):
     quotation = get_object_or_404(Quotation, pk=pk)
-    line_form = DocumentLineForm(request.POST or None)
-    combo_form = ComboSelectionForm(request.POST or None, prefix='combo')
+    updating_details = request.method == 'POST' and 'update_quotation' in request.POST
+    adding_line = request.method == 'POST' and 'add_line' in request.POST
+    adding_combo = request.method == 'POST' and 'add_combo' in request.POST
+    line_form = DocumentLineForm(request.POST if adding_line else None)
+    detail_form = QuotationForm(request.POST if updating_details else None, instance=quotation)
+    combo_form = ComboSelectionForm(request.POST if adding_combo else None, prefix='combo')
 
     if request.method == 'POST':
+        if 'update_quotation' in request.POST and detail_form.is_valid():
+            detail_form.save()
+            messages.success(request, 'Quotation details updated.')
+            return redirect('ims:sales:quotation_edit', pk)
         if 'add_line' in request.POST and line_form.is_valid():
             line = line_form.save(commit=False)
             product = line.product
@@ -121,6 +135,7 @@ def quotation_edit(request, pk):
         'sales/quotation_detail.html',
         {
             'quotation': quotation,
+            'form': detail_form,
             'item_form': line_form,
             'combo_form': combo_form,
             'combo_options': combo_options,
@@ -179,11 +194,20 @@ def invoice_create(request):
 @login_required
 def invoice_edit(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk)
-    line_form = DocumentLineForm(request.POST or None)
-    combo_form = ComboSelectionForm(request.POST or None, prefix='combo')
-    pay_form = PaymentForm(request.POST or None, initial={'invoice': invoice})
+    updating_details = request.method == 'POST' and 'update_invoice' in request.POST
+    adding_line = request.method == 'POST' and 'add_line' in request.POST
+    adding_combo = request.method == 'POST' and 'add_combo' in request.POST
+    adding_payment = request.method == 'POST' and 'add_payment' in request.POST
+    line_form = DocumentLineForm(request.POST if adding_line else None)
+    detail_form = InvoiceForm(request.POST if updating_details else None, instance=invoice)
+    combo_form = ComboSelectionForm(request.POST if adding_combo else None, prefix='combo')
+    pay_form = PaymentForm(request.POST if adding_payment else None, initial={'invoice': invoice})
 
     if request.method == 'POST':
+        if 'update_invoice' in request.POST and detail_form.is_valid():
+            detail_form.save()
+            messages.success(request, 'Invoice details updated.')
+            return redirect('ims:sales:invoice_edit', pk)
         if 'add_line' in request.POST and line_form.is_valid():
             line = line_form.save(commit=False)
             product = line.product
@@ -258,11 +282,13 @@ def invoice_edit(request, pk):
         'sales/invoice_detail.html',
         {
             'invoice': invoice,
+            'form': detail_form,
             'item_form': line_form,
             'combo_form': combo_form,
             'combo_options': combo_options,
             'pay_form': pay_form,
             'lines': lines,
+            **get_invoice_status_context(invoice),
         },
     )
 
@@ -273,12 +299,52 @@ def invoice_pdf(request, pk):
 
     invoice = get_object_or_404(Invoice, pk=pk)
     lines = list(invoice.lines.select_related('product').order_by('id'))
-    html = render_to_string('sales/pdf_invoice.html', {'inv': invoice, 'lines': lines})
+    html = render_to_string(
+        'sales/pdf_invoice.html',
+        {'inv': invoice, 'lines': lines, **get_invoice_status_context(invoice)},
+    )
     pdf = render_pdf_from_html(html, base_url=request.build_absolute_uri())
     response = HttpResponse(pdf, content_type='application/pdf')
     disposition = 'inline' if (request.GET.get('preview') or request.GET.get('disposition') == 'inline') else 'attachment'
     response['Content-Disposition'] = f"{disposition}; filename=\"{invoice.number}.pdf\""
     return response
+
+
+@login_required
+@require_POST
+def quotation_line_delete(request, pk, line_id):
+    quotation = get_object_or_404(Quotation, pk=pk)
+    line = get_object_or_404(DocumentLine, pk=line_id, quotation=quotation)
+    line.delete()
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True, 'total': str(quotation.total)})
+    messages.success(request, 'Quotation line removed.')
+    return redirect('ims:sales:quotation_edit', pk)
+
+
+@login_required
+@require_POST
+def invoice_line_delete(request, pk, line_id):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    if invoice.status == Invoice.PAID:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': False, 'error': 'Paid invoice lines cannot be removed.'}, status=400)
+        messages.error(request, 'Paid invoice lines cannot be removed.')
+        return redirect('ims:sales:invoice_edit', pk)
+    line = get_object_or_404(DocumentLine, pk=line_id, invoice=invoice)
+    line.delete()
+    try:
+        StockService.release_reservation(invoice)
+        StockService.reserve_stock(invoice)
+    except Exception as exc:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': False, 'error': f'Line removed, but stock reservation refresh failed: {exc}'}, status=400)
+        messages.error(request, f'Line removed, but stock reservation refresh failed: {exc}')
+    else:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True, 'total': str(invoice.total)})
+        messages.success(request, 'Invoice line removed.')
+    return redirect('ims:sales:invoice_edit', pk)
 
 
 @login_required

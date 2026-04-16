@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h3 class="mb-0">{{ page_title }}</h3>
+  <div class="d-flex gap-2">
+    <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:finance_export' 'dashboard' 'csv' %}?{{ querystring }}">CSV</a>
+    <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:finance_export' 'dashboard' 'pdf' %}?{{ querystring }}">PDF</a>
+  </div>
+</div>
+{% include 'accounting/includes/finance_nav.html' %}
+<div class="card p-3 mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <div class="h6 mb-1">Accounting Quick Links</div>
+      <div class="small text-secondary">Operational reports and transaction entry</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:sales_summary' %}">Sales Summary</a>
+      <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:sales_summary_pdf' %}">Sales Summary PDF</a>
+      <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:inventory_valuation' %}">Inventory Valuation</a>
+      <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:inventory_valuation_pdf' %}">Inventory PDF</a>
+      <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:expense_list' %}">Expenses</a>
+      <a class="btn btn-sm btn-primary" href="{% url 'ims:accounting:expense_create' %}">Quick Add Expense</a>
+      <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:expenses_report' %}">Expenses by Category</a>
+      <a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:expenses_report_pdf' %}">Expenses PDF</a>
+    </div>
+  </div>
+</div>
+{% include 'accounting/includes/finance_filters.html' %}
+
+<div class="row g-3 mb-3">
+  {% include 'accounting/includes/kpi_card.html' with label='Cash In Today' value=today_summary.cash_in %}
+  {% include 'accounting/includes/kpi_card.html' with label='Cash Out Today' value=today_summary.cash_out %}
+  {% include 'accounting/includes/kpi_card.html' with label='Net Cash Today' value=today_summary.net_cashflow %}
+  {% include 'accounting/includes/kpi_card.html' with label='Revenue This Month' value=month_summary.revenue %}
+  {% include 'accounting/includes/kpi_card.html' with label='Cash In This Week' value=week_summary.cash_in %}
+  {% include 'accounting/includes/kpi_card.html' with label='Cash Out This Week' value=week_summary.cash_out %}
+  {% include 'accounting/includes/kpi_card.html' with label='Cash In This Month' value=month_summary.cash_in %}
+  {% include 'accounting/includes/kpi_card.html' with label='Cash Out This Month' value=month_summary.cash_out %}
+  {% include 'accounting/includes/kpi_card.html' with label='Expenses This Month' value=month_summary.expenses subtext='Operating expenses and posted bills' %}
+  {% include 'accounting/includes/kpi_card.html' with label='Gross Profit This Month' value=month_summary.gross_profit subtext=month_summary.gross_margin %}
+  {% include 'accounting/includes/kpi_card.html' with label='Net Profit This Month' value=month_summary.net_profit subtext=month_summary.net_margin %}
+  {% include 'accounting/includes/kpi_card.html' with label='Outstanding Debtors' value=summary.outstanding_debtors %}
+  {% include 'accounting/includes/kpi_card.html' with label='Outstanding Creditors' value=summary.outstanding_creditors %}
+  {% include 'accounting/includes/kpi_card.html' with label='Cash In This Year' value=year_summary.cash_in %}
+  {% include 'accounting/includes/kpi_card.html' with label='Cash Out This Year' value=year_summary.cash_out %}
+  {% include 'accounting/includes/kpi_card.html' with label='Financial Health' value=health.status subtext=health.score %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8"><div class="card p-3"><h5>Cashflow Trend</h5><canvas id="cashflowChart" height="120"></canvas></div></div>
+  <div class="col-lg-4"><div class="card p-3"><h5>Expenses by Category</h5><canvas id="expensePie" height="220"></canvas></div></div>
+  <div class="col-lg-6"><div class="card p-3"><h5>Revenue Trend</h5><canvas id="revenueChart" height="140"></canvas></div></div>
+  <div class="col-lg-6"><div class="card p-3"><h5>Expense Trend</h5><canvas id="expenseChart" height="140"></canvas></div></div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-4"><div class="card p-3"><h5>Smart Insights</h5>{% for insight in insights %}<div class="alert alert-{{ insight.severity }} py-2"><strong>{{ insight.title }}</strong><br><span class="small">{{ insight.description }}</span><br><span class="small">{{ insight.suggested_action }}</span></div>{% endfor %}</div></div>
+  <div class="col-lg-4"><div class="card p-3"><h5>Top Customers</h5><table class="table table-sm"><tbody>{% for row in revenue_by_customer %}<tr><td>{{ row.invoice__customer__name }}</td><td class="text-end">{{ row.total }}</td></tr>{% empty %}<tr><td>No revenue</td><td></td></tr>{% endfor %}</tbody></table></div></div>
+  <div class="col-lg-4"><div class="card p-3"><h5>Top Products</h5><table class="table table-sm"><tbody>{% for row in revenue_by_product %}<tr><td>{{ row.product__name|default:'Other' }}</td><td class="text-end">{{ row.total }}</td></tr>{% empty %}<tr><td>No revenue</td><td></td></tr>{% endfor %}</tbody></table></div></div>
+</div>
+
+<script id="finance-chart-data" type="application/json">{{ chart_json|safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const financeData = JSON.parse(document.getElementById('finance-chart-data').textContent);
+new Chart(document.getElementById('cashflowChart'), {type:'line', data:{labels:financeData.cashflow.labels, datasets:[{label:'Cash In', data:financeData.cashflow.in, borderColor:'#27d17f'},{label:'Cash Out', data:financeData.cashflow.out, borderColor:'#ff6b6b'},{label:'Net', data:financeData.cashflow.net, borderColor:'#4da3ff'}]}});
+new Chart(document.getElementById('expensePie'), {type:'doughnut', data:{labels:financeData.expense_categories.labels, datasets:[{data:financeData.expense_categories.values}]}});
+new Chart(document.getElementById('revenueChart'), {type:'bar', data:{labels:financeData.revenue.labels, datasets:[{label:'Revenue', data:financeData.revenue.values, backgroundColor:'#4da3ff'}]}});
+new Chart(document.getElementById('expenseChart'), {type:'bar', data:{labels:financeData.expenses.labels, datasets:[{label:'Expenses', data:financeData.expenses.values, backgroundColor:'#ff6b6b'}]}});
+</script>
+{% endblock %}

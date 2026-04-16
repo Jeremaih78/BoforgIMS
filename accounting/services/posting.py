@@ -31,17 +31,10 @@ def _split_invoice_amounts(inv: Invoice) -> tuple[Decimal, Decimal, Decimal]:
     net = Decimal("0")
     tax = Decimal("0")
     for it in inv.items.all():
-        # replicate item.total math to split tax
-        price = it.unit_price
-        if it.discount_percent:
-            price = price * (1 - (it.discount_percent / 100))
-        price = price - it.discount_value
-        if price < 0:
-            price = Decimal("0")
-        line_net = it.quantity * price
+        line_net = Decimal(it.line_total or 0)
         line_tax = Decimal("0")
-        if it.tax_rate:
-            line_tax = line_net * (it.tax_rate / 100)
+        if getattr(it, "tax_rate_percent", None):
+            line_tax = line_net * (Decimal(it.tax_rate_percent) / Decimal("100"))
         net += line_net
         tax += line_tax
     # guard floating diff
@@ -52,7 +45,7 @@ def _split_invoice_amounts(inv: Invoice) -> tuple[Decimal, Decimal, Decimal]:
 
 @transaction.atomic
 def post_sales_invoice(invoice_id: int) -> JournalEntry:
-    inv = Invoice.objects.select_related("customer").prefetch_related("items").get(pk=invoice_id)
+    inv = Invoice.objects.select_related("customer").prefetch_related("lines").get(pk=invoice_id)
     cur = _base_currency()
     net, tax, gross = _split_invoice_amounts(inv)
 
@@ -116,7 +109,7 @@ def post_ar_receipt(invoice_id: int, amount: Decimal) -> JournalEntry:
 def post_cogs_for_invoice(invoice_id: int) -> JournalEntry | None:
     """Post COGS at average cost. Uses product.price as proxy if avg_cost not maintained yet."""
     from inventory.models import Product
-    inv = Invoice.objects.prefetch_related("items__product").get(pk=invoice_id)
+    inv = Invoice.objects.prefetch_related("lines__product").get(pk=invoice_id)
     cur = _base_currency()
     total_cogs = Decimal("0")
     for it in inv.items.all():

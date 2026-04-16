@@ -1,0 +1,83 @@
+<form class="card p-3 mb-3" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label">Period</label>
+      <select class="form-select" name="period">
+        {% for value,label in period_presets %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">From</label>
+      <input class="form-control" type="date" name="from" value="{{ period.start|date:'Y-m-d' }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">To</label>
+      <input class="form-control" type="date" name="to" value="{{ period.end|date:'Y-m-d' }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Group</label>
+      <select class="form-select" name="group_by">
+        {% for value,label in group_options %}
+        <option value="{{ value }}" {% if group_by == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Customer</label>
+      <select class="form-select" name="customer">
+        <option value="">All</option>
+        {% for customer in customers %}
+        <option value="{{ customer.id }}">{{ customer.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Expense Category</label>
+      <select class="form-select" name="expense_category">
+        <option value="">All</option>
+        {% for category in expense_categories %}
+        <option value="{{ category.id }}">{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Account</label>
+      <select class="form-select" name="account">
+        <option value="">All</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}">{{ account.code }} {{ account.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Product</label>
+      <select class="form-select" name="product">
+        <option value="">All</option>
+        {% for product in products %}
+        <option value="{{ product.id }}">{{ product.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Product Category</label>
+      <select class="form-select" name="category">
+        <option value="">All</option>
+        {% for category in product_categories %}
+        <option value="{{ category.id }}">{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Payee</label>
+      <input class="form-control" name="payee" value="{{ filters.payee|default:'' }}" placeholder="Search payee">
+    </div>
+    <div class="col-md-2 d-grid">
+      <button class="btn btn-primary">Apply</button>
+    </div>
+    <div class="col-md-2 d-grid">
+      <a class="btn btn-outline-light" href="?">Reset</a>
+    </div>
+  </div>
+</form>

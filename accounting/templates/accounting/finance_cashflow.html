@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2"><h3 class="mb-0">{{ page_title }}</h3><div class="d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:finance_export' 'cashflow' 'csv' %}?{{ querystring }}">CSV</a><a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:finance_export' 'cashflow' 'pdf' %}?{{ querystring }}">PDF</a><a class="btn btn-sm btn-outline-light" href="{% url 'ims:accounting:finance_export' 'cashflow' 'xlsx' %}?{{ querystring }}">Excel</a></div></div>
+{% include 'accounting/includes/finance_nav.html' %}
+{% include 'accounting/includes/finance_filters.html' %}
+<div class="row g-3 mb-3">
+  {% include 'accounting/includes/kpi_card.html' with label='Opening Balance' value=summary.opening_balance %}
+  {% include 'accounting/includes/kpi_card.html' with label='Total Inflows' value=summary.cash_in %}
+  {% include 'accounting/includes/kpi_card.html' with label='Total Outflows' value=summary.cash_out %}
+  {% include 'accounting/includes/kpi_card.html' with label='Net Cashflow' value=summary.net_cashflow %}
+  {% include 'accounting/includes/kpi_card.html' with label='Closing Balance' value=summary.closing_balance %}
+</div>
+<div class="card p-3 mb-3"><h5>Inflow vs Outflow</h5><canvas id="cashflowChart" height="120"></canvas></div>
+<div class="card p-3"><h5>Cash Movement Detail</h5><table class="table table-sm"><thead><tr><th>Period</th><th class="text-end">Cash In</th><th class="text-end">Cash Out</th><th class="text-end">Net</th><th class="text-end">Balance</th></tr></thead><tbody>{% for row in rows %}<tr><td>{{ row.period }}</td><td class="text-end">{{ row.cash_in }}</td><td class="text-end">{{ row.cash_out }}</td><td class="text-end">{{ row.net }}</td><td class="text-end">{{ row.balance }}</td></tr>{% empty %}<tr><td colspan="5">No cash movement.</td></tr>{% endfor %}</tbody></table></div>
+<script id="finance-chart-data" type="application/json">{{ chart_json|safe }}</script><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script>const d=JSON.parse(document.getElementById('finance-chart-data').textContent);new Chart(document.getElementById('cashflowChart'),{type:'bar',data:{labels:d.labels,datasets:[{label:'Cash In',data:d.in,backgroundColor:'#27d17f'},{label:'Cash Out',data:d.out,backgroundColor:'#ff6b6b'},{label:'Net',data:d.net,backgroundColor:'#4da3ff'}]}});</script>
+{% endblock %}

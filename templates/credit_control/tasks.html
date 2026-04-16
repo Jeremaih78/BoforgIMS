@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0">Collection Tasks</h4><div class="d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="?run_auto=1">Auto Create</a><a class="btn btn-sm btn-primary" href="{% url 'ims:credit_control:task_create' %}">New Task</a></div></div>
+<div class="card p-3"><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Type</th><th>Target</th><th>Assigned</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>{% for t in tasks %}<tr><td>{{ t.get_task_type_display }}</td><td>{% if t.customer %}{{ t.customer.name }}{% elif t.supplier %}{{ t.supplier.name }}{% elif t.invoice %}{{ t.invoice.number }}{% elif t.bill %}{{ t.bill.doc_no }}{% endif %}</td><td>{{ t.assigned_to.username|default:'-' }}</td><td>{{ t.due_date }}</td><td>{{ t.priority }}</td><td>{{ t.status }}</td></tr>{% empty %}<tr><td colspan="6">No tasks</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

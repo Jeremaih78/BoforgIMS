@@ -1,0 +1,51 @@
+{% load static %}
+<div class="d-flex justify-content-end mb-2">
+  <button type="button" class="btn btn-sm btn-outline-primary js-customer-modal-open" data-customer-select="{{ customer_select_id }}">
+    <i class="bi bi-person-plus me-1"></i>Add Customer
+  </button>
+</div>
+
+{% if not customer_quick_create_modal_rendered %}
+<div class="modal fade" id="customerQuickCreateModal" tabindex="-1" aria-labelledby="customerQuickCreateLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content form-card">
+      <form id="customerQuickCreateForm" action="{% url 'ims:customers:customer_quick_create' %}" method="post">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="customerQuickCreateLabel">Add Customer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger d-none" id="customerQuickCreateErrors"></div>
+          <div class="mb-3">
+            <label class="form-label" for="quick_customer_name">Name</label>
+            <input class="form-control" id="quick_customer_name" name="name" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="quick_customer_phone">Phone</label>
+              <input class="form-control" id="quick_customer_phone" name="phone">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="quick_customer_email">Email</label>
+              <input class="form-control" id="quick_customer_email" name="email" type="email">
+            </div>
+          </div>
+          <button class="btn btn-link px-0 mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#customerQuickCreateMore" aria-expanded="false">
+            More details
+          </button>
+          <div class="collapse" id="customerQuickCreateMore">
+            <label class="form-label" for="quick_customer_address">Address</label>
+            <textarea class="form-control" id="quick_customer_address" name="address" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Customer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script src="{% static 'js/customer_quick_create.js' %}"></script>
+{% endif %}

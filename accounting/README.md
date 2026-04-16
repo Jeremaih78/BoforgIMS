@@ -24,3 +24,19 @@ CLI Seed
 Notes
 - Future iterations will add expenses, supplier bills, reports, period locking and FX conversions across currencies.
 
+Financial Command Center
+- Available at `/ims/accounting/`.
+- Pages: Dashboard, Cashflow, Revenue Analytics, Expense Analytics, Profitability.
+- Core service layer: `accounting/services/finance_dashboard.py`.
+- Accrual revenue: invoice line totals for valid invoices in the selected period.
+- Cash received: sales `Payment` records plus accounting `ARPayment` records.
+- Expenses: posted `Expense` records plus posted/partial/paid supplier bills where relevant.
+- Cash out: posted expenses plus accounting `APPayment` records.
+- COGS: invoice line quantity multiplied by product `avg_cost`.
+- Gross profit: accrual revenue minus COGS.
+- Net profit: gross profit minus expenses.
+- Cashflow is intentionally separate from profit.
+- Exports: CSV, PDF, and Excel-compatible `.xls` for dashboard, cashflow, revenue, expenses, and profitability.
+- Smart insights are rules-based and structured for a future AI recommendation layer.
+- Department and multi-company filters are scaffold-ready but should be shown only once transaction data consistently carries those dimensions.
+

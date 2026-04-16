@@ -56,5 +56,38 @@
       </div>
     </a>
   </div>
+  <div class="col-md-3 col-6">
+    <a href="{% url 'ims:credit_control:dashboard' %}" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Overdue Receivables</div>
+          <i class="bi bi-exclamation-circle fs-4 text-danger"></i>
+        </div>
+        <div class="display-6">{{ stats.overdue_receivables }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="{% url 'ims:credit_control:dashboard' %}" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Overdue Payables</div>
+          <i class="bi bi-clock-history fs-4 text-warning"></i>
+        </div>
+        <div class="display-6">{{ stats.overdue_payables }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3 col-6">
+    <a href="{% url 'ims:credit_control:dashboard' %}" class="click-card">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="h6 mb-0">Net Cash Pressure</div>
+          <i class="bi bi-cash-stack fs-4 text-info"></i>
+        </div>
+        <div class="display-6">{{ stats.cash_pressure }}</div>
+      </div>
+    </a>
+  </div>
 </div>
 {% endblock %}

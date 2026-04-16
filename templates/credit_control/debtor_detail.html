@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Debtor: {{ customer.name }}</h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'ims:credit_control:add_debtor_followup' customer.id %}" class="btn btn-sm btn-primary">Add Follow-up</a>
+    <a href="{% url 'ims:credit_control:send_debtor_whatsapp' customer.id %}" class="btn btn-sm btn-success">Send WhatsApp</a>
+    <a href="{% url 'ims:credit_control:promise_create' %}" class="btn btn-sm btn-outline-light">Record Promise</a>
+    <a href="{% url 'ims:credit_control:dispute_create' %}" class="btn btn-sm btn-outline-light">Mark Disputed</a>
+    <a href="{% url 'ims:credit_control:statement_customer' customer.id %}" class="btn btn-sm btn-outline-light">Statement</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="card p-3"><small>Outstanding</small><h5>{{ account.total_outstanding }}</h5></div></div>
+  <div class="col-md-3"><div class="card p-3"><small>Overdue</small><h5 class="text-danger">{{ account.overdue_balance }}</h5></div></div>
+  <div class="col-md-3"><div class="card p-3"><small>Risk</small><h5>{{ account.risk_level }}</h5></div></div>
+  <div class="col-md-3"><div class="card p-3"><small>Status</small><h5>{{ account.collection_status }}</h5></div></div>
+</div>
+
+<div class="card p-3 mb-3">
+  <h6>Recommended Next Action</h6>
+  <p class="mb-1"><strong>{{ recommendation.recommended_action }}</strong> ({{ recommendation.urgency }})</p>
+  <small>{{ recommendation.recommended_message }}</small>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card p-3 h-100"><h6>Outstanding Invoices</h6><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for inv in invoices %}<tr><td>{{ inv.number }}</td><td>{{ inv.date }}</td><td>{{ inv.due_date|default:'-' }}</td><td>{{ inv.total }}</td><td>{{ inv.status }}</td><td><a href="{% url 'ims:credit_control:send_debtor_whatsapp' customer.id %}" class="btn btn-sm btn-outline-success">Remind</a></td></tr>{% empty %}<tr><td colspan="6">No invoices</td></tr>{% endfor %}
+    </tbody></table></div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-3 h-100"><h6>Communication Timeline</h6><ul class="list-group">
+      {% for event in timeline %}
+      <li class="list-group-item d-flex justify-content-between"><span>[{{ event.kind }}] {{ event.label }}</span><small>{{ event.when }}</small></li>
+      {% empty %}<li class="list-group-item">No timeline events</li>{% endfor %}
+    </ul></div>
+  </div>
+</div>
+{% endblock %}

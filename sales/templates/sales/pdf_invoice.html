@@ -10,6 +10,7 @@
     .small{font-size:10px;}
     .brand-title{font-weight:bold; font-size:16px; letter-spacing:0.5px;}
     .heading{font-size:22px; margin:0;}
+    .logo-img{width:117px; height:56px;}
     .hr{height:2px; background:#000; margin:8px 0 12px;}
     .table{width:100%; border-collapse:collapse;}
     .table th,.table td{border:1px solid #ccc; padding:6px; vertical-align:top;}
@@ -22,6 +23,33 @@
     .info-table td{border:none; padding:2px 0;}
     .totals{width:40%; margin-left:auto;}
     .footer{margin-top:18px; font-size:11px; border-top:1px solid #ddd; padding-top:8px;}
+    .invoice-status-stamp-wrap{
+      width:170px;
+      margin:0 auto;
+      border-collapse:collapse;
+    }
+    .invoice-status-stamp-wrap-partially-paid{width:270px;}
+    .invoice-status-stamp{
+      width:170px;
+      padding:8px 12px;
+      border:3px solid;
+      border-radius:6px;
+      text-align:center;
+      font-size:28px;
+      font-weight:900;
+      line-height:1;
+      letter-spacing:1.2px;
+      text-transform:uppercase;
+    }
+    .invoice-status-stamp-label{font-size:28px; font-weight:900;}
+    .invoice-status-stamp-date{font-size:7px; font-weight:700; letter-spacing:.2px; margin-top:4px;}
+    .invoice-status-stamp-wrap-partially-paid .invoice-status-stamp{width:270px;}
+    .invoice-status-paid{color:#15803d; background:#dcfce7;}
+    .invoice-status-unpaid{color:#92400e; background:#fef3c7;}
+    .invoice-status-partially-paid{color:#1d4ed8; background:#dbeafe; font-size:24px;}
+    .invoice-status-overdue{color:#b91c1c; background:#fee2e2;}
+    .invoice-status-void{color:#6b1111; background:#f3f4f6;}
+    .invoice-status-draft{color:#4b5563; background:#f3f4f6;}
   </style>
   <title>Invoice {{ inv.number }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -37,8 +65,8 @@
   <!-- Header -->
   <table class="container" style="border-collapse:collapse; width:100%;">
     <tr>
-      <td style="vertical-align:middle;">
-        <img src="{% static 'img/logo_black.png' %}" alt="Boforg Technologies" height="56" class="mb-6"><br>
+      <td style="vertical-align:middle; width:32%;">
+        <img src="{% static 'img/logo_black.png' %}" alt="Boforg Technologies" width="117" height="56" class="mb-6 logo-img"><br>
         <div class="brand-title">Boforg Technologies</div>
         <table class="info-table small muted">
           <tr><td>Phone:</td><td>+263 786 264 994</td></tr>
@@ -46,7 +74,10 @@
           <tr><td>Web:</td><td>boforg.co.zw</td></tr>
         </table>
       </td>
-      <td class="right" style="vertical-align:middle;">
+      <td style="vertical-align:middle; text-align:center; width:36%;">
+        {% include 'sales/includes/invoice_status_stamp.html' %}
+      </td>
+      <td class="right" style="vertical-align:middle; width:32%;">
         <h1 class="heading">Invoice {{ inv.number }}</h1>
         <div class="small">Date: {{ inv.date }}<br>Due: {{ inv.due_date }}</div>
       </td>

@@ -1,5 +1,7 @@
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.db.models import Q
 from django.core.paginator import Paginator
 from .models import Customer
@@ -32,3 +34,21 @@ def customer_edit(request, pk):
         form.save()
         return redirect('ims:customers:customer_list')
     return render(request,'customers/customer_form.html',{'form':form})
+
+
+@login_required
+@require_POST
+def customer_quick_create(request):
+    form = CustomerForm(request.POST)
+    if form.is_valid():
+        customer = form.save()
+        return JsonResponse({
+            'ok': True,
+            'customer': {
+                'id': customer.id,
+                'name': customer.name,
+                'email': customer.email or '',
+                'phone': customer.phone or '',
+            },
+        })
+    return JsonResponse({'ok': False, 'errors': form.errors}, status=400)

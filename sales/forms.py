@@ -5,15 +5,38 @@ from django.db.models import Q
 
 from .models import Quotation, Invoice, Payment, DocumentLine
 from inventory.models import Combo, ProductUnit
+from customers.models import Customer
 
 
-class QuotationForm(forms.ModelForm):
+def newest_customer_queryset():
+    return Customer.objects.order_by('-id')
+
+
+class CustomerOrderedFormMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'customer' in self.fields:
+            self.fields['customer'].queryset = newest_customer_queryset()
+            self.fields['customer'].widget.attrs.update({'class': 'form-select'})
+        for name, field in self.fields.items():
+            if name != 'customer':
+                widget = field.widget
+                css_class = 'form-control'
+                if isinstance(widget, forms.Select):
+                    css_class = 'form-select'
+                existing = widget.attrs.get('class', '')
+                widget.attrs['class'] = f'{existing} {css_class}'.strip()
+            if name == 'notes':
+                field.widget.attrs['rows'] = 1
+
+
+class QuotationForm(CustomerOrderedFormMixin, forms.ModelForm):
     class Meta:
         model = Quotation
         fields = ['customer', 'date', 'notes']
 
 
-class InvoiceForm(forms.ModelForm):
+class InvoiceForm(CustomerOrderedFormMixin, forms.ModelForm):
     class Meta:
         model = Invoice
         fields = ['customer', 'date', 'due_date', 'notes']

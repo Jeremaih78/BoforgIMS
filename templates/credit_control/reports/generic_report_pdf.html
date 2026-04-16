@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>body{font-family:Arial,sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th,td{border:1px solid #ddd;padding:6px;text-align:left;}h2{margin:0 0 8px 0;}</style>
+</head>
+<body>
+  {% load credit_control_tags %}
+  <h2>Credit Control Report: {{ report_name|title }}</h2>
+  <p>Generated: {{ dashboard.date }}</p>
+
+  {% if report_name == 'ar_aging' %}
+    <table><thead><tr><th>Customer</th><th>Outstanding</th><th>Overdue</th><th>Current</th><th>1-30</th><th>31-60</th><th>61-90</th><th>91-120</th><th>120+</th></tr></thead><tbody>{% for row in debtor_rows %}<tr><td>{{ row.customer.name }}</td><td>{{ row.total_outstanding }}</td><td>{{ row.overdue_amount }}</td><td>{{ row.buckets.current }}</td><td>{{ row.buckets|get_item:'1_30' }}</td><td>{{ row.buckets|get_item:'31_60' }}</td><td>{{ row.buckets|get_item:'61_90' }}</td><td>{{ row.buckets|get_item:'91_120' }}</td><td>{{ row.buckets|get_item:'120_plus' }}</td></tr>{% endfor %}</tbody></table>
+  {% elif report_name == 'ap_aging' %}
+    <table><thead><tr><th>Supplier</th><th>Outstanding</th><th>Overdue</th><th>Current</th><th>1-30</th><th>31-60</th><th>61-90</th><th>91-120</th><th>120+</th></tr></thead><tbody>{% for row in creditor_rows %}<tr><td>{{ row.supplier.name }}</td><td>{{ row.total_outstanding }}</td><td>{{ row.overdue_amount }}</td><td>{{ row.buckets.current }}</td><td>{{ row.buckets|get_item:'1_30' }}</td><td>{{ row.buckets|get_item:'31_60' }}</td><td>{{ row.buckets|get_item:'61_90' }}</td><td>{{ row.buckets|get_item:'91_120' }}</td><td>{{ row.buckets|get_item:'120_plus' }}</td></tr>{% endfor %}</tbody></table>
+  {% else %}
+    <p>Use CSV exports for detailed report tables.</p>
+    <table><tr><th>Metric</th><th>Value</th></tr><tr><td>Total Receivables</td><td>{{ dashboard.total_receivables }}</td></tr><tr><td>Total Payables</td><td>{{ dashboard.total_payables }}</td></tr><tr><td>Overdue Receivables</td><td>{{ dashboard.overdue_receivables }}</td></tr><tr><td>Overdue Payables</td><td>{{ dashboard.overdue_payables }}</td></tr><tr><td>Net Cash Pressure</td><td>{{ dashboard.net_cash_pressure }}</td></tr></table>
+  {% endif %}
+</body>
+</html>

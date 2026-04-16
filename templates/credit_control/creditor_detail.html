@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Creditor: {{ supplier.name }}</h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'ims:credit_control:add_creditor_followup' supplier.id %}" class="btn btn-sm btn-primary">Add Follow-up</a>
+    <a href="{% url 'ims:credit_control:task_create' %}" class="btn btn-sm btn-outline-light">Assign Task</a>
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="card p-3"><small>Outstanding</small><h5>{{ account.total_outstanding }}</h5></div></div>
+  <div class="col-md-3"><div class="card p-3"><small>Overdue</small><h5 class="text-warning">{{ account.overdue_balance }}</h5></div></div>
+  <div class="col-md-3"><div class="card p-3"><small>Stock Dependency</small><h5>{{ stock_dependency }}</h5></div></div>
+  <div class="col-md-3"><div class="card p-3"><small>Status</small><h5>{{ account.payment_status }}</h5></div></div>
+</div>
+<div class="card p-3 mb-3">
+  <h6>Suggested Next Payment Action</h6>
+  <p class="mb-1"><strong>{{ recommendation.recommended_action }}</strong> ({{ recommendation.urgency }})</p>
+  <small>{{ recommendation.recommended_message }}</small>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card p-3 h-100"><h6>Outstanding Bills</h6><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Bill</th><th>Date</th><th>Due</th><th>Total</th><th>Status</th></tr></thead><tbody>{% for b in bills %}<tr><td>{{ b.doc_no }}</td><td>{{ b.date }}</td><td>{{ b.due_date|default:'-' }}</td><td>{{ b.total }}</td><td>{{ b.status }}</td></tr>{% empty %}<tr><td colspan="5">No bills</td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-6"><div class="card p-3 h-100"><h6>Communication Timeline</h6><ul class="list-group">{% for event in timeline %}<li class="list-group-item d-flex justify-content-between"><span>[{{ event.kind }}] {{ event.label }}</span><small>{{ event.when }}</small></li>{% empty %}<li class="list-group-item">No timeline events</li>{% endfor %}</ul></div></div>
+</div>
+{% endblock %}

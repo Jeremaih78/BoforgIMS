@@ -6,6 +6,11 @@ app_name = 'accounting'
 
 urlpatterns = [
     path('', views.accounting_dashboard, name='accounting_dashboard'),
+    path('finance/cashflow/', views.finance_cashflow, name='finance_cashflow'),
+    path('finance/revenue/', views.finance_revenue, name='finance_revenue'),
+    path('finance/expenses/', views.finance_expenses, name='finance_expenses'),
+    path('finance/profitability/', views.finance_profitability, name='finance_profitability'),
+    path('finance/export/<str:report_name>/<str:fmt>/', views.finance_export, name='finance_export'),
     # Expenses
     path('expenses/', views.expense_list, name='expense_list'),
     path('expenses/new/', views.expense_create, name='expense_create'),

@@ -23,6 +23,7 @@
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/shipments/dashboard/"><i class="bi bi-graph-up me-2"></i>Shipment Dashboard</a>
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/sales/"><i class="bi bi-receipt me-2"></i>Sales</a>
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/customers/"><i class="bi bi-people me-2"></i>Customers</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/credit-control/"><i class="bi bi-cash-stack me-2"></i>Credit Control</a>
           {% if user.is_superuser %}
           <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/accounting/"><i class="bi bi-cash-coin me-2"></i>Accounting</a>
           {% endif %}
@@ -63,6 +64,7 @@
         <a class="navbar-brand" href="/ims/inventory/"><i class="bi bi-box-seam"></i></a>
         <a class="navbar-brand" href="/ims/inventory/shipments/"><i class="bi bi-truck"></i></a>
         <a class="navbar-brand" href="/ims/sales/"><i class="bi bi-receipt"></i></a>
+        <a class="navbar-brand" href="/ims/credit-control/"><i class="bi bi-cash-stack"></i></a>
         {% if user.is_superuser %}
         <a class="navbar-brand" href="/ims/accounting/"><i class="bi bi-cash-coin"></i></a>
         {% endif %}

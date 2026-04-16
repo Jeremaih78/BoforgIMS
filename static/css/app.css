@@ -141,3 +141,52 @@ a.btn.btn-force-white:focus,
 a.btn.btn-force-white:active {
   color: #fff !important;
 }
+
+.invoice-status-badge {
+  display: inline-block;
+  min-width: 82px;
+  border-radius: 6px;
+  padding: .24rem .55rem;
+  font-size: .72rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .02rem;
+}
+
+.invoice-status-badge-paid {
+  background: rgba(39, 209, 127, .18);
+  color: #27d17f !important;
+  border: 1px solid rgba(39, 209, 127, .45);
+}
+
+.invoice-status-badge-unpaid {
+  background: rgba(245, 158, 11, .18);
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, .45);
+}
+
+.invoice-status-badge-partially-paid {
+  background: rgba(77, 163, 255, .18);
+  color: #93c5fd !important;
+  border: 1px solid rgba(77, 163, 255, .45);
+}
+
+.invoice-status-badge-overdue {
+  background: rgba(255, 107, 107, .18);
+  color: #ff8a8a !important;
+  border: 1px solid rgba(255, 107, 107, .45);
+}
+
+.invoice-status-badge-void {
+  background: rgba(107, 17, 17, .22);
+  color: #fecaca !important;
+  border: 1px solid rgba(248, 113, 113, .45);
+}
+
+.invoice-status-badge-draft {
+  background: rgba(169, 193, 214, .16);
+  color: #d1d5db !important;
+  border: 1px solid rgba(169, 193, 214, .38);
+}

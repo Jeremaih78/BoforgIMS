@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Invoice {{ invoice.number }}</h3>
@@ -8,11 +9,38 @@
   </div>
 </div>
 <div class="card p-3 mb-3">
+  {% include 'sales/includes/customer_quick_create_modal.html' with customer_select_id=form.customer.id_for_label customer_quick_create_modal_rendered=False %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.customer.id_for_label }}">Customer</label>
+        {{ form.customer }}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="{{ form.date.id_for_label }}">Date</label>
+        {{ form.date }}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="{{ form.due_date.id_for_label }}">Due</label>
+        {{ form.due_date }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="{{ form.notes.id_for_label }}">Notes</label>
+        {{ form.notes }}
+      </div>
+      <div class="col-md-1">
+        <button class="btn btn-primary btn-sm" name="update_invoice" value="1">Save</button>
+      </div>
+    </div>
+  </form>
+</div>
+<div class="card p-3 mb-3">
   <div class="row">
     <div class="col">Customer: <strong>{{ invoice.customer }}</strong></div>
     <div class="col">Date: {{ invoice.date }}</div>
     <div class="col">Due: {{ invoice.due_date }}</div>
-    <div class="col">Status: {{ invoice.status }}</div>
+    <div class="col">Status: {% include 'sales/includes/invoice_status_badge.html' %}</div>
   </div>
 </div>
 <div class="row g-3">
@@ -56,7 +84,7 @@
     <div class="card p-3 mt-3">
       <h5>Lines</h5>
       <table class="table align-middle">
-        <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+        <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th><th class="text-end">Action</th></tr></thead>
         <tbody>
           {% for line in lines %}
           <tr>
@@ -80,12 +108,20 @@
             <td class="text-end">{{ line.quantity }}</td>
             <td class="text-end">{{ line.unit_price }}</td>
             <td class="text-end">{{ line.line_total }}</td>
+            <td class="text-end">
+              <form method="post" action="{% url 'ims:sales:invoice_line_delete' invoice.id line.id %}" class="d-inline js-line-delete-form" data-total-target="#invoice-total">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" type="submit">
+                  <i class="bi bi-trash"></i> Remove
+                </button>
+              </form>
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="text-center">No lines yet</td></tr>
+          <tr><td colspan="5" class="text-center">No lines yet</td></tr>
           {% endfor %}
         </tbody>
-        <tfoot><tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ invoice.total }}</th></tr></tfoot>
+        <tfoot><tr><th colspan="3" class="text-end">Total</th><th id="invoice-total" class="text-end">{{ invoice.total }}</th><th></th></tr></tfoot>
       </table>
     </div>
   </div>
@@ -112,4 +148,5 @@
     </div>
   </div>
 </div>
+<script src="{% static 'js/document_line_delete.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,10 @@
+{% if invoice_status_label %}
+<table class="invoice-status-stamp-wrap invoice-status-stamp-wrap-{{ invoice_status_class }}" align="center">
+  <tr>
+    <td class="invoice-status-stamp invoice-status-{{ invoice_status_class }}">
+      <div class="invoice-status-stamp-label">{{ invoice_status_label }}</div>
+      <div class="invoice-status-stamp-date">Stamped {% now "Y-m-d H:i" %}</div>
+    </td>
+  </tr>
+</table>
+{% endif %}

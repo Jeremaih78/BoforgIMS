@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body{font-family:Arial, sans-serif; font-size:11px; color:#111;}
+    h1{font-size:18px;}
+    table{width:100%; border-collapse:collapse;}
+    th,td{border:1px solid #ccc; padding:5px;}
+    th{background:#f3f4f6;}
+    .right{text-align:right;}
+  </style>
+</head>
+<body>
+  <h1>{{ report_name|title }} Report</h1>
+  <p>{{ period.start }} to {{ period.end }}</p>
+  <table>
+    <thead><tr>{% for header in headers %}<th>{{ header }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in rows %}<tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ headers|length }}">No data</td></tr>{% endfor %}</tbody>
+  </table>
+</body>
+</html>

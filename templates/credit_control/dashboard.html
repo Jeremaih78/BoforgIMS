@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Collections Dashboard</h4>
+  <div class="d-flex gap-2">
+    <a class="btn btn-sm btn-outline-light" href="{% url 'ims:credit_control:tasks' %}?run_auto=1">Run Auto Tasks</a>
+    <a class="btn btn-sm btn-primary" href="{% url 'ims:credit_control:aging_reports' %}">Aging Reports</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3 col-6"><div class="card p-3"><small>Total Receivables</small><h4>{{ total_receivables }}</h4></div></div>
+  <div class="col-md-3 col-6"><div class="card p-3"><small>Overdue Receivables</small><h4 class="text-danger">{{ overdue_receivables }}</h4></div></div>
+  <div class="col-md-3 col-6"><div class="card p-3"><small>Total Payables</small><h4>{{ total_payables }}</h4></div></div>
+  <div class="col-md-3 col-6"><div class="card p-3"><small>Overdue Payables</small><h4 class="text-warning">{{ overdue_payables }}</h4></div></div>
+  <div class="col-md-3 col-6"><div class="card p-3"><small>Promised This Week</small><h4>{{ amount_promised_this_week }}</h4></div></div>
+  <div class="col-md-3 col-6"><div class="card p-3"><small>Broken Promises (Month)</small><h4 class="text-danger">{{ broken_promises_this_month }}</h4></div></div>
+  <div class="col-md-6 col-12"><div class="card p-3"><small>Net Cash Pressure</small><h4>{% if net_cash_pressure > 0 %}<span class="text-danger">{{ net_cash_pressure }}</span>{% else %}<span class="text-success">{{ net_cash_pressure }}</span>{% endif %}</h4></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">Top 10 Debtors To Chase</h6><a href="{% url 'ims:credit_control:debtors_list' %}" class="btn btn-sm btn-outline-light">View</a></div>
+      <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Customer</th><th>Outstanding</th><th>Overdue</th></tr></thead><tbody>
+      {% for row in top_debtors %}<tr><td>{{ row.customer.name }}</td><td>{{ row.total_outstanding }}</td><td class="text-danger">{{ row.overdue_amount }}</td></tr>{% empty %}<tr><td colspan="3">No data</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">Top 10 Creditors To Settle</h6><a href="{% url 'ims:credit_control:creditors_list' %}" class="btn btn-sm btn-outline-light">View</a></div>
+      <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Supplier</th><th>Outstanding</th><th>Overdue</th></tr></thead><tbody>
+      {% for row in top_creditors %}<tr><td>{{ row.supplier.name }}</td><td>{{ row.total_outstanding }}</td><td class="text-warning">{{ row.overdue_amount }}</td></tr>{% empty %}<tr><td colspan="3">No data</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3 mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">Today's Action List</h6><a href="{% url 'ims:credit_control:tasks' %}?today=1" class="btn btn-sm btn-outline-light">Open Tasks</a></div>
+  <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Type</th><th>Target</th><th>Priority</th><th>Status</th><th>Due</th></tr></thead><tbody>
+  {% for t in urgent_tasks %}
+    <tr>
+      <td>{{ t.get_task_type_display }}</td>
+      <td>{% if t.customer %}{{ t.customer.name }}{% elif t.supplier %}{{ t.supplier.name }}{% elif t.invoice %}{{ t.invoice.number }}{% elif t.bill %}{{ t.bill.doc_no }}{% endif %}</td>
+      <td><span class="badge bg-{% if t.priority == 'URGENT' %}danger{% elif t.priority == 'HIGH' %}warning{% else %}secondary{% endif %}">{{ t.priority }}</span></td>
+      <td>{{ t.status }}</td>
+      <td>{{ t.due_date }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">No urgent actions</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

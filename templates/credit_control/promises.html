@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0">Promises To Pay</h4><a class="btn btn-sm btn-primary" href="{% url 'ims:credit_control:promise_create' %}">New Promise</a></div>
+<div class="card p-3"><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Customer</th><th>Invoice</th><th>Promised</th><th>Date</th><th>Status</th><th>Actual Paid</th></tr></thead><tbody>{% for p in promises %}<tr><td>{{ p.customer.name }}</td><td>{{ p.invoice.number|default:'-' }}</td><td>{{ p.promised_amount }}</td><td>{{ p.promised_date }}</td><td><span class="badge bg-{% if p.status == 'BROKEN' %}danger{% elif p.status == 'KEPT' %}success{% else %}secondary{% endif %}">{{ p.status }}</span></td><td>{{ p.actual_paid_amount }}</td></tr>{% empty %}<tr><td colspan="6">No promises</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

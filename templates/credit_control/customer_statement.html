@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card p-3">
+  <h5>{{ customer.name }} Statement</h5>
+  <div class="row g-3">
+    <div class="col-lg-6"><h6>Invoices</h6><ul class="list-group">{% for inv in invoices %}<li class="list-group-item d-flex justify-content-between"><span>{{ inv.number }} - {{ inv.date }}</span><span>{{ inv.total }}</span></li>{% empty %}<li class="list-group-item">None</li>{% endfor %}</ul></div>
+    <div class="col-lg-6"><h6>Payments</h6><ul class="list-group">{% for p in payments %}<li class="list-group-item d-flex justify-content-between"><span>{{ p.invoice.number }} - {{ p.date }}</span><span>{{ p.amount }}</span></li>{% empty %}<li class="list-group-item">None</li>{% endfor %}</ul></div>
+  </div>
+</div>
+{% endblock %}

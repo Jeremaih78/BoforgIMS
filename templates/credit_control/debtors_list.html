@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load credit_control_tags %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Debtors</h4>
+  <div class="d-flex gap-2"><a href="{% url 'ims:credit_control:aging_reports' %}" class="btn btn-sm btn-outline-light">Aging</a><a href="{% url 'ims:credit_control:report_export_csv' 'ar_aging' %}" class="btn btn-sm btn-primary">CSV</a></div>
+</div>
+<div class="card p-3">
+  <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Customer</th><th>Outstanding</th><th>Overdue</th><th>Current</th><th>30+</th><th>60+</th><th>90+</th><th>Last Payment</th><th>Next Follow-up</th><th>Risk</th><th>Status</th><th></th></tr></thead><tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.account.customer.name }}</td>
+      <td>{{ row.account.total_outstanding }}</td>
+      <td class="text-danger">{{ row.account.overdue_balance }}</td>
+      <td>{{ row.aging.current|default:'0.00' }}</td>
+      <td>{{ row.aging|get_item:'1_30'|default:'0.00' }}</td>
+      <td>{{ row.aging|get_item:'31_60'|default:'0.00' }}</td>
+      <td>{{ row.aging|get_item:'61_90'|default:'0.00' }}</td>
+      <td>{{ row.account.last_payment_date|default:'-' }}</td>
+      <td>{{ row.account.next_follow_up_date|default:'-' }}</td>
+      <td><span class="badge bg-{% if row.account.risk_level == 'CRITICAL' %}danger{% elif row.account.risk_level == 'HIGH' %}warning{% else %}secondary{% endif %}">{{ row.account.risk_level }}</span></td>
+      <td>{{ row.account.collection_status }}</td>
+      <td><a class="btn btn-sm btn-outline-light" href="{% url 'ims:credit_control:debtor_detail' row.account.customer_id %}">Open</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="12">No debtor data</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

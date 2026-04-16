@@ -1,12 +1,16 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6">
     <div class="card p-4 form-card">
       <h4 class="mb-3">New Quotation</h4>
+      {% include 'sales/includes/customer_quick_create_modal.html' with customer_select_id=form.customer.id_for_label customer_quick_create_modal_rendered=False %}
       <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
+        <p>{{ form.customer.label_tag }} {{ form.customer }}</p>
+        <p>{{ form.date.label_tag }} {{ form.date }}</p>
+        <p>{{ form.notes.label_tag }} {{ form.notes }}</p>
         <div class="d-flex gap-2">
           <button class="btn btn-primary">Create</button>
           <a href="{% url 'ims:sales:sales_home' %}" class="btn btn-secondary">Cancel</a>
