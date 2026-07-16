@@ -1,0 +1,53 @@
+{% load static %}
+{% if item_form.non_field_errors %}
+<div class="alert alert-danger py-2" role="alert">{{ item_form.non_field_errors }}</div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-12">
+    <label class="form-label" for="product-search-{{ item_form.product.id_for_label }}">Product</label>
+    <div class="product-combobox" data-product-combobox data-search-url="{% url 'ims:sales:product_search' %}">
+      {{ item_form.product }}
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+        <input
+          id="product-search-{{ item_form.product.id_for_label }}"
+          class="form-control product-combobox__input"
+          type="search"
+          autocomplete="off"
+          placeholder="Type product name, SKU, category or description"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="product-results-{{ item_form.product.id_for_label }}"
+          value="{% if item_form.selected_product %}{{ item_form.selected_product.name }} ({{ item_form.selected_product.sku }}){% endif %}"
+        >
+        <button class="btn btn-outline-secondary product-combobox__clear" type="button" title="Clear selected product" aria-label="Clear selected product">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div id="product-results-{{ item_form.product.id_for_label }}" class="product-combobox__results list-group shadow" role="listbox" hidden></div>
+      <div class="form-text">Search by name, SKU, category, or description. Use ↑ ↓ and Enter to select.</div>
+    </div>
+    {% if item_form.product.errors %}<div class="text-danger small">{{ item_form.product.errors|join:', ' }}</div>{% endif %}
+  </div>
+  <div class="col-md-6">
+    <label class="form-label" for="{{ item_form.description.id_for_label }}">Description <span class="text-secondary">(optional)</span></label>
+    {{ item_form.description }}
+    {% if item_form.description.errors %}<div class="text-danger small">{{ item_form.description.errors|join:', ' }}</div>{% endif %}
+  </div>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ item_form.quantity.id_for_label }}">Quantity</label>
+    {{ item_form.quantity }}
+    {% if item_form.quantity.errors %}<div class="text-danger small">{{ item_form.quantity.errors|join:', ' }}</div>{% endif %}
+  </div>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ item_form.unit_price.id_for_label }}">Unit price</label>
+    {{ item_form.unit_price }}
+    {% if item_form.unit_price.errors %}<div class="text-danger small">{{ item_form.unit_price.errors|join:', ' }}</div>{% endif %}
+  </div>
+  <div class="col-md-2">
+    <label class="form-label" for="{{ item_form.tax_rate_percent.id_for_label }}">Tax %</label>
+    {{ item_form.tax_rate_percent }}
+    {% if item_form.tax_rate_percent.errors %}<div class="text-danger small">{{ item_form.tax_rate_percent.errors|join:', ' }}</div>{% endif %}
+  </div>
+</div>

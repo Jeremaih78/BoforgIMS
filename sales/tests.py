@@ -16,7 +16,7 @@ from inventory.models import (
     ProductUnit,
 )
 from inventory.services.combos import add_combo_to_invoice, add_combo_to_quotation, combo_available_quantity
-from sales.forms import InvoiceForm, QuotationForm
+from sales.forms import DocumentLineForm, InvoiceForm, QuotationForm
 from sales.invoice_status import get_invoice_status_context
 from sales.models import Quotation, Invoice, Payment, DocumentLine
 from sales.services import StockService
@@ -208,6 +208,60 @@ class SalesCustomerQuickCreateTests(TestCase):
         self.assertTrue(data['ok'])
         self.assertEqual(data['customer']['name'], 'Walk In Buyer')
         self.assertTrue(Customer.objects.filter(name='Walk In Buyer').exists())
+
+
+class ProductSearchTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='search-user', password='safe-pass')
+        self.category = Category.objects.create(name='Large Format Printers')
+        self.product = Product.objects.create(
+            name='Eco Solvent Printer',
+            sku='ECO-1800',
+            category=self.category,
+            description='Wide format printing machine',
+            price=Decimal('4500.00'),
+            quantity=8,
+            reserved=3,
+            tax_rate=Decimal('15.00'),
+        )
+        Product.objects.create(name='Retired Printer', sku='OLD-001', is_active=False)
+
+    def search(self, query):
+        return self.client.get(reverse('ims:sales:product_search'), {'q': query})
+
+    def test_product_search_requires_login(self):
+        response = self.search('printer')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_product_search_matches_name_sku_category_and_description(self):
+        self.client.login(username='search-user', password='safe-pass')
+        for query in ('Eco Solvent', 'ECO-1800', 'Large Format', 'printing machine'):
+            with self.subTest(query=query):
+                response = self.search(query)
+                self.assertEqual(response.status_code, 200)
+                result = response.json()['results'][0]
+                self.assertEqual(result['id'], self.product.id)
+                self.assertEqual(result['category'], self.category.name)
+                self.assertEqual(result['available_stock'], 5)
+                self.assertEqual(result['price'], '4500.00')
+
+    def test_product_search_excludes_inactive_products(self):
+        self.client.login(username='search-user', password='safe-pass')
+        self.assertEqual(self.search('Retired').json()['results'], [])
+
+    def test_line_form_accepts_active_product_id_and_uses_catalogue_defaults(self):
+        form = DocumentLineForm(data={
+            'product': self.product.id,
+            'description': '',
+            'quantity': '2',
+            'unit_price': '',
+            'tax_rate_percent': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['unit_price'], Decimal('4500.00'))
+        self.assertEqual(form.cleaned_data['tax_rate_percent'], Decimal('15.00'))
+        self.assertEqual(form.cleaned_data['line_total'], Decimal('9000.00'))
 
 
 class SalesLineDeleteTests(TestCase):

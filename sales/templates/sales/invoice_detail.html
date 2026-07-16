@@ -48,8 +48,8 @@
     <div class="card p-3 form-card">
       <h5>Add Product Line</h5>
       <form method="post">{% csrf_token %}
-        {{ item_form.as_p }}
-        <button class="btn btn-primary" name="add_line" value="1">Add Product</button>
+        {% include 'sales/includes/document_line_form.html' %}
+        <button class="btn btn-primary mt-3" name="add_line" value="1">Add Product</button>
       </form>
     </div>
     <div class="card p-3 form-card mt-3">
@@ -149,4 +149,5 @@
   </div>
 </div>
 <script src="{% static 'js/document_line_delete.js' %}"></script>
+<script src="{% static 'js/product_combobox.js' %}"></script>
 {% endblock %}

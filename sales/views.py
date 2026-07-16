@@ -7,8 +7,8 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
-from django.db.models import Q
-from django.views.decorators.http import require_POST
+from django.db.models import Case, IntegerField, Q, Value, When
+from django.views.decorators.http import require_GET, require_POST
 
 from .forms import (
     QuotationForm,
@@ -26,7 +26,7 @@ from .models import (
 )
 from .invoice_status import get_invoice_status_context
 from .services import PricingService, StockService
-from inventory.models import Combo, ProductUnit
+from inventory.models import Combo, Product, ProductUnit
 from inventory.services.combos import (
     add_combo_to_invoice,
     add_combo_to_quotation,
@@ -57,6 +57,53 @@ def sales_home(request):
         invoice.invoice_status_label = status_context['invoice_status_label']
         invoice.invoice_status_class = status_context['invoice_status_class']
     return render(request, 'sales/home.html', {'invoices': inv_pg, 'quotations': quo_pg, 'q': q})
+
+
+@login_required
+@require_GET
+def product_search(request):
+    """Small, authenticated catalogue lookup for sales document line entry."""
+    query = request.GET.get('q', '').strip()[:100]
+    products = Product.objects.filter(is_active=True).select_related('category')
+    if query:
+        products = products.filter(
+            Q(name__icontains=query)
+            | Q(sku__icontains=query)
+            | Q(category__name__icontains=query)
+            | Q(description__icontains=query)
+        ).annotate(
+            search_rank=Case(
+                When(sku__iexact=query, then=Value(0)),
+                When(name__iexact=query, then=Value(1)),
+                When(sku__istartswith=query, then=Value(2)),
+                When(name__istartswith=query, then=Value(3)),
+                When(category__name__istartswith=query, then=Value(4)),
+                default=Value(5),
+                output_field=IntegerField(),
+            )
+        ).order_by('search_rank', 'name', 'sku')
+    else:
+        products = products.order_by('name', 'sku')
+
+    limit = 20
+    rows = list(products[:limit + 1])
+    return JsonResponse({
+        'results': [
+            {
+                'id': product.id,
+                'name': product.name,
+                'sku': product.sku,
+                'category': product.category.name if product.category else 'Uncategorised',
+                'price': str(product.price),
+                'currency': product.currency,
+                'tax_rate': str(product.tax_rate),
+                'available_stock': product.available_stock,
+                'track_inventory': product.track_inventory,
+            }
+            for product in rows[:limit]
+        ],
+        'has_more': len(rows) > limit,
+    })
 
 
 @login_required

@@ -4,7 +4,7 @@ from django import forms
 from django.db.models import Q
 
 from .models import Quotation, Invoice, Payment, DocumentLine
-from inventory.models import Combo, ProductUnit
+from inventory.models import Combo, Product, ProductUnit
 from customers.models import Customer
 
 
@@ -49,9 +49,26 @@ class DocumentLineForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['product'].queryset = Product.objects.filter(is_active=True).select_related('category')
+        self.fields['product'].widget = forms.HiddenInput()
         self.fields['unit_price'].required = False
         self.fields['tax_rate_percent'].required = False
         self.fields['quantity'].initial = self.fields['quantity'].initial or 1
+        for name in ('description', 'quantity', 'unit_price', 'tax_rate_percent'):
+            self.fields[name].widget.attrs['class'] = 'form-control'
+        self.fields['description'].widget.attrs['rows'] = 2
+        self.fields['quantity'].widget.attrs.update({'min': '0.01', 'step': '0.01'})
+        self.fields['unit_price'].widget.attrs.update({'min': '0', 'step': '0.01'})
+        self.fields['tax_rate_percent'].widget.attrs.update({'min': '0', 'step': '0.01'})
+        self.selected_product = None
+        product_id = self.data.get(self.add_prefix('product')) if self.is_bound else self.initial.get('product')
+        if not product_id and getattr(self.instance, 'product_id', None):
+            product_id = self.instance.product_id
+        if product_id:
+            try:
+                self.selected_product = self.fields['product'].queryset.get(pk=product_id)
+            except (Product.DoesNotExist, TypeError, ValueError):
+                pass
 
     def clean(self):
         cleaned = super().clean()

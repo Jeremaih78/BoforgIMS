@@ -6,6 +6,7 @@ app_name = 'sales'
 
 urlpatterns = [
     path('', views.sales_home, name='sales_home'),
+    path('api/products/search/', views.product_search, name='product_search'),
     path('quotation/new/', views.quotation_create, name='quotation_create'),
     path('quotation/<int:pk>/', views.quotation_edit, name='quotation_edit'),
     path('quotation/<int:pk>/pdf/', views.quotation_pdf, name='quotation_pdf'),
