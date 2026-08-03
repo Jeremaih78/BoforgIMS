@@ -3,6 +3,7 @@
 import logging
 import os
 from typing import Optional
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
@@ -32,6 +33,46 @@ logger = logging.getLogger(__name__)
 
 
 CATALOG_PAGE_SIZE = 12
+WHATSAPP_ORDER_NUMBER = '263786264994'
+
+
+def _build_whatsapp_order_url(items, subtotal) -> str:
+    product_blocks = []
+    for position, item in enumerate(items, start=1):
+        product_blocks.append(
+            '\n'.join(
+                [
+                    f'{position}. {item.product.name}',
+                    f'SKU: {item.product.sku}',
+                    f'Unit Price: ${item.product.price:.2f}',
+                    f'Quantity: {item.quantity}',
+                    f'Total: ${item.line_total:.2f}',
+                ]
+            )
+        )
+
+    message = '\n\n'.join(
+        [
+            'Hello Boforg Technologies,',
+            'I would like to place the following order:',
+            *product_blocks,
+            f'Order Subtotal: ${subtotal:.2f}',
+            'Please confirm availability, payment instructions, and collection or delivery arrangements.',
+        ]
+    )
+    return f'https://wa.me/{WHATSAPP_ORDER_NUMBER}?{urlencode({"text": message})}'
+
+
+def _cart_detail_context(cart) -> dict:
+    items = list(cart.items.select_related('product', 'product__category'))
+    subtotal = cart_totals(cart)
+    return {
+        'cart': cart,
+        'items': items,
+        'cart_count': cart_item_count(cart),
+        'subtotal': subtotal,
+        'whatsapp_order_url': _build_whatsapp_order_url(items, subtotal) if items else '',
+    }
 
 
 def _resolve_category(value: str) -> Optional[Category]:
@@ -136,16 +177,10 @@ def product_detail(request, slug):
 @require_GET
 def cart_detail(request):
     cart = get_or_create_cart(request)
-    items = cart.items.select_related('product', 'product__category')
     return render(
         request,
         'shop/cart_detail.html',
-        {
-            'cart': cart,
-            'items': items,
-            'cart_count': cart_item_count(cart),
-            'subtotal': cart_totals(cart),
-        },
+        _cart_detail_context(cart),
     )
 
 
@@ -196,8 +231,8 @@ def cart_remove(request):
 
     if request.headers.get('HX-Request') == 'true':
         html = render_to_string(
-            'shop/partials/cart_counter.html',
-            {'count': cart_item_count(cart)},
+            'shop/partials/cart_remove_response.html',
+            _cart_detail_context(cart),
             request=request,
         )
         return HttpResponse(html)

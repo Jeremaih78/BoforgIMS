@@ -14,6 +14,16 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+To populate a development database with realistic, repeatable demo data:
+
+```bash
+python manage.py seed_demo_data
+```
+
+The command covers inventory, customers, sales, shop orders, finance, shipments,
+serialized stock, and credit control. It is idempotent, so rerunning it does not
+duplicate the demo records.
+
 Visit http://127.0.0.1:8000 to access the IMS dashboard under `/ims/`.
 
 ### PDF Rendering
