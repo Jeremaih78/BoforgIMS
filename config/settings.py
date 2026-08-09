@@ -13,7 +13,7 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get(
     'DJANGO_ALLOWED_HOSTS',
-    'boforg.co.zw,www.boforg.co.zw,localhost,127.0.0.1'
+    'boforg.co.zw,www.boforg.co.zw,localhost,127.0.0.1, shop.boforg.co.zw, ims.boforg.co.zw,ai.boforg.co.zw, api.boforg.co.zw'
 ).split(',') if host.strip()]
 
 PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', 'https://boforg.co.zw')
