@@ -48,11 +48,33 @@ export DJANGO_DEBUG=false
 
 ## Public Web Frontends
 
-- **Homepage**: `https://boforg.co.zw/` (served by the `website` app)
-- **Shop**: `https://boforg.co.zw/shop/` (server-rendered Django + HTMX)
-- **IMS**: `https://boforg.co.zw/ims/` (authenticated back-office)
+- **Company website**: `https://boforg.co.zw/`
+- **Shop**: `https://shop.boforg.co.zw/`
+- **IMS**: `https://ims.boforg.co.zw/`
+- **AI Tasker**: `https://ai.boforg.co.zw/`
+- **REST API**: `https://api.boforg.co.zw/`
 
-`config/urls.py` wires the three entry points. Configure Nginx to proxy `/`, `/shop/`, and `/ims/` to the same Django application.
+`config/hosts.py` selects one URL configuration from `config/host_urls/` for
+each hostname. All hosts still use the same Django process, applications,
+authentication system, PostgreSQL database, static files, and media storage.
+The path-based `config/urls.py` remains available for local development and
+legacy reverse compatibility; old public `/shop/`, `/ims/`, and
+`/ims/tasker/` entry points redirect to their canonical hosts.
+
+The API host exposes the existing inventory and sales API views under
+`/inventory/` and `/sales/`. Product catalogue reads are public; product
+writes, shipment data, and invoice serial operations require authentication.
+
+Production host settings:
+
+```bash
+export DJANGO_PARENT_HOST="boforg.co.zw"
+export DJANGO_HOST_SCHEME="https"
+export DJANGO_ALLOWED_HOSTS="boforg.co.zw,www.boforg.co.zw,shop.boforg.co.zw,ims.boforg.co.zw,ai.boforg.co.zw,api.boforg.co.zw"
+export CSRF_TRUSTED_ORIGINS="https://boforg.co.zw,https://www.boforg.co.zw,https://shop.boforg.co.zw,https://ims.boforg.co.zw,https://ai.boforg.co.zw,https://api.boforg.co.zw"
+export SESSION_COOKIE_DOMAIN=".boforg.co.zw"
+export CSRF_COOKIE_DOMAIN=".boforg.co.zw"
+```
 
 ## Apps
 

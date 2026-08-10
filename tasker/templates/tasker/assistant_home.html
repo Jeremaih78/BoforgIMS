@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Personal AI Assistant · Boforg AI Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/assistant.css' %}">{% endblock %}
+{% block content %}
+<div class="ai-assistant-shell container-xl py-4">
+  <div class="ai-hero p-4 p-lg-5 mb-4">
+    <div class="tasker-label mb-2">Boforg AI · Personal workspace</div>
+    <h1 class="display-6 fw-bold">Your productivity assistant</h1>
+    <p class="text-muted mb-0">Recommendations use only your tasks, plan, focus session, workload, and daily review. You stay in control of every change.</p>
+  </div>
+  {% if not ai_availability.available %}<div class="alert alert-warning"><i class="bi bi-info-circle me-2"></i>{{ ai_availability.reason }}</div>{% endif %}
+  <div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-3"><form method="post" action="{% url 'ims:tasker:assistant_day_action' 'plan-day' %}">{% csrf_token %}<button class="ai-action-card w-100 text-start" {% if not ai_availability.available %}disabled{% endif %}><i class="bi bi-calendar2-check"></i><strong>Plan My Day</strong><small>Build a realistic sequence with reasons.</small></button></form></div>
+    <div class="col-md-6 col-xl-3"><form method="post" action="{% url 'ims:tasker:assistant_day_action' 'next-task' %}">{% csrf_token %}<button class="ai-action-card w-100 text-start" {% if not ai_availability.available %}disabled{% endif %}><i class="bi bi-compass"></i><strong>Suggest Next Task</strong><small>Find the most valuable next move.</small></button></form></div>
+    <div class="col-md-6 col-xl-3"><form method="post" action="{% url 'ims:tasker:assistant_day_action' 'prioritize' %}">{% csrf_token %}<button class="ai-action-card w-100 text-start" {% if not ai_availability.available %}disabled{% endif %}><i class="bi bi-sort-numeric-down"></i><strong>Prioritize Tasks</strong><small>Rank your active workload.</small></button></form></div>
+    <div class="col-md-6 col-xl-3"><form method="post" action="{% url 'ims:tasker:assistant_day_action' 'summarize-day' %}">{% csrf_token %}<button class="ai-action-card w-100 text-start" {% if not ai_availability.available %}disabled{% endif %}><i class="bi bi-journal-check"></i><strong>Summarize Day</strong><small>Reflect from recorded work only.</small></button></form></div>
+  </div>
+  <section class="ai-panel p-4">
+    <h2 class="h5">Recent personal sessions</h2>
+    {% if conversations %}<div class="list-group list-group-flush">{% for conversation in conversations %}<div class="list-group-item bg-transparent px-0 d-flex justify-content-between"><span>{{ conversation.title|default:"Personal assistant session" }}</span><small class="text-muted">{{ conversation.created_at|timesince }} ago</small></div>{% endfor %}</div>{% else %}<div class="ai-empty">Your personal AI sessions will appear here.</div>{% endif %}
+  </section>
+</div>
+{% endblock %}

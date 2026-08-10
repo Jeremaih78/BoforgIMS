@@ -1,31 +1,40 @@
-{% load static %}
+{% load static hosts %}
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Boforg IMS</title>
+    <title>{% block title %}Boforg IMS{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    {% if is_tasker_request %}<link rel="stylesheet" href="{% static 'tasker/css/ui.css' %}">{% endif %}
+    {% block extra_css %}{% endblock %}
     <link rel="icon" href="{% static 'img/logo_white.png' %}">
   </head>
   <body>
     <div class="app d-flex">
       <aside class="sidebar d-none d-lg-block p-3">
-        <a class="brand d-flex align-items-center text-decoration-none mb-3" href="/">
+        <a class="brand d-flex align-items-center text-decoration-none mb-3" href="{% host_url 'ims:dashboard' host 'ims' %}">
           <img src="{% static 'img/logo_white.png' %}" height="36" class="me-2"> Boforg IMS
         </a>
         <div class="list-group list-group-flush">
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/"><i class="bi bi-box-seam me-2"></i>Inventory</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/shipments/"><i class="bi bi-truck me-2"></i>Shipments</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/inventory/shipments/dashboard/"><i class="bi bi-graph-up me-2"></i>Shipment Dashboard</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/sales/"><i class="bi bi-receipt me-2"></i>Sales</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/customers/"><i class="bi bi-people me-2"></i>Customers</a>
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/credit-control/"><i class="bi bi-cash-stack me-2"></i>Credit Control</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:dashboard' host 'ims' %}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:inventory:product_list' host 'ims' %}"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:inventory:shipment_list' host 'ims' %}"><i class="bi bi-truck me-2"></i>Shipments</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:inventory:shipment_dashboard' host 'ims' %}"><i class="bi bi-graph-up me-2"></i>Shipment Dashboard</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:sales:sales_home' host 'ims' %}"><i class="bi bi-receipt me-2"></i>Sales</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:customers:customer_list' host 'ims' %}"><i class="bi bi-people me-2"></i>Customers</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:credit_control:dashboard' host 'ims' %}"><i class="bi bi-cash-stack me-2"></i>Credit Control</a>
+          {% if perms.tasker.view_task %}
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:tasker:index' host 'ai' %}"><i class="bi bi-stars me-2"></i>AI Tasker</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link ps-4" href="{% host_url 'ims:tasker:task_list' host 'ai' %}"><i class="bi bi-check2-square me-2"></i>Tasks</a>
+          {% if perms.tasker.view_dailyplan %}<a class="list-group-item list-group-item-action bg-transparent nav-link ps-4" href="{% host_url 'ims:tasker:daily_plan' host 'ai' %}"><i class="bi bi-journal-check me-2"></i>Daily Planner</a>{% endif %}
+          {% if perms.tasker.use_ai %}<a class="list-group-item list-group-item-action bg-transparent nav-link ps-4" href="{% host_url 'ims:tasker:assistant_home' host 'ai' %}"><i class="bi bi-person-stars me-2"></i>Personal AI</a>{% endif %}
+          {% if perms.tasker.view_ai_usage %}<a class="list-group-item list-group-item-action bg-transparent nav-link ps-4" href="{% host_url 'ims:tasker:ai_usage_dashboard' host 'ai' %}"><i class="bi bi-bar-chart-line me-2"></i>AI Usage</a>{% endif %}
+          {% endif %}
           {% if user.is_superuser %}
-          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="/ims/accounting/"><i class="bi bi-cash-coin me-2"></i>Accounting</a>
+          <a class="list-group-item list-group-item-action bg-transparent nav-link" href="{% host_url 'ims:accounting:accounting_dashboard' host 'ims' %}"><i class="bi bi-cash-coin me-2"></i>Accounting</a>
           {% endif %}
         </div>
       </aside>
@@ -60,16 +69,45 @@
 
     <nav class="navbar navbar-dark bg-dark d-lg-none fixed-bottom">
       <div class="container-fluid justify-content-around">
-        <a class="navbar-brand" href="/ims/"><i class="bi bi-speedometer2"></i></a>
-        <a class="navbar-brand" href="/ims/inventory/"><i class="bi bi-box-seam"></i></a>
-        <a class="navbar-brand" href="/ims/inventory/shipments/"><i class="bi bi-truck"></i></a>
-        <a class="navbar-brand" href="/ims/sales/"><i class="bi bi-receipt"></i></a>
-        <a class="navbar-brand" href="/ims/credit-control/"><i class="bi bi-cash-stack"></i></a>
+        <a class="navbar-brand" href="{% host_url 'ims:dashboard' host 'ims' %}"><i class="bi bi-speedometer2"></i></a>
+        <a class="navbar-brand" href="{% host_url 'ims:inventory:product_list' host 'ims' %}"><i class="bi bi-box-seam"></i></a>
+        <a class="navbar-brand" href="{% host_url 'ims:inventory:shipment_list' host 'ims' %}"><i class="bi bi-truck"></i></a>
+        <a class="navbar-brand" href="{% host_url 'ims:sales:sales_home' host 'ims' %}"><i class="bi bi-receipt"></i></a>
+        <a class="navbar-brand" href="{% host_url 'ims:credit_control:dashboard' host 'ims' %}"><i class="bi bi-cash-stack"></i></a>
+        {% if perms.tasker.view_task %}
+        <a class="navbar-brand" href="{% host_url 'ims:tasker:index' host 'ai' %}" aria-label="AI Tasker"><i class="bi bi-stars"></i></a>
+        {% if perms.tasker.view_dailyplan %}<a class="navbar-brand" href="{% host_url 'ims:tasker:daily_plan' host 'ai' %}" aria-label="Daily Planner"><i class="bi bi-journal-check"></i></a>{% endif %}
+        {% if perms.tasker.use_ai %}<a class="navbar-brand" href="{% host_url 'ims:tasker:assistant_home' host 'ai' %}" aria-label="Personal AI"><i class="bi bi-person-stars"></i></a>{% endif %}
+        {% if perms.tasker.view_ai_usage %}<a class="navbar-brand" href="{% host_url 'ims:tasker:ai_usage_dashboard' host 'ai' %}" aria-label="AI Usage"><i class="bi bi-bar-chart-line"></i></a>{% endif %}
+        {% endif %}
         {% if user.is_superuser %}
-        <a class="navbar-brand" href="/ims/accounting/"><i class="bi bi-cash-coin"></i></a>
+        <a class="navbar-brand" href="{% host_url 'ims:accounting:accounting_dashboard' host 'ims' %}"><i class="bi bi-cash-coin"></i></a>
         {% endif %}
       </div>
     </nav>
+
+    {% if is_tasker_request %}
+    <div id="taskerUIConfig" hidden data-today-url="{% url 'ims:tasker:index' %}" data-create-url="{% url 'ims:tasker:task_create' %}" {% if perms.tasker.view_dailyplan %}data-planner-url="{% url 'ims:tasker:daily_plan' %}"{% endif %}></div>
+    <div class="tasker-route-loader" id="taskerRouteLoader" aria-hidden="true"><span></span></div>
+    {% if perms.tasker.add_task %}
+    <button class="tasker-fab" type="button" data-bs-toggle="modal" data-bs-target="#quickAddModal" aria-label="Quick add task" title="Quick add task (N)">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Quick task</span><kbd>N</kbd>
+    </button>
+    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="globalQuickAddLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content tasker-global-modal">
+          <form method="post" action="{% url 'ims:tasker:index' %}">
+            {% csrf_token %}<input type="hidden" name="action" value="quick_add"><input type="hidden" name="next" value="{{ request.path }}">
+            <div class="modal-header border-0 pb-0"><div><div class="tasker-ui-kicker">Capture it now</div><h2 class="modal-title h4" id="globalQuickAddLabel">Quick add task</h2></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body py-4"><div class="mb-3"><label class="form-label" for="globalTaskTitle">What needs to be done?</label><input class="form-control form-control-lg" id="globalTaskTitle" name="title" maxlength="255" autocomplete="off" required placeholder="Type a clear next action"></div><div class="row g-3"><div class="col-sm-6"><label class="form-label" for="globalTaskPriority">Priority</label><select class="form-select" id="globalTaskPriority" name="priority"><option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM" selected>Medium</option><option value="LOW">Low</option></select></div><div class="col-sm-6"><label class="form-label" for="globalTaskTime">Due time</label><input class="form-control" id="globalTaskTime" name="due_time" type="time"></div><div class="col-sm-6"><label class="form-label" for="globalTaskEstimate">Estimate in minutes</label><input class="form-control" id="globalTaskEstimate" name="estimated_minutes" type="number" min="1" max="1440" inputmode="numeric" placeholder="e.g. 30"></div></div></div>
+            <div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add to today</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="modal fade" id="taskerShortcutsModal" tabindex="-1" aria-labelledby="taskerShortcutsLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content tasker-global-modal"><div class="modal-header border-0"><h2 class="modal-title h5" id="taskerShortcutsLabel"><i class="bi bi-keyboard me-2"></i>Keyboard shortcuts</h2><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body pt-0"><div class="tasker-shortcut-row"><span>Quick add task</span><kbd>N</kbd></div><div class="tasker-shortcut-row"><span>Full task form</span><span><kbd>Shift</kbd> <kbd>N</kbd></span></div><div class="tasker-shortcut-row"><span>Today dashboard</span><kbd>T</kbd></div>{% if perms.tasker.view_dailyplan %}<div class="tasker-shortcut-row"><span>Daily planner</span><kbd>P</kbd></div>{% endif %}<div class="tasker-shortcut-row"><span>Search tasks</span><kbd>/</kbd></div><div class="tasker-shortcut-row"><span>Show shortcuts</span><kbd>?</kbd></div></div></div></div></div>
+    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -77,10 +115,18 @@
       document.getElementById('btn-forward')?.addEventListener('click', () => history.forward());
       // Highlight active sidebar link
       const path = location.pathname;
-      document.querySelectorAll('.sidebar .nav-link').forEach(a => {
-        const href = a.getAttribute('href');
-        if (href && path.startsWith(href)) a.classList.add('active');
-      });
+      const matchingLinks = [...document.querySelectorAll('.sidebar .nav-link')]
+        .filter(a => {
+          const href = a.getAttribute('href');
+          if (!href) return false;
+          const target = new URL(href, location.origin);
+          return target.origin === location.origin &&
+            (path === target.pathname || (target.pathname !== '/' && path.startsWith(target.pathname)));
+        })
+        .sort((a, b) => b.getAttribute('href').length - a.getAttribute('href').length);
+      matchingLinks[0]?.classList.add('active');
     </script>
+    {% if is_tasker_request %}<script src="{% static 'tasker/js/ui.js' %}"></script>{% endif %}
+    {% block extra_js %}{% endblock %}
   </body>
 </html>

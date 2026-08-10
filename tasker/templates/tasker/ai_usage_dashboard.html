@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static humanize %}
+{% block title %}AI Usage · Boforg AI Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/ai_usage.css' %}">{% endblock %}
+{% block content %}
+<div class="ai-usage-page">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div><div class="ai-kicker">Governance &amp; reliability</div><h1 class="h2 mb-1">AI Usage</h1><p class="text-muted mb-0">Operational activity for the last 30 days. Prompt and response content is never displayed here.</p></div>
+    <div class="d-flex flex-wrap align-items-center gap-2"><span class="ai-status {% if usage.configuration.is_enabled %}ai-status-succeeded{% else %}ai-status-disabled{% endif %}">{% if usage.configuration.is_enabled %}AI enabled{% else %}AI disabled{% endif %}</span><a class="btn btn-secondary" href="{% url 'ims:tasker:index' %}"><i class="bi bi-arrow-left me-1"></i>Tasker</a></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-xl"><article class="ai-stat"><span>Requests</span><strong>{{ usage.total_requests|intcomma }}</strong></article></div>
+    <div class="col-6 col-xl"><article class="ai-stat"><span>Success rate</span><strong>{{ usage.success_rate }}%</strong></article></div>
+    <div class="col-6 col-xl"><article class="ai-stat"><span>Tokens</span><strong>{{ usage.total_tokens|intcomma }}</strong></article></div>
+    <div class="col-6 col-xl"><article class="ai-stat"><span>Active users</span><strong>{{ usage.active_users|intcomma }}</strong></article></div>
+    <div class="col-12 col-xl"><article class="ai-stat"><span>Average latency</span><strong>{{ usage.average_latency_ms|intcomma }} ms</strong></article></div>
+  </div>
+  <div class="small text-muted mb-4">Active model: <strong class="text-body">{{ usage.configuration.model|default:"Not configured" }}</strong> · Active prompt templates: <strong class="text-body">{{ usage.active_prompt_count }}</strong></div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6"><section class="ai-panel"><div class="ai-panel-head"><div><div class="ai-kicker">Consumption</div><h2 class="h5 mb-0">By model</h2></div><i class="bi bi-cpu"></i></div>{% for row in usage.model_usage %}<div class="ai-breakdown"><span>{{ row.model|default:"Unconfigured" }}</span><strong>{{ row.tokens|default:0|intcomma }} tokens</strong><small>{{ row.requests }} request{{ row.requests|pluralize }}</small></div>{% empty %}<div class="ai-empty">No model usage recorded.</div>{% endfor %}</section></div>
+    <div class="col-lg-6"><section class="ai-panel"><div class="ai-panel-head"><div><div class="ai-kicker">Workloads</div><h2 class="h5 mb-0">By operation</h2></div><i class="bi bi-diagram-3"></i></div>{% for row in usage.operation_usage %}<div class="ai-breakdown"><span>{{ row.operation }}</span><strong>{{ row.requests }} request{{ row.requests|pluralize }}</strong><small>{{ row.tokens|default:0|intcomma }} tokens</small></div>{% empty %}<div class="ai-empty">No AI operations recorded.</div>{% endfor %}</section></div>
+  </div>
+
+  <section class="ai-panel mb-4">
+    <div class="ai-panel-head"><div><div class="ai-kicker">30-day trend</div><h2 class="h5 mb-0">Daily activity</h2></div><i class="bi bi-activity"></i></div>
+    <div class="row g-2">{% for row in usage.daily_usage %}<div class="col-6 col-md-3 col-xl-2"><div class="border rounded-3 p-3 h-100"><time class="small text-muted d-block" datetime="{{ row.day|date:'Y-m-d' }}">{{ row.day|date:"j M" }}</time><strong class="h5 d-block mb-0">{{ row.requests }}</strong><small class="text-muted">{{ row.tokens|default:0|intcomma }} tokens</small></div></div>{% empty %}<div class="ai-empty">Usage trends will appear after the first AI request.</div>{% endfor %}</div>
+  </section>
+
+  <section class="ai-panel">
+    <div class="ai-panel-head"><div><div class="ai-kicker">Audit trail</div><h2 class="h5 mb-0">Recent requests</h2></div><span class="text-muted small">No prompt content logged</span></div>
+    <div class="table-responsive"><table class="table ai-table align-middle mb-0"><thead><tr><th>Time</th><th>Employee</th><th>Operation</th><th>Model</th><th>Status</th><th class="text-end">Tokens</th><th class="text-end">Latency</th></tr></thead><tbody>{% for log in usage.recent_logs %}<tr><td><time datetime="{{ log.started_at|date:'c' }}">{{ log.started_at|date:"j M, H:i" }}</time></td><td>{% if log.user %}{{ log.user.get_full_name|default:log.user.username }}{% else %}Former user{% endif %}</td><td>{{ log.operation }}</td><td>{{ log.model|default:"—" }}</td><td><span class="ai-status ai-status-{{ log.status|lower }}">{{ log.get_status_display }}</span></td><td class="text-end">{{ log.total_tokens|intcomma }}</td><td class="text-end">{% if log.latency_ms is not None %}{{ log.latency_ms|intcomma }} ms{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="7"><div class="ai-empty">No AI requests have been made. The foundation is ready but remains disabled by default.</div></td></tr>{% endfor %}</tbody></table></div>
+  </section>
+</div>
+{% endblock %}

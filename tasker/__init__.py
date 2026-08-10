@@ -1,0 +1,1 @@
+"""Boforg AI Tasker application."""

@@ -1,4 +1,5 @@
 ﻿{% load static %}
+{% load hosts %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -28,21 +29,21 @@
 <body class="bg-gray-50 text-gray-900">
   <header class="bg-white shadow-sm sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="/shop/" class="flex items-center gap-2 text-lg font-semibold">
+      <a href="{% url 'shop:catalog' %}" class="flex items-center gap-2 text-lg font-semibold">
         <span>Boforg Shop</span>
       </a>
       <nav class="hidden md:flex gap-6 text-sm font-medium">
-        <a href="/" class="hover:text-blue-600">Home</a>
-        <a href="/shop/" class="text-blue-600">Shop</a>
+        <a href="{% host_url 'website:home' host 'website' %}" class="hover:text-blue-600">Home</a>
+        <a href="{% url 'shop:catalog' %}" class="text-blue-600">Shop</a>
       </nav>
       <div class="flex items-center gap-3 text-sm">
-        <a href="/shop/cart/" class="border rounded-xl px-3 py-1 flex items-center gap-2">
+        <a href="{% url 'shop:cart_detail' %}" class="border rounded-xl px-3 py-1 flex items-center gap-2">
           <span>Cart</span>
           <div id="cart-counter">
             {% include 'shop/partials/cart_counter.html' with count=cart_count %}
           </div>
         </a>
-        <a href="/shop/checkout/" class="hidden md:inline-flex bg-blue-600 text-white px-3 py-1 rounded-xl">Checkout</a>
+        <a href="{% url 'shop:checkout' %}" class="hidden md:inline-flex bg-blue-600 text-white px-3 py-1 rounded-xl">Checkout</a>
       </div>
     </div>
   </header>
@@ -54,7 +55,7 @@
       </div>
     </section>
     <section>
-      <a href="/shop/" class="text-sm text-blue-600">&larr; Back to shop</a>
+      <a href="{% url 'shop:catalog' %}" class="text-sm text-blue-600">&larr; Back to shop</a>
       <h1 class="mt-4 text-3xl font-bold">{{ product.name }}</h1>
       <div class="mt-2 text-gray-600">SKU: {{ product.sku }}</div>
       {% if product.category %}
@@ -65,7 +66,7 @@
       <div class="mt-6 prose prose-sm max-w-none text-gray-700">
         {{ product.description|linebreaks }}
       </div>
-      <form hx-post="/shop/cart/add/" hx-target="#cart-counter" hx-swap="outerHTML" class="mt-8 flex flex-col sm:flex-row gap-4">
+      <form hx-post="{% url 'shop:cart_add' %}" hx-target="#cart-counter" hx-swap="outerHTML" class="mt-8 flex flex-col sm:flex-row gap-4">
         {% csrf_token %}
         <input type="hidden" name="product_id" value="{{ product.id }}">
         <div class="flex items-center gap-2 border rounded-xl px-4 py-2 bg-white">
@@ -101,8 +102,8 @@
     <div class="max-w-6xl mx-auto px-4 py-10 text-sm text-gray-500 flex flex-col md:flex-row justify-between gap-4">
       <div>&copy; {% now "Y" %} Boforg Technologies Private Limited.</div>
       <div class="flex gap-4">
-        <a class="hover:text-blue-600" href="/legal/privacy/">Privacy</a>
-        <a class="hover:text-blue-600" href="/legal/terms/">Terms</a>
+        <a class="hover:text-blue-600" href="{% host_url 'legal:privacy' host 'website' %}">Privacy</a>
+        <a class="hover:text-blue-600" href="{% host_url 'legal:terms' host 'website' %}">Terms</a>
       </div>
     </div>
   </footer>

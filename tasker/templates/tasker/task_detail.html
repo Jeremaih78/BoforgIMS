@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static tasker_tags %}
+{% block title %}{{ task.title }} · Boforg AI Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/task_management.css' %}">{% endblock %}
+{% block content %}
+<div class="task-management">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <a href="{% url 'ims:tasker:task_list' %}" class="task-breadcrumb"><i class="bi bi-arrow-left me-1"></i>All tasks</a>
+    <div class="d-flex flex-wrap gap-2">{% if can_change and task.status != 'COMPLETED' and task.status != 'CANCELLED' and not task.archived %}<form method="post" action="{% url 'ims:tasker:focus_start' task.slug %}">{% csrf_token %}<button class="btn btn-primary" type="submit"><i class="bi bi-play-fill me-1"></i>Start task</button></form>{% endif %}{% if personal_ai_allowed and perms.tasker.use_ai %}<form method="post" action="{% url 'ims:tasker:assistant_task_action' task.slug 'explain' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit" {% if not ai_availability.available %}disabled title="{{ ai_availability.reason }}"{% endif %}><i class="bi bi-lightbulb me-1"></i>Explain task</button></form>{% if task.status != 'COMPLETED' and task.status != 'CANCELLED' and not task.archived %}<form method="post" action="{% url 'ims:tasker:assistant_task_action' task.slug 'break-down' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit" {% if not ai_availability.available %}disabled title="{{ ai_availability.reason }}"{% endif %}><i class="bi bi-list-check me-1"></i>Break into steps</button></form>{% endif %}{% endif %}{% if can_change %}<a href="{% url 'ims:tasker:task_edit' task.slug %}" class="btn btn-secondary"><i class="bi bi-pencil me-1"></i>Edit</a>{% endif %}{% if can_delete %}<a href="{% url 'ims:tasker:task_delete' task.slug %}" class="btn btn-outline-danger"><i class="bi bi-trash3 me-1"></i>Delete</a>{% endif %}</div>
+  </div>
+
+  <div class="task-detail-header task-panel p-4 p-lg-5 mb-4 priority-border-{{ task.priority|lower }}">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><span class="task-priority priority-pill-{{ task.priority|lower }}">{{ task.get_priority_display }}</span><span class="task-status status-{{ task.status|lower }}">{{ task.get_status_display }}</span>{% if task.archived %}<span class="task-status">Archived</span>{% endif %}</div>
+    <h1 class="display-6 fw-bold mb-3">{{ task.title }}</h1>
+    <p class="task-detail-description text-muted mb-4">{{ task.description|default:"No description has been added yet."|linebreaksbr }}</p>
+    {% if task.blocked_reason %}<div class="alert alert-warning"><strong><i class="bi bi-slash-circle me-1"></i>Blocked:</strong> {{ task.blocked_reason|linebreaksbr }}</div>{% endif %}
+    <div class="row g-3 task-detail-facts">
+      <div class="col-6 col-lg-3"><span>Owner</span><strong>{{ task.owner.get_full_name|default:task.owner.username }}</strong></div>
+      <div class="col-6 col-lg-3"><span>Due</span><strong>{% if task.due_date %}{{ task.due_date|date:"j M Y" }}{% if task.due_time %}, {{ task.due_time|time:"H:i" }}{% endif %}{% else %}Not scheduled{% endif %}</strong></div>
+      <div class="col-6 col-lg-3"><span>Category</span><strong>{{ task.category.name|default:"Uncategorised" }}</strong></div>
+      <div class="col-6 col-lg-3"><span>Estimate / actual</span><strong>{{ task.estimated_duration|task_duration|default:"—" }} / {{ task.actual_duration|task_duration|default:"—" }}</strong></div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-xl-8">
+      <section class="task-panel p-4 mb-4" aria-labelledby="progressHeading">
+        <div class="d-flex justify-content-between align-items-center mb-3"><div><div class="task-eyebrow">Completion</div><h2 class="h5 mb-0" id="progressHeading">Progress</h2></div><div class="tasker-circle-progress" style="--value: {{ task.progress }}" role="progressbar" aria-valuenow="{{ task.progress }}" aria-valuemin="0" aria-valuemax="100"><strong>{{ task.progress }}%</strong></div></div>
+        <div class="progress task-detail-progress mb-3"><div class="progress-bar" style="width: {{ task.progress }}%"></div></div>
+        {% if can_change %}<form action="{% url 'ims:tasker:progress_update' task.slug %}" method="post" class="d-flex gap-2 align-items-start">{% csrf_token %}<div class="flex-grow-1">{{ progress_form.progress }}</div><button class="btn btn-primary" type="submit">Update</button></form>{% endif %}
+      </section>
+
+      <section class="task-panel p-4 mb-4" id="checklist" aria-labelledby="checklistHeading">
+        <div class="d-flex justify-content-between align-items-center mb-3"><div><div class="task-eyebrow">Break it down</div><h2 class="h5 mb-0" id="checklistHeading">Checklist</h2></div><span class="task-count">{{ task.checklist_items.all|length }}</span></div>
+        {% if task.checklist_items.all %}<div class="checklist-list mb-3">{% for item in task.checklist_items.all %}<div class="checklist-item {% if item.is_completed %}is-complete{% endif %}">{% if can_change and perms.tasker.change_taskchecklistitem %}<form method="post" action="{% url 'ims:tasker:checklist_toggle' task.slug item.pk %}">{% csrf_token %}<button class="check-toggle" type="submit" aria-label="{% if item.is_completed %}Reopen{% else %}Complete{% endif %} {{ item.title }}"><i class="bi {% if item.is_completed %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i></button></form>{% else %}<i class="bi {% if item.is_completed %}bi-check-circle-fill text-success{% else %}bi-circle{% endif %}"></i>{% endif %}<div class="flex-grow-1"><div>{{ item.title }}</div>{% if item.completed_at %}<small class="text-muted">Completed {{ item.completed_at|timesince }} ago</small>{% endif %}</div></div>{% endfor %}</div>{% else %}<div class="task-inline-empty mb-3">No checklist items yet.</div>{% endif %}
+        {% if can_change and perms.tasker.add_taskchecklistitem %}<form action="{% url 'ims:tasker:checklist_add' task.slug %}" method="post" class="d-flex gap-2">{% csrf_token %}<div class="flex-grow-1">{{ checklist_form.title }}</div><button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg"></i><span class="visually-hidden">Add item</span></button></form>{% endif %}
+      </section>
+
+      <section class="task-panel p-4 mb-4" id="comments" aria-labelledby="commentsHeading">
+        <div class="d-flex justify-content-between align-items-center mb-3"><div><div class="task-eyebrow">Discussion</div><h2 class="h5 mb-0" id="commentsHeading">Comments</h2></div><span class="task-count">{{ task.comments.all|length }}</span></div>
+        {% if task.comments.all %}<div class="comment-list mb-4">{% for comment in task.comments.all %}<article class="comment-item"><div class="comment-avatar">{% if comment.created_by %}{{ comment.created_by.username|first|upper }}{% else %}?{% endif %}</div><div><div class="d-flex flex-wrap gap-2 align-items-center"><strong>{% if comment.created_by %}{{ comment.created_by.get_full_name|default:comment.created_by.username }}{% else %}Former user{% endif %}</strong><small class="text-muted">{{ comment.created_at|timesince }} ago</small></div><p class="mb-0 mt-1">{{ comment.body|linebreaksbr }}</p></div></article>{% endfor %}</div>{% else %}<div class="task-inline-empty mb-3">No comments yet. Add context, an update, or a blocker.</div>{% endif %}
+        {% if perms.tasker.add_taskcomment %}<form action="{% url 'ims:tasker:comment_add' task.slug %}" method="post">{% csrf_token %}{{ comment_form.body }}<div class="text-end mt-2"><button class="btn btn-primary" type="submit">Post comment</button></div></form>{% endif %}
+      </section>
+
+      {% if task.notes %}<section class="task-panel p-4"><div class="task-eyebrow">Private context</div><h2 class="h5">Notes</h2><div class="text-muted">{{ task.notes|linebreaksbr }}</div></section>{% endif %}
+    </div>
+
+    <div class="col-xl-4">
+      <section class="task-panel p-4 mb-4" id="time-entries" aria-labelledby="timeHeading">
+        <div class="d-flex justify-content-between align-items-center mb-3"><div><div class="task-eyebrow">Effort</div><h2 class="h5 mb-0" id="timeHeading">Time entries</h2></div><i class="bi bi-stopwatch text-info"></i></div>
+        {% if time_entries %}<div class="time-list mb-3">{% for entry in time_entries %}<div class="time-item"><div><strong>{{ entry.duration|task_duration }}</strong><small class="d-block text-muted">{{ entry.started_at|date:"j M, H:i" }} · {{ entry.user.get_full_name|default:entry.user.username }}</small></div>{% if entry.notes %}<span title="{{ entry.notes }}"><i class="bi bi-chat-left-text"></i></span>{% endif %}</div>{% endfor %}</div>{% else %}<div class="task-inline-empty mb-3">No time logged yet.</div>{% endif %}
+        {% if can_change and perms.tasker.add_tasktimeentry %}<button class="btn btn-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#timeForm"><i class="bi bi-plus-lg me-1"></i>Log time</button><div class="collapse mt-3" id="timeForm"><form action="{% url 'ims:tasker:time_add' task.slug %}" method="post">{% csrf_token %}<div class="mb-2"><label class="form-label small">Started</label>{{ time_form.started_at }}</div><div class="mb-2"><label class="form-label small">Minutes</label>{{ time_form.duration_minutes }}</div><div class="mb-2"><label class="form-label small">Notes</label>{{ time_form.notes }}</div><button class="btn btn-primary w-100" type="submit">Save entry</button></form></div>{% endif %}
+      </section>
+
+      <section class="task-panel p-4" aria-labelledby="historyHeading">
+        <div class="d-flex justify-content-between align-items-center mb-3"><div><div class="task-eyebrow">Audit trail</div><h2 class="h5 mb-0" id="historyHeading">History</h2></div><i class="bi bi-clock-history text-muted"></i></div>
+        {% if activities %}<div class="activity-list">{% for activity in activities %}<article class="activity-item"><span class="activity-marker"><i class="bi {% if activity.event_type == 'CREATED' %}bi-plus-lg{% elif activity.event_type == 'COMMENT' %}bi-chat-dots{% elif activity.event_type == 'TIME' %}bi-stopwatch{% elif activity.event_type == 'CHECKLIST' %}bi-check2-square{% elif activity.event_type == 'DELETED' %}bi-trash3{% else %}bi-pencil{% endif %}"></i></span><div><div class="small">{{ activity.description }}</div><small class="text-muted">{% if activity.created_by %}{{ activity.created_by.get_full_name|default:activity.created_by.username }}{% else %}System{% endif %} · {{ activity.created_at|timesince }} ago</small></div></article>{% endfor %}</div>{% else %}<div class="task-inline-empty">No history recorded yet.</div>{% endif %}
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

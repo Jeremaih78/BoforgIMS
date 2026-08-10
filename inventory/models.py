@@ -7,7 +7,6 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.templatetags.static import static
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -117,7 +116,9 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse('shop:product_detail', args=[self.slug])
+        from django_hosts.resolvers import reverse as host_reverse
+
+        return host_reverse('shop:product_detail', args=[self.slug], host='shop')
 
     @property
     def available_stock(self):

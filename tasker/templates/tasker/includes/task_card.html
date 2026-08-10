@@ -1,0 +1,20 @@
+<article class="task-card h-100 priority-border-{{ task.priority|lower }}">
+  <a href="{{ task.get_absolute_url }}" class="task-card-link" aria-label="Open {{ task.title }}"></a>
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-3 position-relative">
+    <span class="task-priority priority-pill-{{ task.priority|lower }}">{{ task.get_priority_display }}</span>
+    <div class="tasker-quick-actions"><span class="task-status status-{{ task.status|lower }}">{{ task.get_status_display }}</span>{% if perms.tasker.manage_tasker or task.owner == user or task.assigned_by == user and perms.tasker.assign_task %}{% if perms.tasker.change_task %}<a class="tasker-icon-action" href="{% url 'ims:tasker:task_edit' task.slug %}" title="Edit task" aria-label="Edit {{ task.title }}"><i class="bi bi-pencil"></i></a>{% endif %}{% endif %}</div>
+  </div>
+  <h2 class="h5 mb-2 position-relative">{{ task.title }}</h2>
+  <p class="task-card-description text-muted mb-3 position-relative">{{ task.description|default:"No description provided."|truncatechars:120 }}</p>
+  <div class="task-card-meta d-flex flex-wrap gap-3 mb-3 position-relative">
+    {% if task.due_date %}<span class="{% if task.due_date < today and task.status != 'COMPLETED' %}text-danger{% endif %}"><i class="bi bi-calendar3 me-1"></i>{{ task.due_date|date:"j M Y" }}{% if task.due_time %}, {{ task.due_time|time:"H:i" }}{% endif %}</span>{% endif %}
+    {% if task.category %}<span><i class="bi bi-tag me-1"></i>{{ task.category.name }}</span>{% endif %}
+    {% if can_view_all or task.owner != user %}<span><i class="bi bi-person me-1"></i>{{ task.owner.get_full_name|default:task.owner.username }}</span>{% endif %}
+  </div>
+  <div class="d-flex align-items-center gap-3 mt-auto position-relative">
+    <div class="progress task-card-progress flex-grow-1" role="progressbar" aria-valuenow="{{ task.progress }}" aria-valuemin="0" aria-valuemax="100">
+      <div class="progress-bar" style="width: {{ task.progress }}%"></div>
+    </div>
+    <small class="text-muted">{{ task.progress }}%</small>
+  </div>
+</article>

@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% load static tasker_tags %}
+
+{% block title %}Today · Boforg AI Tasker{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'tasker/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="tasker-dashboard">
+  <header class="tasker-hero d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
+    <div>
+      <div class="tasker-eyebrow mb-2"><i class="bi bi-sun me-2" aria-hidden="true"></i>{{ dashboard.date|date:"l, j F Y" }}</div>
+      <h1 class="display-6 fw-bold mb-1">{{ dashboard.greeting }}, {{ user.first_name|default:user.username }}.</h1>
+      <p class="text-muted mb-0">Let’s make today count. Start with the work that matters most.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+    {% if perms.tasker.view_dailyplan %}<a class="btn btn-secondary" href="{% url 'ims:tasker:daily_plan' %}"><i class="bi bi-journal-check me-2"></i>Plan today</a>{% endif %}
+    <a class="btn btn-secondary" href="{% url 'ims:tasker:task_list' %}"><i class="bi bi-check2-square me-2"></i>All tasks</a>
+    {% if perms.tasker.add_task %}<button class="btn btn-primary tasker-primary-action" type="button" data-bs-toggle="modal" data-bs-target="#quickAddModal">
+      <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Quick add task
+    </button>{% endif %}
+    </div>
+  </header>
+
+  <section class="row g-3 mb-4" aria-label="Today's progress">
+    <div class="col-lg-6">
+      <div class="tasker-card tasker-progress-card h-100 d-flex align-items-center gap-4 p-4">
+        <div class="tasker-progress-ring flex-shrink-0" style="--progress: {{ dashboard.progress_percent }}" role="progressbar" aria-valuenow="{{ dashboard.progress_percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Today's progress">
+          <span>{{ dashboard.progress_percent }}%</span>
+        </div>
+        <div>
+          <div class="tasker-label">Today’s progress</div>
+          <h2 class="h4 mt-1 mb-1">{% if dashboard.total_count %}Keep your momentum going{% else %}Your day is ready to plan{% endif %}</h2>
+          <p class="text-muted mb-0">{{ dashboard.completed_count }} of {{ dashboard.total_count }} scheduled task{{ dashboard.total_count|pluralize }} completed.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="tasker-card tasker-stat-card h-100 p-4">
+        <span class="tasker-icon tasker-icon-success"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
+        <div class="tasker-stat-value">{{ dashboard.completed_count }}</div>
+        <div class="tasker-label">Tasks completed</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="tasker-card tasker-stat-card h-100 p-4">
+        <span class="tasker-icon tasker-icon-warning"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+        <div class="tasker-stat-value">{{ dashboard.pending_count }}</div>
+        <div class="tasker-label">Pending tasks</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="row g-4">
+    <div class="col-xl-8">
+      <section class="tasker-card p-4 mb-4" aria-labelledby="priorities-heading">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <div class="tasker-label">Focus first</div>
+            <h2 class="h4 mb-0" id="priorities-heading">Top priorities</h2>
+          </div>
+          <span class="tasker-count">{{ dashboard.top_priorities|length }}</span>
+        </div>
+        {% if dashboard.top_priorities %}
+        <div class="tasker-priority-list">
+          {% for task in dashboard.top_priorities %}
+          <article class="tasker-task-row">
+            <span class="tasker-priority-dot priority-{{ task.priority|lower }}" aria-hidden="true"></span>
+            <div class="min-w-0 flex-grow-1">
+              <h3 class="h6 mb-1 text-truncate"><a class="tasker-task-link" href="{{ task.get_absolute_url }}">{{ task.title }}</a></h3>
+              <div class="d-flex flex-wrap align-items-center gap-2 tasker-meta">
+                <span class="priority-text-{{ task.priority|lower }}">{{ task.get_priority_display }}</span>
+                {% if task.category %}<span><i class="bi bi-tag me-1"></i>{{ task.category.name }}</span>{% endif %}
+                {% if task.due_time %}<span><i class="bi bi-clock me-1"></i>{{ task.due_time|time:"H:i" }}</span>{% endif %}
+              </div>
+            </div>
+            <div class="tasker-mini-progress" title="{{ task.progress }}% complete"><span style="width: {{ task.progress }}%"></span></div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="tasker-empty-state py-4">
+          <i class="bi bi-bullseye" aria-hidden="true"></i>
+          <h3 class="h6 mt-3">No urgent priorities</h3>
+          <p class="text-muted mb-0">Add a task for today or choose priorities in the daily planner.</p>
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="tasker-card p-4" aria-labelledby="timeline-heading">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <div class="tasker-label">Your schedule</div>
+            <h2 class="h4 mb-0" id="timeline-heading">Today’s timeline</h2>
+          </div>
+          <i class="bi bi-calendar3 fs-5 text-muted" aria-hidden="true"></i>
+        </div>
+        {% if dashboard.timeline %}
+        <div class="tasker-timeline">
+          {% for task in dashboard.timeline %}
+          <article class="tasker-timeline-item {% if task.status == 'COMPLETED' %}is-complete{% endif %}">
+            <div class="tasker-time">{% if task.due_time %}{{ task.due_time|time:"H:i" }}{% else %}Flexible{% endif %}</div>
+            <div class="tasker-timeline-marker"><span></span></div>
+            <div class="tasker-timeline-content">
+              <div class="d-flex flex-wrap justify-content-between gap-2">
+                <h3 class="h6 mb-1"><a class="tasker-task-link" href="{{ task.get_absolute_url }}">{{ task.title }}</a></h3>
+                <span class="tasker-status status-{{ task.status|lower }}">{{ task.get_status_display }}</span>
+              </div>
+              <div class="tasker-meta">
+                {{ task.get_priority_display }}{% if task.estimated_duration %} · {{ task.estimated_duration|task_duration }}{% endif %}
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="tasker-empty-state py-5">
+          <i class="bi bi-calendar2-plus" aria-hidden="true"></i>
+          <h3 class="h6 mt-3">A clear timeline</h3>
+          <p class="text-muted mb-0">Schedule your first task to give the day structure.</p>
+        </div>
+        {% endif %}
+      </section>
+    </div>
+
+    <div class="col-xl-4">
+      <section class="tasker-card p-4 mb-4" aria-labelledby="carry-heading">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <div class="tasker-label">Needs attention</div>
+            <h2 class="h5 mb-0" id="carry-heading">Carry over</h2>
+          </div>
+          <i class="bi bi-arrow-repeat fs-5 text-warning" aria-hidden="true"></i>
+        </div>
+        {% if dashboard.carry_over_tasks %}
+        <div class="d-grid gap-2">
+          {% for task in dashboard.carry_over_tasks %}
+          <div class="tasker-compact-task">
+            <span class="tasker-priority-dot priority-{{ task.priority|lower }}"></span>
+            <div class="min-w-0">
+              <div class="text-truncate fw-semibold">{{ task.title }}</div>
+              <small class="text-muted">{% if task.due_date %}Due {{ task.due_date|date:"j M" }}{% else %}No due date{% endif %}</small>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="tasker-empty-compact"><i class="bi bi-check2-all me-2"></i>Nothing carried over.</div>
+        {% endif %}
+      </section>
+
+      <section class="tasker-card p-4 mb-4" aria-labelledby="notes-heading">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <div class="tasker-label">Scratchpad</div>
+            <h2 class="h5 mb-0" id="notes-heading">Quick notes</h2>
+          </div>
+          <i class="bi bi-journal-text fs-5 text-info" aria-hidden="true"></i>
+        </div>
+        {% if perms.tasker.add_dailyplan and perms.tasker.change_dailyplan %}
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="quick_notes">
+          {{ quick_notes_form.quick_notes }}
+          {% for error in quick_notes_form.quick_notes.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <small class="text-muted" id="notesStatus">Saved manually</small>
+            <button class="btn btn-sm btn-outline-light" type="submit"><i class="bi bi-save me-1"></i>Save notes</button>
+          </div>
+        </form>
+        {% else %}
+        <p class="text-muted small mb-0">Daily plan edit permission is required to save notes.</p>
+        {% endif %}
+      </section>
+
+      <section class="tasker-card tasker-review-card p-4 mb-4" aria-labelledby="review-heading">
+        <span class="tasker-icon tasker-icon-primary mb-3"><i class="bi bi-moon-stars" aria-hidden="true"></i></span>
+        <h2 class="h5" id="review-heading">End day review</h2>
+        {% if dashboard.has_daily_review %}
+        <p class="text-muted small">Today’s reflection has been completed.</p>
+        {% if perms.tasker.view_dailyreview %}<a class="btn btn-sm btn-outline-success w-100" href="{% url 'ims:tasker:daily_review' %}"><i class="bi bi-check2 me-1"></i>View review</a>{% else %}<button class="btn btn-sm btn-outline-success w-100" disabled>Review complete</button>{% endif %}
+        {% else %}
+        <p class="text-muted small">Close the loop by recording wins, lessons, and tomorrow’s focus.</p>
+        {% if perms.tasker.view_dailyreview %}<a class="btn btn-sm btn-outline-light w-100" href="{% url 'ims:tasker:daily_review' %}">Start end day review</a>{% else %}<button class="btn btn-sm btn-outline-light w-100" disabled>Review permission required</button>{% endif %}
+        {% endif %}
+      </section>
+
+      <section class="tasker-card p-4" aria-labelledby="ai-heading">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="tasker-ai-mark"><i class="bi bi-stars" aria-hidden="true"></i></span>
+          <div>
+            <div class="tasker-label">Boforg AI</div>
+            <h2 class="h5 mb-0" id="ai-heading">AI assistant</h2>
+          </div>
+        </div>
+        <div class="d-grid gap-2">
+          {% if perms.tasker.use_ai %}
+          <form method="post" action="{% url 'ims:tasker:assistant_day_action' 'plan-day' %}">{% csrf_token %}<button class="tasker-ai-button w-100" {% if not ai_availability.available %}disabled{% endif %}><span><i class="bi bi-calendar2-check me-2"></i>Plan My Day</span><small>Personal plan</small></button></form>
+          <form method="post" action="{% url 'ims:tasker:assistant_day_action' 'next-task' %}">{% csrf_token %}<button class="tasker-ai-button w-100" {% if not ai_availability.available %}disabled{% endif %}><span><i class="bi bi-compass me-2"></i>Suggest Next Task</span><small>With a clear why</small></button></form>
+          <form method="post" action="{% url 'ims:tasker:assistant_day_action' 'prioritize' %}">{% csrf_token %}<button class="tasker-ai-button w-100" {% if not ai_availability.available %}disabled{% endif %}><span><i class="bi bi-sort-numeric-down me-2"></i>Prioritize Tasks</span><small>Rank my workload</small></button></form>
+          <form method="post" action="{% url 'ims:tasker:assistant_day_action' 'summarize-day' %}">{% csrf_token %}<button class="tasker-ai-button w-100" {% if not ai_availability.available %}disabled{% endif %}><span><i class="bi bi-file-earmark-text me-2"></i>Summarize Day</span><small>From recorded work</small></button></form>
+          <a class="btn btn-sm btn-link" href="{% url 'ims:tasker:assistant_home' %}">Open personal assistant</a>
+          {% if not ai_availability.available %}<small class="text-muted text-center">{{ ai_availability.reason }}</small>{% endif %}
+          {% else %}<div class="task-inline-empty">AI permission is required.</div>{% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const notesInput = document.querySelector('.tasker-notes-input');
+  notesInput?.addEventListener('input', () => {
+    const status = document.getElementById('notesStatus');
+    if (status) status.textContent = 'Unsaved changes';
+  });
+</script>
+{% endblock %}

@@ -12,7 +12,7 @@
           <div class="text-sm text-gray-500">{{ item.product.sku }}</div>
           <div class="mt-2 text-blue-700 font-semibold">${{ item.product.price }}</div>
           <div class="mt-2 text-sm text-gray-600">Quantity: {{ item.quantity }}</div>
-          <form hx-post="/shop/cart/remove/" hx-target="#cart-content" hx-swap="outerHTML" class="mt-3 inline-flex">
+          <form hx-post="{% url 'shop:cart_remove' %}" hx-target="#cart-content" hx-swap="outerHTML" class="mt-3 inline-flex">
             {% csrf_token %}
             <input type="hidden" name="product_id" value="{{ item.product.id }}">
             <button class="text-sm text-red-600 hover:underline">Remove</button>
@@ -30,14 +30,14 @@
         <span>${{ subtotal }}</span>
       </div>
       <div class="mt-2 text-xs text-gray-500">Shipping & payment calculated at checkout.</div>
-      <a href="/shop/checkout/" class="mt-6 block text-center bg-blue-600 text-white py-3 rounded-2xl font-semibold">Proceed to Checkout</a>
+      <a href="{% url 'shop:checkout' %}" class="mt-6 block text-center bg-blue-600 text-white py-3 rounded-2xl font-semibold">Proceed to Checkout</a>
       <a href="{{ whatsapp_order_url }}" target="_blank" rel="noopener noreferrer" class="mt-3 block w-full text-center bg-[#25D366] hover:bg-[#1ebe5d] text-white py-3 rounded-2xl font-semibold transition-colors">Place Order via WhatsApp</a>
     </aside>
   </div>
   {% else %}
   <div class="mt-12 text-center text-gray-500">
     <p>Your cart is empty.</p>
-    <a href="/shop/" class="mt-4 inline-flex px-5 py-3 bg-blue-600 text-white rounded-2xl">Continue Shopping</a>
+    <a href="{% url 'shop:catalog' %}" class="mt-4 inline-flex px-5 py-3 bg-blue-600 text-white rounded-2xl">Continue Shopping</a>
   </div>
   {% endif %}
 </div>

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ page_title }} · Boforg AI Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/task_management.css' %}">{% endblock %}
+{% block content %}
+<div class="task-management task-form-page mx-auto">
+  <a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'ims:tasker:task_list' %}{% endif %}" class="task-breadcrumb"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  <div class="task-panel p-4 p-lg-5 mt-3">
+    <div class="mb-4"><div class="task-eyebrow">Task management</div><h1 class="h2 mb-1">{{ page_title }}</h1><p class="text-muted mb-0">Give the task enough clarity that the next action is obvious.</p></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="mb-3"><label class="form-label" for="{{ form.title.id_for_label }}">Title</label>{{ form.title }}{% for error in form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+      <div class="mb-3"><label class="form-label" for="{{ form.description.id_for_label }}">Description</label>{{ form.description }}{{ form.description.errors }}</div>
+      <div class="row g-3 mb-3">
+        {% if form.owner %}<div class="col-md-6"><label class="form-label" for="{{ form.owner.id_for_label }}">Owner</label>{{ form.owner }}{{ form.owner.errors }}</div>{% endif %}
+        <div class="col-md-3"><label class="form-label" for="{{ form.priority.id_for_label }}">Priority</label>{{ form.priority }}</div>
+        <div class="col-md-3"><label class="form-label" for="{{ form.status.id_for_label }}">Status</label>{{ form.status }}</div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-3"><label class="form-label" for="{{ form.due_date.id_for_label }}">Due date</label>{{ form.due_date }}{{ form.due_date.errors }}</div>
+        <div class="col-md-3"><label class="form-label" for="{{ form.due_time.id_for_label }}">Due time</label>{{ form.due_time }}</div>
+        <div class="col-md-3"><label class="form-label" for="{{ form.estimated_minutes.id_for_label }}">Estimate (minutes)</label>{{ form.estimated_minutes }}{{ form.estimated_minutes.errors }}</div>
+        <div class="col-md-3"><label class="form-label" for="{{ form.actual_minutes.id_for_label }}">Actual (minutes)</label>{{ form.actual_minutes }}{{ form.actual_minutes.errors }}</div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-4"><label class="form-label" for="{{ form.category.id_for_label }}">Category</label>{{ form.category }}</div>
+        <div class="col-md-4"><label class="form-label" for="{{ form.parent_task.id_for_label }}">Parent task</label>{{ form.parent_task }}{{ form.parent_task.errors }}</div>
+        <div class="col-md-2"><label class="form-label" for="{{ form.progress.id_for_label }}">Progress %</label>{{ form.progress }}{{ form.progress.errors }}</div>
+        <div class="col-md-2"><label class="form-label" for="{{ form.colour.id_for_label }}">Colour</label>{{ form.colour }}{{ form.colour.errors }}</div>
+      </div>
+      <div class="mb-4"><label class="form-label" for="{{ form.notes.id_for_label }}">Internal notes</label>{{ form.notes }}</div>
+      <div class="mb-4"><label class="form-label" for="{{ form.blocked_reason.id_for_label }}">Blocker reason <span class="text-muted fw-normal">(required when status is Blocked)</span></label>{{ form.blocked_reason }}{{ form.blocked_reason.errors }}</div>
+      <div class="d-flex flex-wrap gap-4 mb-4"><div class="form-check">{{ form.carry_forward }}<label class="form-check-label" for="{{ form.carry_forward.id_for_label }}">Carry forward</label></div><div class="form-check">{{ form.archived }}<label class="form-check-label" for="{{ form.archived.id_for_label }}">Archived</label></div></div>
+      <div class="d-flex justify-content-end gap-2"><a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'ims:tasker:task_list' %}{% endif %}" class="btn btn-secondary">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Save task</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

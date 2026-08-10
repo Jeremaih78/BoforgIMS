@@ -1,5 +1,6 @@
 def analytics_allowed(request):
     internal_paths = ("/ai/", "/ims/", "/admin/", "/django-admin/")
+    internal_apps = {"admin", "ims", "tasker"}
 
     user = getattr(request, "user", None)
 
@@ -9,7 +10,9 @@ def analytics_allowed(request):
 
     # Block internal system URLs
     path = (getattr(request, "path", "") or "").lower()
-    if path.startswith(internal_paths):
+    match = getattr(request, "resolver_match", None)
+    app_names = set(match.app_names) if match else set()
+    if path.startswith(internal_paths) or app_names.intersection(internal_apps):
         return {"allow_analytics": False}
 
     return {"allow_analytics": True}

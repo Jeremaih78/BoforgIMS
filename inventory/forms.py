@@ -59,6 +59,14 @@ class ProductForm(forms.ModelForm):
         slug_field = self.fields.get('slug')
         if slug_field:
             slug_field.required = False
+        tracking_field = self.fields.get('tracking_mode')
+        if tracking_field:
+            # Preserve the model's quantity-tracking default for legacy clients
+            # and lightweight product-create forms that omit this choice.
+            tracking_field.required = False
+
+    def clean_tracking_mode(self):
+        return self.cleaned_data.get('tracking_mode') or Product.TRACK_QUANTITY
 
     def clean_image(self):
         image = self.cleaned_data.get('image')

@@ -1,4 +1,5 @@
 ﻿{% load static %}
+{% load hosts %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,11 +12,11 @@
 <body class="bg-gray-50 text-gray-900">
   <header class="bg-white shadow-sm">
     <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-      <a href="/shop/" class="text-lg font-semibold">Boforg Shop</a>
+      <a href="{% url 'shop:catalog' %}" class="text-lg font-semibold">Boforg Shop</a>
       <nav class="flex gap-5 text-sm font-medium">
-        <a href="/" class="hover:text-blue-600">Home</a>
-        <a href="/shop/" class="hover:text-blue-600">Shop</a>
-        <a href="/shop/cart/" class="hover:text-blue-600">Cart</a>
+        <a href="{% host_url 'website:home' host 'website' %}" class="hover:text-blue-600">Home</a>
+        <a href="{% url 'shop:catalog' %}" class="hover:text-blue-600">Shop</a>
+        <a href="{% url 'shop:cart_detail' %}" class="hover:text-blue-600">Cart</a>
       </nav>
     </div>
   </header>
@@ -73,8 +74,8 @@
     <div class="max-w-5xl mx-auto px-4 py-10 text-sm text-gray-500 flex justify-between">
       <div>&copy; {% now "Y" %} Boforg Technologies Private Limited.</div>
       <div class="flex gap-4">
-        <a class="hover:text-blue-600" href="/legal/privacy/">Privacy</a>
-        <a class="hover:text-blue-600" href="/legal/terms/">Terms</a>
+        <a class="hover:text-blue-600" href="{% host_url 'legal:privacy' host 'website' %}">Privacy</a>
+        <a class="hover:text-blue-600" href="{% host_url 'legal:terms' host 'website' %}">Terms</a>
       </div>
     </div>
   </footer>

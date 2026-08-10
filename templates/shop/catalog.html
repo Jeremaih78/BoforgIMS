@@ -1,4 +1,5 @@
 ﻿{% load static %}
+{% load hosts %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -16,16 +17,16 @@
         <span>Boforg Technologies</span>
       </a>
       <nav class="hidden md:flex gap-6 text-sm font-medium">
-        <a href="/" class="hover:text-blue-600">Home</a>
-        <a href="/shop/" class="text-blue-600">Shop</a>
-        <a href="/legal/privacy/" class="hover:text-blue-600">Privacy</a>
+        <a href="{% host_url 'website:home' host 'website' %}" class="hover:text-blue-600">Home</a>
+        <a href="{% url 'shop:catalog' %}" class="text-blue-600">Shop</a>
+        <a href="{% host_url 'legal:privacy' host 'website' %}" class="hover:text-blue-600">Privacy</a>
       </nav>
       <div class="flex items-center gap-3">
-        <a href="/shop/cart/" class="relative inline-flex items-center gap-2 border rounded-xl px-3 py-1 text-sm">
+        <a href="{% url 'shop:cart_detail' %}" class="relative inline-flex items-center gap-2 border rounded-xl px-3 py-1 text-sm">
           <span>Cart</span>
           {% include 'shop/partials/cart_counter.html' with count=cart_count %}
         </a>
-        <a href="/shop/checkout/" class="hidden md:inline-flex bg-blue-600 text-white px-3 py-1 rounded-xl text-sm">Checkout</a>
+        <a href="{% url 'shop:checkout' %}" class="hidden md:inline-flex bg-blue-600 text-white px-3 py-1 rounded-xl text-sm">Checkout</a>
       </div>
     </div>
   </header>
@@ -48,13 +49,13 @@
           <div class="font-semibold text-sm uppercase text-gray-500 tracking-wide">Categories</div>
           <ul class="mt-3 space-y-2 text-sm">
             <li>
-              <a href="/shop/" class="flex items-center justify-between hover:text-blue-600 {% if not selected_category %}text-blue-600 font-semibold{% endif %}">
+              <a href="{% url 'shop:catalog' %}" class="flex items-center justify-between hover:text-blue-600 {% if not selected_category %}text-blue-600 font-semibold{% endif %}">
                 <span>All Products</span>
               </a>
             </li>
             {% for cat in categories %}
             <li>
-              <a href="/shop/?category={{ cat.slug|default:cat.pk }}" class="flex items-center justify-between hover:text-blue-600 {% if selected_category and cat.id == selected_category.id %}text-blue-600 font-semibold{% endif %}">
+              <a href="{% url 'shop:catalog' %}?category={{ cat.slug|default:cat.pk }}" class="flex items-center justify-between hover:text-blue-600 {% if selected_category and cat.id == selected_category.id %}text-blue-600 font-semibold{% endif %}">
                 <span>{{ cat.name }}</span>
               </a>
             </li>
@@ -78,7 +79,7 @@
               </div>
             </a>
             <div class="px-4 pb-4">
-              <form hx-post="/shop/cart/add/" hx-target="#cart-counter" hx-swap="outerHTML" class="flex items-center gap-3">
+              <form hx-post="{% url 'shop:cart_add' %}" hx-target="#cart-counter" hx-swap="outerHTML" class="flex items-center gap-3">
                 {% csrf_token %}
                 <input type="hidden" name="product_id" value="{{ product.id }}">
                 <button class="flex-1 border rounded-xl py-2 hover:bg-blue-600 hover:text-white transition text-sm">Add to Cart</button>
@@ -111,9 +112,9 @@
     <div class="max-w-7xl mx-auto px-4 py-10 text-sm text-gray-500 flex flex-col md:flex-row justify-between gap-4">
       <div>&copy; {% now "Y" %} Boforg Technologies Private Limited.</div>
       <div class="flex gap-4">
-        <a class="hover:text-blue-600" href="/legal/privacy/">Privacy</a>
-        <a class="hover:text-blue-600" href="/legal/terms/">Terms</a>
-        <a class="hover:text-blue-600" href="/shop/healthz/">Status</a>
+        <a class="hover:text-blue-600" href="{% host_url 'legal:privacy' host 'website' %}">Privacy</a>
+        <a class="hover:text-blue-600" href="{% host_url 'legal:terms' host 'website' %}">Terms</a>
+        <a class="hover:text-blue-600" href="{% url 'shop:healthcheck' %}">Status</a>
       </div>
     </div>
   </footer>

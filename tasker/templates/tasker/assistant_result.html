@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ page_title }} · Boforg AI Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/assistant.css' %}">{% endblock %}
+{% block content %}
+<div class="ai-assistant-shell container-lg py-4">
+  <div class="d-flex justify-content-between align-items-center gap-3 mb-4">
+    <a class="btn btn-sm btn-outline-secondary" href="{% if task %}{% url 'ims:tasker:task_detail' task.slug %}{% else %}{% url 'ims:tasker:index' %}{% endif %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    <span class="ai-private-badge"><i class="bi bi-person-lock me-1"></i>Personal data only</span>
+  </div>
+  <header class="ai-result-header p-4 p-lg-5 mb-4"><div class="tasker-label mb-2">Boforg AI recommendation</div><h1 class="h2 mb-2">{{ page_title }}</h1><p class="mb-0 text-muted">Review the recommendation and its reasoning. Nothing was changed automatically.</p></header>
+
+  {% if feature == 'plan_day' %}
+    <section class="ai-panel p-4 mb-3"><h2 class="h4">{{ result.headline }}</h2><p class="mb-0"><strong>Today’s focus:</strong> {{ result.focus }}</p></section>
+    {% for item in result.recommendations %}<article class="ai-panel ai-recommendation p-4 mb-3"><div class="d-flex gap-3"><span class="ai-rank">{{ item.order }}</span><div><h3 class="h5">{{ item.title }}</h3><p class="mb-2">{{ item.why }}</p><small class="text-muted">{{ item.suggested_start }} · {{ item.estimated_minutes }} minutes</small></div></div></article>{% empty %}<div class="ai-panel p-4">No tasks need scheduling right now.</div>{% endfor %}
+  {% elif feature == 'next_task' %}
+    <section class="ai-panel p-4 mb-3"><div class="tasker-label">Best next task</div><h2 class="h3">{{ result.title }}</h2><p>{{ result.why }}</p><div class="alert alert-primary mb-0"><strong>Start with:</strong> {{ result.next_action }} <span class="ms-2 text-muted">≈ {{ result.estimated_focus_minutes }} min</span></div></section>
+  {% elif feature == 'prioritize' %}
+    <section class="ai-panel p-4 mb-3"><h2 class="h4">{{ result.headline }}</h2></section>
+    {% for item in result.ranked_tasks %}<article class="ai-panel p-4 mb-3"><div class="d-flex gap-3"><span class="ai-rank">{{ item.rank }}</span><div><h3 class="h5">{{ item.title }}</h3><p class="mb-2">{{ item.why }}</p><small><strong>Next action:</strong> {{ item.next_action }}</small></div></div></article>{% empty %}<div class="ai-panel p-4">There are no active tasks to prioritize.</div>{% endfor %}
+  {% elif feature == 'summarize_day' %}
+    <section class="ai-panel p-4 mb-3"><h2 class="h4">{{ result.headline }}</h2><h3 class="h6 mt-4">Accomplishments</h3><ul>{% for item in result.accomplishments %}<li>{{ item }}</li>{% empty %}<li>No completed work was recorded today.</li>{% endfor %}</ul><h3 class="h6 mt-4">Insights</h3><ul>{% for item in result.insights %}<li>{{ item }}</li>{% empty %}<li>No additional insight was inferred.</li>{% endfor %}</ul><div class="alert alert-primary mb-0"><strong>Tomorrow’s focus:</strong> {{ result.tomorrow_focus }}</div></section>
+    {% for item in result.unfinished %}<article class="ai-panel p-4 mb-3"><h3 class="h6">{{ item.title }}</h3><p class="mb-1"><strong>Why unfinished:</strong> {{ item.why_unfinished }}</p><small><strong>Next action:</strong> {{ item.next_action }}</small></article>{% endfor %}
+  {% elif feature == 'break_task' %}
+    <section class="ai-panel p-4 mb-3"><h2 class="h4">{{ result.task_title }}</h2><p class="mb-0">{{ result.approach }}</p></section>
+    <form method="post" action="{% url 'ims:tasker:assistant_apply_steps' task.slug ai_message.pk %}">{% csrf_token %}<div class="ai-panel p-4 mb-3"><h3 class="h5">Suggested checklist</h3>{% for step in result.steps %}<label class="ai-step"><input class="form-check-input" type="checkbox" name="steps" value="{{ forloop.counter0 }}" checked><span><strong>{{ step.order }}. {{ step.title }}</strong><small>{{ step.why }} · ≈ {{ step.estimated_minutes }} min</small></span></label>{% endfor %}</div><button class="btn btn-primary" type="submit"><i class="bi bi-check2-square me-1"></i>Add selected steps</button></form>
+  {% elif feature == 'explain_task' %}
+    <section class="ai-panel p-4"><h2 class="h3">{{ result.title }}</h2><p class="lead">{{ result.plain_language_goal }}</p><dl class="ai-explanation"><dt>Why it matters</dt><dd>{{ result.why_it_matters }}</dd><dt>Definition of done</dt><dd>{{ result.definition_of_done }}</dd><dt>Best first action</dt><dd>{{ result.first_action }}</dd><dt>Risks to watch</dt><dd><ul>{% for risk in result.risks %}<li>{{ risk }}</li>{% empty %}<li>No specific risks identified.</li>{% endfor %}</ul></dd></dl></section>
+  {% endif %}
+  <aside class="ai-why p-4 mt-4"><div class="d-flex gap-2"><i class="bi bi-lightbulb"></i><div><h2 class="h6">Why Boforg AI made this recommendation</h2><p class="mb-0">{{ result.reasoning }}</p></div></div></aside>
+</div>
+{% endblock %}

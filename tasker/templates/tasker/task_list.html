@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Tasks · Boforg AI Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/task_management.css' %}">{% endblock %}
+
+{% block content %}
+<div class="task-management">
+  <header class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <div>
+      <a href="{% url 'ims:tasker:index' %}" class="task-breadcrumb"><i class="bi bi-arrow-left me-1"></i>Today</a>
+      <h1 class="display-6 fw-bold mt-2 mb-1">Tasks</h1>
+      <p class="text-muted mb-0">Find the work that needs your attention and move it forward.</p>
+    </div>
+    {% if perms.tasker.add_task %}<a href="{% url 'ims:tasker:task_create' %}" class="btn btn-primary task-primary-btn"><i class="bi bi-plus-lg me-2"></i>Create task</a>{% endif %}
+  </header>
+
+  <form method="get" class="task-filter-card p-3 mb-4" aria-label="Task filters">
+    <div class="row g-2 align-items-end">
+      <div class="col-lg-4">
+        <label class="visually-hidden" for="taskSearch">Search tasks</label>
+        <div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input id="taskSearch" class="form-control" name="q" value="{{ filters.q }}" placeholder="Search tasks…" data-task-search><span class="input-group-text d-none d-md-flex"><kbd>/</kbd></span></div>
+      </div>
+      <div class="col-6 col-md-3 col-lg-2"><label class="visually-hidden" for="priorityFilter">Priority</label><select id="priorityFilter" class="form-select" name="priority"><option value="">All priorities</option>{% for value, label in priority_choices %}<option value="{{ value }}" {% if filters.priority == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-6 col-md-3 col-lg-2"><label class="visually-hidden" for="statusFilter">Status</label><select id="statusFilter" class="form-select" name="status"><option value="">All statuses</option>{% for value, label in status_choices %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-6 col-md-3 col-lg-2"><label class="visually-hidden" for="categoryFilter">Category</label><select id="categoryFilter" class="form-select" name="category"><option value="">All categories</option>{% for category in categories %}<option value="{{ category.pk }}" {% if filters.category == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></div>
+      <div class="col-6 col-md-3 col-lg-2"><label class="visually-hidden" for="sortFilter">Sort</label><select id="sortFilter" class="form-select" name="sort"><option value="due" {% if filters.sort == 'due' %}selected{% endif %}>Due date</option><option value="priority" {% if filters.sort == 'priority' %}selected{% endif %}>Priority</option><option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Newest</option><option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>Oldest</option><option value="updated" {% if filters.sort == 'updated' %}selected{% endif %}>Recently updated</option><option value="title" {% if filters.sort == 'title' %}selected{% endif %}>Title</option></select></div>
+      {% if can_view_all %}<div class="col-md-4 col-lg-3"><label class="visually-hidden" for="ownerFilter">Owner</label><select id="ownerFilter" class="form-select" name="owner"><option value="">All owners</option>{% for owner in owners %}<option value="{{ owner.pk }}" {% if filters.owner == owner.pk|stringformat:"s" %}selected{% endif %}>{{ owner.get_full_name|default:owner.username }}</option>{% endfor %}</select></div>{% endif %}
+      <div class="col-md-auto"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" value="1" name="archived" id="archivedFilter" {% if filters.archived == '1' %}checked{% endif %}><label class="form-check-label small" for="archivedFilter">Include archived</label></div></div>
+      <div class="col-md-auto ms-md-auto d-flex gap-2"><a href="{% url 'ims:tasker:task_list' %}" class="btn btn-secondary">Clear</a><button class="btn btn-primary" type="submit">Apply filters</button></div>
+    </div>
+  </form>
+
+  <div class="d-flex justify-content-between align-items-center mb-3"><div class="task-results-count">{{ page_obj.paginator.count }} task{{ page_obj.paginator.count|pluralize }}</div><div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div></div>
+  {% if page_obj %}
+  <div class="row g-3">
+    {% for task in page_obj %}<div class="col-md-6 col-xxl-4">{% include "tasker/includes/task_card.html" %}</div>{% endfor %}
+  </div>
+  {% else %}
+  <div class="task-empty-page"><span><i class="bi bi-inbox"></i></span><h2 class="h4 mt-3">No tasks found</h2><p class="text-muted">Try clearing a filter or create your first task.</p>{% if perms.tasker.add_task %}<a href="{% url 'ims:tasker:task_create' %}" class="btn btn-primary">Create task</a>{% endif %}</div>
+  {% endif %}
+
+  {% if page_obj.paginator.num_pages > 1 %}<nav class="mt-4" aria-label="Task pages"><ul class="pagination justify-content-center">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="{% querystring page=page_obj.previous_page_number %}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="{% querystring page=page_obj.next_page_number %}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+</div>
+{% endblock %}

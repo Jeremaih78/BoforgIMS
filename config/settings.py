@@ -1,5 +1,6 @@
 ﻿import os
 from pathlib import Path
+import sys
 
 import dj_database_url
 from dotenv import load_dotenv
@@ -11,16 +12,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'kgd$wg@0t_hw)lkys-@6ez=kgpwcqk5%f$sk+q(lf)xmo#k6se')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
 
+BOFORG_PUBLIC_HOSTS = (
+    'boforg.co.zw',
+    'www.boforg.co.zw',
+    'shop.boforg.co.zw',
+    'ims.boforg.co.zw',
+    'ai.boforg.co.zw',
+    'api.boforg.co.zw',
+)
+
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get(
     'DJANGO_ALLOWED_HOSTS',
-    'boforg.co.zw,www.boforg.co.zw,localhost,127.0.0.1'
+    ','.join((*BOFORG_PUBLIC_HOSTS, 'localhost', '127.0.0.1'))
 ).split(',') if host.strip()]
 
 PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', 'https://boforg.co.zw')
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', PUBLIC_BASE_URL).split(',')
+    for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        ','.join(f'https://{host}' for host in BOFORG_PUBLIC_HOSTS),
+    ).split(',')
     if origin.strip()
 ]
 
@@ -33,7 +46,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'django.contrib.postgres',
+    'django_hosts',
     'rest_framework',
     # Local apps
     'inventory',
@@ -46,9 +61,11 @@ INSTALLED_APPS = [
     'website',
     'shop',
     'payments',
+    'tasker.apps.TaskerConfig',
 ]
 
 MIDDLEWARE = [
+    'config.middleware.BoforgHostsRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -57,9 +74,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'config.middleware.BoforgHostsResponseMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
+ROOT_HOSTCONF = 'config.hosts'
+DEFAULT_HOST = 'website'
+PARENT_HOST = os.environ.get('DJANGO_PARENT_HOST', 'boforg.co.zw')
+HOST_SCHEME = os.environ.get(
+    'DJANGO_HOST_SCHEME',
+    'http://' if DEBUG else 'https://',
+)
+if not HOST_SCHEME.endswith('://'):
+    HOST_SCHEME = f'{HOST_SCHEME}://'
 
 TEMPLATES = [
     {
@@ -73,6 +100,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.analytics_allowed',
+                'tasker.context_processors.tasker_ui',
             ],
         },
     },
@@ -83,34 +111,34 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 # Developmentr DATABASES
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
-        'USER': os.environ.get('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2204'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
+#         'USER': os.environ.get('POSTGRES_USER', 'postgres'),
+#         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2204'),
+#         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+#         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+#     }
+# }
 
 # Production Databases
 
-# if DATABASE_URL:
-#     DATABASES = {
-#         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=60, ssl_require=not DEBUG),
-#     }
-# else:
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.postgresql',
-#             'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
-#             'USER': os.environ.get('POSTGRES_USER', 'boforg'),
-#             'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2024'),
-#             'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-#             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-#         }
-#     }
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=60, ssl_require=not DEBUG),
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
+            'USER': os.environ.get('POSTGRES_USER', 'boforg'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2024'),
+            'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -136,6 +164,13 @@ STORAGES = {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
+
+# Development and tests do not require collectstatic. Keep the hashed
+# WhiteNoise manifest backend for production deployments only.
+if DEBUG or "test" in sys.argv:
+    STORAGES["staticfiles"] = {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    }
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
@@ -169,10 +204,36 @@ else:
 SESSION_ENGINE = os.environ.get('SESSION_ENGINE', 'django.contrib.sessions.backends.cached_db')
 SESSION_COOKIE_AGE = int(os.environ.get('SESSION_COOKIE_AGE', 60 * 60 * 24 * 7))
 
-LOGIN_REDIRECT_URL = 'dashboard'
+# Share the authenticated session between the trusted Boforg applications in
+# production. Development remains host-local unless explicitly configured.
+_default_cookie_domain = f'.{PARENT_HOST}' if not DEBUG else None
+SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN') or _default_cookie_domain
+CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN') or _default_cookie_domain
+
+LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = 'login'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Boforg AI Tasker. Provider secrets remain environment-only and are never
+# persisted in AIConfiguration or request logs.
+TASKER_AI_OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+TASKER_AI_OPENAI_ORGANIZATION = os.environ.get('OPENAI_ORGANIZATION', '')
+TASKER_AI_OPENAI_PROJECT = os.environ.get('OPENAI_PROJECT', '')
+TASKER_AI_MAX_PROMPT_CHARACTERS = int(os.environ.get('TASKER_AI_MAX_PROMPT_CHARACTERS', '50000'))
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {
+        'tasker.ai': {
+            'handlers': ['console'],
+            'level': os.environ.get('TASKER_AI_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        }
+    },
+}
 
 SECURE_SSL_REDIRECT = not DEBUG and os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() == 'true'
 SESSION_COOKIE_SECURE = not DEBUG
