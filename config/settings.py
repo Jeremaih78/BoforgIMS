@@ -23,7 +23,7 @@ BOFORG_PUBLIC_HOSTS = (
 
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get(
     'DJANGO_ALLOWED_HOSTS',
-    ','.join((*BOFORG_PUBLIC_HOSTS, 'localhost', '127.0.0.1'))
+    ','.join((*BOFORG_PUBLIC_HOSTS, 'localhost', '127.0.0.1,shop.boforg.co.zw,ims.boforg.co.zw,ai.boforg.co.zw,api.boforg.co.zw'))
 ).split(',') if host.strip()]
 
 PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', 'https://boforg.co.zw')
