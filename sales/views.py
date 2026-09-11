@@ -1,7 +1,16 @@
 from decimal import Decimal
+import logging
+from django.db import transaction
+from django.core.exceptions import ValidationError, PermissionDenied
+from core.permissions import allowed
+from .services.payments import record_payment
+from .services.serials import assign_serials
+
+logger = logging.getLogger(__name__)
 
 from django import forms
 from django.contrib import messages
+from core.permissions import ims_permission
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
@@ -35,13 +44,14 @@ from inventory.services.combos import (
 
 
 @login_required
+@ims_permission('sales.view_invoice', staff=True)
 def sales_home(request):
     q = request.GET.get('q', '')
     inv_qs = Invoice.objects.filter(
         Q(number__icontains=q) |
         Q(customer__name__icontains=q) |
         Q(status__icontains=q)
-    ).select_related('customer')
+    ).select_related('customer').prefetch_related('lines', 'payments')
     quo_qs = Quotation.objects.filter(
         Q(number__icontains=q) |
         Q(customer__name__icontains=q) |
@@ -60,6 +70,7 @@ def sales_home(request):
 
 
 @login_required
+@ims_permission('inventory.view_product', staff=True)
 @require_GET
 def product_search(request):
     """Small, authenticated catalogue lookup for sales document line entry."""
@@ -107,6 +118,7 @@ def product_search(request):
 
 
 @login_required
+@ims_permission('sales.add_quotation', staff=True)
 def quotation_create(request):
     form = QuotationForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -116,8 +128,13 @@ def quotation_create(request):
 
 
 @login_required
+@ims_permission('sales.view_quotation', staff=True, write_permission='sales.change_quotation')
+@transaction.atomic
 def quotation_edit(request, pk):
-    quotation = get_object_or_404(Quotation, pk=pk)
+    quotation = get_object_or_404(Quotation.objects.select_for_update(), pk=pk)
+    if request.method == 'POST' and quotation.status == Quotation.CONVERTED:
+        messages.error(request, 'Converted quotations cannot be edited.')
+        return redirect('ims:sales:quotation_edit', pk)
     updating_details = request.method == 'POST' and 'update_quotation' in request.POST
     adding_line = request.method == 'POST' and 'add_line' in request.POST
     adding_combo = request.method == 'POST' and 'add_combo' in request.POST
@@ -192,29 +209,33 @@ def quotation_edit(request, pk):
 
 
 @login_required
+@ims_permission('sales.add_invoice', staff=True)
+@require_POST
+@transaction.atomic
 def quotation_to_invoice(request, pk):
-    quotation = get_object_or_404(Quotation, pk=pk)
-    invoice = Invoice.objects.create(customer=quotation.customer, quotation=quotation, notes=quotation.notes)
-    for line in quotation.lines.all():
-        DocumentLine.objects.create(
-            invoice=invoice,
-            product=line.product,
-            description=line.description,
-            quantity=line.quantity,
-            unit_price=line.unit_price,
-            tax_rate_percent=line.tax_rate_percent,
-            line_total=line.line_total,
-        )
-    quotation.status = Quotation.CONVERTED
-    quotation.save(update_fields=['status'])
+    quotation = get_object_or_404(Quotation.objects.select_for_update(), pk=pk)
+    existing = Invoice.objects.filter(quotation=quotation).first()
+    if existing:
+        return redirect('ims:sales:invoice_edit', existing.pk)
     try:
-        StockService.reserve_stock(invoice)
-    except Exception as exc:
-        messages.error(request, f"Stock reservation failed on conversion: {exc}")
-    return redirect('ims:sales:invoice_edit', invoice.id)
+        with transaction.atomic():
+            invoice = Invoice.objects.create(customer=quotation.customer, quotation=quotation,
+                notes=quotation.notes, created_by=request.user)
+            for line in quotation.lines.all():
+                DocumentLine.objects.create(invoice=invoice, product=line.product, combo=line.combo,
+                    description=line.description, quantity=line.quantity, unit_price=line.unit_price,
+                    tax_rate_percent=line.tax_rate_percent, line_total=line.line_total)
+            StockService.reserve_stock(invoice)
+            quotation.status = Quotation.CONVERTED
+            quotation.save(update_fields=['status'])
+    except (ValueError, ValidationError) as exc:
+        messages.error(request, str(exc))
+        return redirect('ims:sales:quotation_edit', pk)
+    return redirect('ims:sales:invoice_edit', invoice.pk)
 
 
 @login_required
+@ims_permission('sales.view_quotation', staff=True)
 def quotation_pdf(request, pk):
     from .pdf_utils import render_pdf_from_html
 
@@ -230,17 +251,25 @@ def quotation_pdf(request, pk):
 
 
 @login_required
+@ims_permission('sales.add_invoice', staff=True)
 def invoice_create(request):
     form = InvoiceForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        invoice = form.save()
+        invoice = form.save(commit=False)
+        invoice.created_by = request.user
+        invoice.save()
         return redirect('ims:sales:invoice_edit', invoice.id)
     return render(request, 'sales/invoice_form.html', {'form': form})
 
 
 @login_required
+@ims_permission('sales.view_invoice', staff=True, write_permission='sales.change_invoice')
+@transaction.atomic
 def invoice_edit(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk)
+    invoice = get_object_or_404(Invoice.objects.select_for_update(), pk=pk)
+    if request.method == 'POST' and 'add_payment' not in request.POST and (invoice.stock_finalized or invoice.status == Invoice.PAID or invoice.payments.exists()):
+        messages.error(request, 'Invoices with payments or finalized stock cannot be edited.')
+        return redirect('ims:sales:invoice_edit', pk)
     updating_details = request.method == 'POST' and 'update_invoice' in request.POST
     adding_line = request.method == 'POST' and 'add_line' in request.POST
     adding_combo = request.method == 'POST' and 'add_combo' in request.POST
@@ -248,7 +277,7 @@ def invoice_edit(request, pk):
     line_form = DocumentLineForm(request.POST if adding_line else None)
     detail_form = InvoiceForm(request.POST if updating_details else None, instance=invoice)
     combo_form = ComboSelectionForm(request.POST if adding_combo else None, prefix='combo')
-    pay_form = PaymentForm(request.POST if adding_payment else None, initial={'invoice': invoice})
+    pay_form = PaymentForm(request.POST if adding_payment else None)
 
     if request.method == 'POST':
         if 'update_invoice' in request.POST and detail_form.is_valid():
@@ -275,8 +304,9 @@ def invoice_edit(request, pk):
             line.save()
             try:
                 StockService.reserve_stock(invoice)
-            except Exception as exc:
-                messages.error(request, f"Stock reservation failed: {exc}")
+            except (ValueError, ValidationError) as exc:
+                transaction.set_rollback(True)
+                messages.error(request, str(exc))
             return redirect('ims:sales:invoice_edit', pk)
         if 'add_combo' in request.POST:
             combo_form = ComboSelectionForm(request.POST, prefix='combo')
@@ -286,26 +316,23 @@ def invoice_edit(request, pk):
                 try:
                     add_combo_to_invoice(invoice, combo.id, quantity)
                     StockService.reserve_stock(invoice)
-                except ValueError as exc:
+                except (ValueError, ValidationError) as exc:
+                    transaction.set_rollback(True)
                     messages.error(request, str(exc))
-                except Exception as exc:
-                    messages.error(request, f"Stock reservation failed: {exc}")
                 return redirect('ims:sales:invoice_edit', pk)
         if 'add_payment' in request.POST and pay_form.is_valid():
-            payment = pay_form.save()
-            paid = StockService.amount_paid(invoice)
-            if paid >= invoice.total:
-                try:
-                    invoice.confirm(user=request.user)
-                    invoice.status = Invoice.PAID
-                    invoice.save(update_fields=['status'])
-                    StockService.finalize_sale(invoice)
-                except Exception as exc:
-                    messages.error(request, f"Invoice confirmation failed: {exc}")
-            elif paid > 0 and invoice.status != Invoice.PAID:
-                invoice.status = Invoice.PENDING
-                invoice.save(update_fields=['status'])
-            return redirect('ims:sales:invoice_edit', pk)
+            if not allowed(request.user, 'sales.add_payment', staff=True):
+                raise PermissionDenied
+            try:
+                record_payment(invoice_id=invoice.pk, user=request.user, **pay_form.cleaned_data)
+            except (ValueError, ValidationError) as exc:
+                pay_form.add_error(None, str(exc))
+            except Exception:
+                logger.exception('Invoice payment transaction failed for invoice %s', invoice.pk)
+                pay_form.add_error(None, 'Payment was not saved. Ask a manager to check accounting configuration and try again.')
+            else:
+                messages.success(request, 'Payment recorded.')
+                return redirect('ims:sales:invoice_edit', pk)
 
     combo_options = []
     for combo in Combo.objects.filter(is_active=True).prefetch_related('items__product'):
@@ -341,6 +368,7 @@ def invoice_edit(request, pk):
 
 
 @login_required
+@ims_permission('sales.view_invoice', staff=True)
 def invoice_pdf(request, pk):
     from .pdf_utils import render_pdf_from_html
 
@@ -358,9 +386,13 @@ def invoice_pdf(request, pk):
 
 
 @login_required
+@ims_permission('sales.change_quotation', staff=True)
 @require_POST
+@transaction.atomic
 def quotation_line_delete(request, pk, line_id):
-    quotation = get_object_or_404(Quotation, pk=pk)
+    quotation = get_object_or_404(Quotation.objects.select_for_update(), pk=pk)
+    if quotation.status == Quotation.CONVERTED:
+        return JsonResponse({'ok': False, 'error': 'Converted quotations cannot be edited.'}, status=400)
     line = get_object_or_404(DocumentLine, pk=line_id, quotation=quotation)
     line.delete()
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -370,23 +402,26 @@ def quotation_line_delete(request, pk, line_id):
 
 
 @login_required
+@ims_permission('sales.change_invoice', staff=True)
 @require_POST
+@transaction.atomic
 def invoice_line_delete(request, pk, line_id):
-    invoice = get_object_or_404(Invoice, pk=pk)
-    if invoice.status == Invoice.PAID:
+    invoice = get_object_or_404(Invoice.objects.select_for_update(), pk=pk)
+    if invoice.stock_finalized or invoice.status == Invoice.PAID or invoice.payments.exists():
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': False, 'error': 'Paid invoice lines cannot be removed.'}, status=400)
         messages.error(request, 'Paid invoice lines cannot be removed.')
         return redirect('ims:sales:invoice_edit', pk)
     line = get_object_or_404(DocumentLine, pk=line_id, invoice=invoice)
+    ProductUnit.objects.filter(sale_line=line, status=ProductUnit.STATUS_RESERVED).update(sale_line=None, status=ProductUnit.STATUS_AVAILABLE)
     line.delete()
     try:
-        StockService.release_reservation(invoice)
         StockService.reserve_stock(invoice)
-    except Exception as exc:
+    except (ValueError, ValidationError) as exc:
+        transaction.set_rollback(True)
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'ok': False, 'error': f'Line removed, but stock reservation refresh failed: {exc}'}, status=400)
-        messages.error(request, f'Line removed, but stock reservation refresh failed: {exc}')
+            return JsonResponse({'ok': False, 'error': f'Line removal cancelled; stock reservation failed: {exc}'}, status=400)
+        messages.error(request, f'Line removal cancelled; stock reservation failed: {exc}')
     else:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'total': str(invoice.total)})
@@ -395,6 +430,7 @@ def invoice_line_delete(request, pk, line_id):
 
 
 @login_required
+@ims_permission('sales.change_invoice', staff=True)
 def invoice_line_serials(request, line_id):
     line = get_object_or_404(
         DocumentLine.objects.select_related('invoice', 'product'),
@@ -408,19 +444,13 @@ def invoice_line_serials(request, line_id):
         return redirect('ims:sales:invoice_edit', line.invoice_id)
     form = InvoiceLineSerialAssignmentForm(request.POST or None, line=line)
     if request.method == 'POST' and form.is_valid():
-        selected = list(form.cleaned_data['serials'])
-        selected_ids = [unit.id for unit in selected]
-        ProductUnit.objects.filter(sale_line=line).exclude(id__in=selected_ids).update(
-            sale_line=None,
-            status=ProductUnit.STATUS_AVAILABLE,
-            sold_at=None,
-        )
-        for unit in selected:
-            unit.sale_line = line
-            unit.status = ProductUnit.STATUS_RESERVED
-            unit.save(update_fields=['sale_line', 'status', 'updated_at'])
-        messages.success(request, 'Serial numbers updated.')
-        return redirect('ims:sales:invoice_edit', line.invoice_id)
+        try:
+            assign_serials(line_id=line.pk, serials=list(form.cleaned_data['serials'].values_list('serial_number', flat=True)))
+        except ValueError as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, 'Serial numbers updated.')
+            return redirect('ims:sales:invoice_edit', line.invoice_id)
     return render(
         request,
         'sales/invoice_line_serials.html',

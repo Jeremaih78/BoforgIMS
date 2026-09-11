@@ -1,4 +1,12 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+from django.db import transaction
+from django.db.models import Q, F
+from django.utils.http import url_has_allowed_host_and_scheme
+from .selectors import public_products
+from .context_processors import whatsapp_url
+import json
+from django.utils.safestring import mark_safe
+from decimal import Decimal, InvalidOperation
 
 import logging
 import os
@@ -33,10 +41,10 @@ logger = logging.getLogger(__name__)
 
 
 CATALOG_PAGE_SIZE = 12
-WHATSAPP_ORDER_NUMBER = '263786264994'
 
 
-def _build_whatsapp_order_url(items, subtotal) -> str:
+
+def _build_whatsapp_order_url(items, subtotal, packages=()) -> str:
     product_blocks = []
     for position, item in enumerate(items, start=1):
         product_blocks.append(
@@ -51,6 +59,8 @@ def _build_whatsapp_order_url(items, subtotal) -> str:
             )
         )
 
+    for package in packages:
+        product_blocks.append(f'{package.quantity} x {package.combo.name} ({package.combo.code}): {package.line_total:.2f}')
     message = '\n\n'.join(
         [
             'Hello Boforg Technologies,',
@@ -60,18 +70,21 @@ def _build_whatsapp_order_url(items, subtotal) -> str:
             'Please confirm availability, payment instructions, and collection or delivery arrangements.',
         ]
     )
-    return f'https://wa.me/{WHATSAPP_ORDER_NUMBER}?{urlencode({"text": message})}'
+    return whatsapp_url(message)
 
 
 def _cart_detail_context(cart) -> dict:
     items = list(cart.items.select_related('product', 'product__category'))
     subtotal = cart_totals(cart)
+    packages = list(cart.packages.select_related('combo').prefetch_related('combo__items__product'))
     return {
         'cart': cart,
+        'page_event': {'event': 'view_cart'},
         'items': items,
+        'cart_packages': packages,
         'cart_count': cart_item_count(cart),
         'subtotal': subtotal,
-        'whatsapp_order_url': _build_whatsapp_order_url(items, subtotal) if items else '',
+        'whatsapp_order_url': _build_whatsapp_order_url(items, subtotal, packages) if items or packages else '',
     }
 
 
@@ -89,87 +102,76 @@ def _resolve_category(value: str) -> Optional[Category]:
 
 @require_GET
 def catalog(request):
-    category_param = request.GET.get('category', '').strip()
-    query = request.GET.get('q', '').strip()
-    page_number = request.GET.get('page', '1')
-
-    category = _resolve_category(category_param)
-
-    products = Product.objects.filter(is_active=True).select_related('category')
+    category = _resolve_category(request.GET.get('category', '')[:120])
+    query = request.GET.get('q', '').strip()[:100]
+    department = request.GET.get('department', '')
+    products = public_products()
     if category:
         products = products.filter(category=category)
-
-    if query:
+    if department in ('printing', 'fitness'):
+        products = products.filter(category__department=department)
+    for term in query.split()[:6]:
+        products = products.filter(Q(name__icontains=term) | Q(sku__icontains=term) | Q(category__name__icontains=term) | Q(description__icontains=term))
+    if request.GET.get('stock') == '1':
+        products = products.filter(Q(track_inventory=False) | Q(quantity__gt=F('reserved')))
+    for key, lookup in [('min_price', 'price__gte'), ('max_price', 'price__lte')]:
         try:
-            vector = (SearchVector('name', weight='A') +
-                      SearchVector('description', weight='B'))
-            search_query = SearchQuery(query)
-            products = (
-                products
-                .annotate(rank=SearchRank(vector, search_query))
-                .filter(rank__gte=0.1)
-                .order_by('-rank', '-updated_at')
-            )
-        except (ProgrammingError, OperationalError):
-            products = products.filter(name__icontains=query)
-    else:
-        products = products.order_by('-updated_at')
-
-    paginator = Paginator(products, CATALOG_PAGE_SIZE)
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-
-    categories_cache_key = 'shop:categories:v1'
-    categories = cache.get(categories_cache_key)
-    if categories is None:
-        categories = list(
-            Category.objects.filter(product__is_active=True)
-            .distinct()
-            .order_by('name')
-        )
-        cache.set(categories_cache_key, categories, getattr(settings, 'CACHE_TTL_CATALOG', 120))
-
-    cart = get_or_create_cart(request)
-
-    context = {
-        'page_obj': page_obj,
-        'products': page_obj.object_list,
-        'paginator': paginator,
-        'selected_category': category,
-        'query': query,
-        'categories': categories,
-        'cart_count': cart_item_count(cart),
-        'cart_total': cart_totals(cart),
-    }
+            value = Decimal(request.GET.get(key, ''))
+            if value.is_finite() and 0 <= value <= Decimal('9999999999.99'):
+                products = products.filter(**{lookup: value})
+        except (InvalidOperation, ValueError):
+            pass
+    sort = request.GET.get('sort', 'newest')
+    ordering = {'price_asc': 'price', 'price_desc': '-price', 'name': 'name', 'newest': '-created_at'}
+    products = products.order_by(ordering.get(sort, '-created_at'), 'pk')
+    page = Paginator(products, CATALOG_PAGE_SIZE).get_page(request.GET.get('page'))
+    params = request.GET.copy(); params.pop('page', None)
+    guided = not request.GET
+    categories = Category.objects.filter(product__in=public_products()).distinct()
+    context = {'page_obj': page, 'products': page.object_list, 'paginator': page.paginator,
+               'selected_category': category, 'query': query, 'department': department,
+               'categories': categories, 'sort': sort, 'filter_query': params.urlencode(),
+               'page_event': {'event': 'search' if query else 'view_item_list'}, 'canonical_url': request.build_absolute_uri(), 'guided': guided, 'page_description': 'Shop printing equipment, supplies and home fitness in Harare, Zimbabwe.'}
+    if guided:
+        from .packages import public_packages
+        context['packages'] = public_packages()
+        context['discovery_sections'] = [(title, public_products().filter(category__name__icontains=term).order_by('-created_at')[:4]) for title, term in [('Machines', 'machine'), ('Consumables & restocking', 'consum'), ('Blanks', 'blank')]]
+        context['departments'] = [('printing', 'Printing & Business Equipment'), ('fitness', 'Boforg Home Fitness')]
     return render(request, 'shop/catalog.html', context)
 
 
 @require_GET
 def product_detail(request, slug):
     product = get_object_or_404(
-        Product.objects.select_related('category', 'supplier'),
+        public_products(),
         slug=slug,
         is_active=True,
     )
     related_products = (
-        Product.objects.filter(is_active=True, category=product.category)
+        public_products().filter(category=product.category)
         .exclude(pk=product.pk)
         .order_by('-updated_at')[:4]
     )
 
-    cart = get_or_create_cart(request)
+    recommended = product.recommended_products.filter(is_active=True, is_public=True, price__gt=0).select_related('category')[:4]
+    schema = {'@context': 'https://schema.org', '@type': 'Product', 'name': product.name, 'sku': product.sku, 'description': product.short_description or product.description or product.name, 'image': request.build_absolute_uri(product.get_primary_image_url()), 'offers': {'@type': 'Offer', 'price': str(product.price), 'priceCurrency': product.currency, 'availability': 'https://schema.org/' + ('InStock' if product.shop_purchasable else 'OutOfStock')}}
+    schema['url'] = request.build_absolute_uri()
+    breadcrumb = {'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [{'@type': 'ListItem', 'position': 1, 'name': 'Shop', 'item': request.build_absolute_uri(reverse('shop:catalog'))}, {'@type': 'ListItem', 'position': 2, 'name': product.name, 'item': request.build_absolute_uri()}]}
+    breadcrumb_data = mark_safe(json.dumps(breadcrumb).replace('<', chr(92) + 'u003c'))
+    structured_data = mark_safe(json.dumps(schema).replace('<', chr(92) + 'u003c'))
 
     return render(
         request,
         'shop/product_detail.html',
         {
             'product': product,
+            'page_event': {'event': 'view_item', 'currency': product.currency, 'value': str(product.price), 'items': [{'item_id': product.sku, 'item_name': product.name, 'price': str(product.price)}]},
             'related_products': related_products,
-            'cart_count': cart_item_count(cart),
+            'recommended_products': recommended,
+            'structured_data': structured_data,
+            'breadcrumb_data': breadcrumb_data,
+            'product_whatsapp': whatsapp_url(f'Hello Boforg Technologies, I am interested in {product.name}. Price: {product.currency} {product.price}. Product page: {request.build_absolute_uri(reverse("shop:product_detail", args=[product.slug]))}. Please assist me.'),
+            'page_description': product.short_description or (product.description or product.name)[:160],
         },
     )
 
@@ -186,28 +188,40 @@ def cart_detail(request):
 
 @require_POST
 def cart_add(request):
-    product_id = request.POST.get('product_id')
+    try:
+        product_id = int(request.POST.get('product_id', ''))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest('Invalid product.')
     quantity = request.POST.get('quantity', '1')
     try:
         quantity = int(quantity)
     except (TypeError, ValueError):
-        quantity = 1
-    quantity = max(quantity, 1)
+        return HttpResponseBadRequest('Quantity must be a whole number.')
+    if not 1 <= quantity <= 9999:
+        return HttpResponseBadRequest('Quantity must be between 1 and 9999.')
 
-    product = get_object_or_404(Product, pk=product_id, is_active=True)
+    product = get_object_or_404(public_products(), pk=product_id)
     cart = get_or_create_cart(request)
 
     existing_qty = cart.items.filter(product=product).values_list('quantity', flat=True).first() or 0
     if product.track_inventory and (existing_qty + quantity) > product.available_stock:
+        if request.headers.get('Accept') == 'application/json':
+            return JsonResponse({'message': f'Not enough stock for {product.name}.'}, status=409)
         if request.headers.get('HX-Request') == 'true':
             html = render_to_string("shop/partials/cart_counter.html", {"count": cart_item_count(cart)}, request=request)
             response = HttpResponse(html)
             response.status_code = 409
             return response
         messages.error(request, f"Not enough stock for {product.name}.")
-        return redirect(product.get_absolute_url())
+        return redirect('shop:product_detail', slug=product.slug)
 
-    add_product_to_cart(cart, product, quantity)
+    try:
+        add_product_to_cart(cart, product, quantity)
+    except ValueError as exc:
+        if request.headers.get('Accept') == 'application/json':
+            return JsonResponse({'message': str(exc)}, status=409)
+        messages.error(request, str(exc))
+        return redirect('shop:product_detail', slug=product.slug)
 
     if request.headers.get('HX-Request') == 'true':
         html = render_to_string(
@@ -217,17 +231,33 @@ def cart_add(request):
         )
         return HttpResponse(html)
 
+    event = {'event': 'add_to_cart', 'currency': product.currency, 'value': str(product.price * quantity), 'items': [{'item_id': product.sku, 'item_name': product.name, 'price': str(product.price), 'quantity': quantity}]}
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({'message': f'{product.name} added to cart.', 'cart_count': cart_item_count(cart), 'analytics': event})
+    request.session['store_events'] = [event]
     messages.success(request, f"Added {product.name} to cart.")
-    next_url = request.POST.get('next') or product.get_absolute_url()
+    next_url = request.POST.get('next', '')
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        next_url = reverse('shop:product_detail', args=[product.slug])
     return redirect(next_url)
 
 
 @require_POST
 def cart_remove(request):
-    product_id = request.POST.get('product_id')
+    try:
+        product_id = int(request.POST.get('product_id', ''))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest('Invalid product.')
     product = get_object_or_404(Product, pk=product_id)
     cart = get_or_create_cart(request)
+    event = {'event': 'remove_from_cart', 'items': [{'item_id': product.sku}]}
     remove_product_from_cart(cart, product)
+    if request.headers.get('Accept') == 'application/json':
+        context = _cart_detail_context(cart)
+        return JsonResponse({'message': f'{product.name} removed from cart.', 'cart_count': context['cart_count'],
+                             'cart_html': render_to_string('shop/partials/cart_content.html', context, request=request),
+                             'analytics': event})
+    request.session['store_events'] = [event]
 
     if request.headers.get('HX-Request') == 'true':
         html = render_to_string(
@@ -244,7 +274,7 @@ def cart_remove(request):
 def checkout(request):
     cart = get_or_create_cart(request)
     items = list(cart.items.select_related('product'))
-    if not items:
+    if not items and not cart.packages.exists():
         messages.info(request, 'Your cart is empty.')
         return redirect('shop:catalog')
 
@@ -273,7 +303,7 @@ def checkout(request):
     else:
         form = CheckoutForm()
 
-    subtotal = sum(item.line_total for item in items)
+    subtotal = cart_totals(cart)
 
     return render(
         request,
@@ -282,7 +312,9 @@ def checkout(request):
             'cart': cart,
             'items': items,
             'subtotal': subtotal,
+            'cart_packages': list(cart.packages.select_related('combo').prefetch_related('combo__items__product')),
             'form': form,
+            'page_event': {'event': 'begin_checkout'},
         },
     )
 
@@ -292,11 +324,16 @@ def checkout_complete(request):
     if not order_number:
         return redirect('shop:catalog')
     order = get_object_or_404(Order, number=order_number)
-    return render(request, 'shop/checkout_complete.html', {'order': order})
+    events = []
+    key = 'tracked_purchase_' + order.number
+    if order.is_paid and not request.session.get(key):
+        events = [{'event': 'purchase', 'transaction_id': order.number, 'currency': order.currency, 'value': str(order.total)}]
+        request.session[key] = True
+    return render(request, 'shop/checkout_complete.html', {'order': order, 'purchase_events': events})
 
 
 def paynow_initiate(request):
-    order_number = request.GET.get('order') or request.session.get('shop_last_order')
+    order_number = request.session.get('shop_last_order')
     if not order_number:
         messages.error(request, 'Order not found for payment.')
         return redirect('shop:checkout')
@@ -309,7 +346,7 @@ def paynow_initiate(request):
         request.session['shop_last_paid_order'] = order.number
         return redirect('shop:checkout_complete')
 
-    public_base = os.environ.get('SHOP_PUBLIC_BASE', getattr(settings, 'PUBLIC_BASE_URL', ''))
+    public_base = os.environ.get('SHOP_PUBLIC_BASE', '')
     if not public_base:
         public_base = request.build_absolute_uri('/').rstrip('/')
     return_url = f"{public_base}{reverse('shop:paynow_return')}"
@@ -346,7 +383,14 @@ def paynow_initiate(request):
     return redirect('shop:checkout')
 
 
+@transaction.atomic
 def _handle_payment_status(order: Order, payment: Payment, status: str, payload: dict) -> None:
+    order = Order.objects.select_for_update().get(pk=order.pk)
+    original_payment = payment
+    payment = Payment.objects.select_for_update().get(pk=payment.pk)
+    if order.status in (Order.Status.PAID, Order.Status.SHIPPED):
+        original_payment.status = Payment.Status.PAID
+        return
     status_lower = status.lower() if status else ''
     if status_lower == 'paid':
         if payment.status != Payment.Status.PAID:
@@ -371,9 +415,19 @@ def _handle_payment_status(order: Order, payment: Payment, status: str, payload:
     else:
         logger.info('Order %s payment status %s ignored.', order.number, status)
 
+    original_payment.status = payment.status
+
+
+def _verified_status_matches(order, result):
+    raw = result.get('raw') or {}
+    try:
+        return raw.get('reference') == order.number and Decimal(str(raw.get('amount'))) == order.total
+    except (ArithmeticError, TypeError, ValueError):
+        return False
+
 
 def paynow_return(request):
-    reference = request.GET.get('reference') or request.GET.get('order') or request.session.get('shop_last_order')
+    reference = request.session.get('shop_last_order')
     if not reference:
         messages.error(request, 'Missing payment reference.')
         return redirect('shop:checkout')
@@ -387,12 +441,18 @@ def paynow_return(request):
     status_payload = {}
     if payment.poll_url:
         status_payload = paynow.poll_status(payment.poll_url)
-    status = status_payload.get('status') or request.GET.get('status', '')
+    status = status_payload.get('status', '')
+    if not _verified_status_matches(order, status_payload):
+        status = ''
     if not status:
         messages.info(request, 'Payment status could not be verified yet. Please wait a moment and refresh.')
         return redirect('shop:checkout')
 
-    _handle_payment_status(order, payment, status, status_payload.get('raw', {}))
+    try:
+        _handle_payment_status(order, payment, status, status_payload.get('raw', {}))
+    except OrderCreationError:
+        messages.error(request, 'Payment verified; please contact staff to reconcile stock before collection.')
+        return redirect('shop:checkout')
 
     if payment.is_paid:
         cart = get_or_create_cart(request)
@@ -419,8 +479,14 @@ def paynow_result(request):
     if not payment:
         return HttpResponseBadRequest('Payment record not found')
 
-    raw_payload = request.POST.dict()
-    _handle_payment_status(order, payment, status, raw_payload)
+    verified = paynow.poll_status(payment.poll_url)
+    if not _verified_status_matches(order, verified):
+        return HttpResponse('Payment could not be verified; retry later.', status=503)
+    try:
+        _handle_payment_status(order, payment, verified.get('status', ''), verified.get('raw', {}))
+    except OrderCreationError:
+        logger.error('Verified order %s needs stock reconciliation.', order.pk)
+        return HttpResponse('Stock reconciliation required.', status=409)
 
     return HttpResponse('OK')
 
@@ -428,3 +494,61 @@ def paynow_result(request):
 @require_GET
 def healthcheck(request):
     return JsonResponse({'ok': True})
+
+
+@require_POST
+@transaction.atomic
+def package_add(request):
+    from .packages import public_packages
+    from .models import Cart, CartPackage
+    try:
+        quantity = int(request.POST.get('quantity', '1'))
+        combo_id = int(request.POST.get('combo_id', ''))
+    except ValueError:
+        return HttpResponseBadRequest('Invalid package quantity.')
+    cart = get_or_create_cart(request)
+    Cart.objects.select_for_update().get(pk=cart.pk)
+    combo = next((c for c in public_packages([combo_id]) if c.pk == combo_id), None)
+    if not combo or not 1 <= quantity <= 9999:
+        return HttpResponseBadRequest('Package unavailable.')
+    entry, created = CartPackage.objects.get_or_create(cart=cart, combo=combo, defaults={'quantity': 0})
+    if entry.quantity + quantity > combo.shop_available:
+        if created:
+            entry.delete()
+        if request.headers.get('Accept') == 'application/json':
+            return JsonResponse({'message': 'Not enough stock for this package.'}, status=409)
+        messages.error(request, 'Not enough stock for this package.')
+    else:
+        entry.quantity += quantity
+        entry.save(update_fields=['quantity'])
+        if request.headers.get('Accept') == 'application/json':
+            return JsonResponse({'message': f'{combo.name} added to cart.', 'cart_count': cart_item_count(cart)})
+        messages.success(request, 'Package added to cart. Component availability is checked again at checkout.')
+    return redirect('shop:cart_detail')
+
+
+@require_POST
+@transaction.atomic
+def package_remove(request):
+    from .models import Cart
+    try:
+        package_id = int(request.POST.get('package_id', ''))
+    except (TypeError, ValueError):
+        return HttpResponseBadRequest('Invalid package.')
+    cart = get_or_create_cart(request)
+    Cart.objects.select_for_update().get(pk=cart.pk)
+    package = cart.packages.filter(pk=package_id).select_related('combo').first()
+    name = package.combo.name if package else 'Package'
+    cart.packages.filter(pk=package_id).delete()
+    if request.headers.get('Accept') == 'application/json':
+        context = _cart_detail_context(cart)
+        return JsonResponse({'message': f'{name} removed from cart.', 'cart_count': context['cart_count'],
+                             'cart_html': render_to_string('shop/partials/cart_content.html', context, request=request)})
+    messages.info(request, f'{name} removed from cart.')
+    return redirect('shop:cart_detail')
+
+
+@require_GET
+def robots(request):
+    sitemap_url = request.build_absolute_uri(reverse('shop:sitemap'))
+    return HttpResponse(f'User-agent: *\nDisallow: /cart/\nDisallow: /checkout/\nDisallow: /paynow/\nSitemap: {sitemap_url}\n', content_type='text/plain')

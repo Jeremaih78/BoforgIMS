@@ -34,7 +34,7 @@ def _is_partially_paid(invoice, status):
         return False
 
     total = Decimal(str(getattr(invoice, "total", 0) or 0))
-    paid = payments.aggregate(total=Sum("amount")).get("total") or Decimal("0")
+    paid = sum((payment.amount for payment in payments.all()), Decimal("0"))
     return Decimal(str(paid)) > Decimal("0") and Decimal(str(paid)) < total
 
 

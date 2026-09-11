@@ -9,6 +9,15 @@ python -m venv .venv
 # Windows: .venv\Scripts\activate
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+Before running Django, copy `.env.example` to `.env` **only if `.env` does not
+already exist**. Keep any existing values. Set `POSTGRES_DB`, `POSTGRES_USER`,
+and `POSTGRES_PASSWORD` to your local PostgreSQL credentials; the database and
+role must already exist. Generate a persistent local `DJANGO_SECRET_KEY` using
+the command in the template and keep `DJANGO_DEBUG=true` locally.
+
+```bash
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
@@ -25,6 +34,51 @@ serialized stock, and credit control. It is idempotent, so rerunning it does not
 duplicate the demo records.
 
 Visit http://127.0.0.1:8000 to access the IMS dashboard under `/ims/`.
+
+### Review and safe configuration
+
+Debug is opt-in (`DJANGO_DEBUG=true` for local development). Configure a persistent
+`DJANGO_SECRET_KEY` and your local PostgreSQL credentials before running migrations
+or the server; database passwords no longer have source-code defaults. Production
+startup fails when its secret key is missing.
+
+The reliability review adds transactional receipt/stock workflows, explicit staff
+permissions, private business attachments and security dependency updates. Read
+[the review, outstanding decisions and rollout/rollback instructions](docs/IMS_REVIEW.md)
+before applying these migrations to an existing database. `PRIVATE_MEDIA_ROOT`
+must be outside public web-server aliases. Existing attachments need an owner-run
+file migration; database migrations do not move them.
+
+Use `python manage.py check_ims_integrity` for a read-only reconciliation report.
+The isolated `config.test_settings` is for local PostgreSQL testing only.
+
+### Git push/pull and per-machine configuration
+
+Commit `.env.example`, never `.env` (already Git-ignored). Each checkout loads its
+own root `.env`; process/service environment variables take precedence. If
+`DATABASE_URL` is set, it overrides the individual `POSTGRES_*` settings.
+
+Configure the server once with its own credentials, `DJANGO_DEBUG=false`, and
+its persistent production `DJANGO_SECRET_KEY`. Preserve the existing production
+key; copying a development environment to the server is not a deployment step.
+Set `PRIVATE_MEDIA_ROOT` outside public Nginx locations. Git pulls preserve this
+untracked configuration. If the service already supplies these settings, keep
+that source of configuration instead of duplicating it.
+
+For each release, follow the backup/staging checklist in `docs/IMS_REVIEW.md`,
+pull the reviewed code, install requirements in the deployment environment,
+run the integrity preflight and migrations, run `check --deploy` and
+`collectstatic --noinput`, then restart the actual application service.
+Do not assume pulling code alone updates database schema or running workers.
+
+Startup troubleshooting:
+
+- `Set DJANGO_SECRET_KEY before starting production`: configure the persistent
+  production key, or set `DJANGO_DEBUG=true` for local development.
+- `fe_sendauth: no password supplied`: configure the database password in the
+  active configuration source. This does not call for resetting the database.
+- `password authentication failed`: verify the configured database username and
+  password locally; never paste credentials into logs, issues, or chat.
 
 ### PDF Rendering
 
@@ -63,7 +117,9 @@ legacy reverse compatibility; old public `/shop/`, `/ims/`, and
 
 The API host exposes the existing inventory and sales API views under
 `/inventory/` and `/sales/`. Product catalogue reads are public; product
-writes, shipment data, and invoice serial operations require authentication.
+writes require the documented Admin/Staff role or matching Django permissions.
+Shipment data and invoice serial operations require explicit permissions; signing
+in alone does not grant internal access.
 
 Production host settings:
 
@@ -138,3 +194,12 @@ Meta App Review fields:
 - Terms of Service URL: https://boforg.co.zw/legal/terms/
 - Data Deletion Instructions: https://boforg.co.zw/legal/data-deletion/
 - Data Deletion Callback (optional): https://boforg.co.zw/legal/facebook-data-deletion/
+
+
+### Website and shop upgrade
+
+See [the CRO implementation report](docs/SHOP_CRO_REVIEW.md) for the shared public
+UI, package checkout, search/SEO changes, verification and rollout requirements.
+Apply the three additional migrations before running this code. In Django admin,
+classify category departments, hide internal products and opt reviewed combos into
+public sale. No production catalogue records were automatically rewritten.

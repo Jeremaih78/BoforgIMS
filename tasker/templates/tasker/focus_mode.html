@@ -12,8 +12,8 @@
 <body>
   <main class="focus-shell">
     <header class="focus-topbar">
-      <form method="post" action="{% url 'ims:tasker:focus_stop' task.slug %}" class="focus-exit-form">{% csrf_token %}<button type="submit" class="focus-exit" aria-label="Stop timer and exit focus mode"><i class="bi bi-x-lg"></i><span>Stop &amp; exit</span></button></form>
-      <div class="focus-brand"><i class="bi bi-bullseye"></i> BOFORG FOCUS</div>
+      <form method="post" action="{% url 'ims:tasker:focus_stop' task.slug %}" class="focus-exit-form">{% csrf_token %}<button type="submit" class="focus-exit" aria-label="Stop timer and exit focus mode"><i aria-hidden="true" class="bi bi-x-lg"></i><span>Stop &amp; exit</span></button></form>
+      <div class="focus-brand"><i aria-hidden="true" class="bi bi-bullseye"></i> BOFORG FOCUS</div>
       <span class="focus-save-state" id="focusSaveState" aria-live="polite">Notes saved</span>
     </header>
 
@@ -25,8 +25,8 @@
         <h1 id="taskTitle">{{ task.title }}</h1>
         <p class="focus-description">{{ task.description|default:"No description added. Stay with the next clear action."|linebreaksbr }}</p>
         <div class="focus-meta">
-          <span class="priority priority-{{ task.priority|lower }}"><i class="bi bi-flag-fill"></i>{{ task.get_priority_display }}</span>
-          <span><i class="bi bi-hourglass-split"></i>{{ task.estimated_duration|task_duration|default:"No estimate" }}</span>
+          <span class="priority priority-{{ task.priority|lower }}"><i aria-hidden="true" class="bi bi-flag-fill"></i>{{ task.get_priority_display }}</span>
+          <span><i aria-hidden="true" class="bi bi-hourglass-split"></i>{{ task.estimated_duration|task_duration|default:"No estimate" }}</span>
         </div>
 
         <div class="focus-timer-card">
@@ -37,13 +37,13 @@
 
         <div class="focus-actions">
           {% if running_entry %}
-          <form method="post" action="{% url 'ims:tasker:focus_pause' task.slug %}">{% csrf_token %}<button class="btn-focus btn-pause" type="submit"><i class="bi bi-pause-fill"></i>Pause</button></form>
+          <form method="post" action="{% url 'ims:tasker:focus_pause' task.slug %}">{% csrf_token %}<button class="btn-focus btn-pause" type="submit"><i aria-hidden="true" class="bi bi-pause-fill"></i>Pause</button></form>
           {% else %}
-          <form method="post" action="{% url 'ims:tasker:focus_resume' task.slug %}">{% csrf_token %}<button class="btn-focus btn-resume" type="submit"><i class="bi bi-play-fill"></i>Resume</button></form>
+          <form method="post" action="{% url 'ims:tasker:focus_resume' task.slug %}">{% csrf_token %}<button class="btn-focus btn-resume" type="submit"><i aria-hidden="true" class="bi bi-play-fill"></i>Resume</button></form>
           {% endif %}
-          <form method="post" action="{% url 'ims:tasker:focus_stop' task.slug %}">{% csrf_token %}<button class="btn-focus btn-stop" type="submit"><i class="bi bi-stop-fill"></i>Stop</button></form>
-          <button class="btn-focus btn-blocked" type="button" data-bs-toggle="modal" data-bs-target="#blockedModal"><i class="bi bi-slash-circle"></i>Blocked</button>
-          <form method="post" action="{% url 'ims:tasker:focus_complete' task.slug %}" data-confirm-complete>{% csrf_token %}<button class="btn-focus btn-complete" type="submit"><i class="bi bi-check2"></i>Complete</button></form>
+          <form method="post" action="{% url 'ims:tasker:focus_stop' task.slug %}">{% csrf_token %}<button class="btn-focus btn-stop" type="submit"><i aria-hidden="true" class="bi bi-stop-fill"></i>Stop</button></form>
+          <button class="btn-focus btn-blocked" type="button" data-bs-toggle="modal" data-bs-target="#blockedModal"><i aria-hidden="true" class="bi bi-slash-circle"></i>Blocked</button>
+          <form method="post" action="{% url 'ims:tasker:focus_complete' task.slug %}" data-confirm-complete>{% csrf_token %}<button class="btn-focus btn-complete" type="submit"><i aria-hidden="true" class="bi bi-check2"></i>Complete</button></form>
         </div>
         <div class="focus-shortcuts d-none d-lg-flex"><span><kbd>Space</kbd> pause / resume</span><span><kbd>B</kbd> blocked</span><span><kbd>C</kbd> complete</span><span><kbd>Esc</kbd> exit</span></div>
       </section>
@@ -54,8 +54,8 @@
           <div class="progress mb-4"><div class="progress-bar" style="width: {{ task.progress }}%"></div></div>
           <div class="focus-checklist">
             {% for item in task.checklist_items.all %}
-            <form method="post" action="{% url 'ims:tasker:focus_checklist_toggle' task.slug item.pk %}" class="focus-check {% if item.is_completed %}is-complete{% endif %}">{% csrf_token %}<button type="submit" aria-label="Toggle {{ item.title }}"><i class="bi {% if item.is_completed %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i><span>{{ item.title }}</span></button></form>
-            {% empty %}<div class="focus-empty"><i class="bi bi-check2-square"></i>No checklist items. Keep attention on the task outcome.</div>{% endfor %}
+            <form method="post" action="{% url 'ims:tasker:focus_checklist_toggle' task.slug item.pk %}" class="focus-check {% if item.is_completed %}is-complete{% endif %}">{% csrf_token %}<button type="submit" aria-label="Toggle {{ item.title }}"><i aria-hidden="true" class="bi {% if item.is_completed %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i><span>{{ item.title }}</span></button></form>
+            {% empty %}<div class="focus-empty"><i aria-hidden="true" class="bi bi-check2-square"></i>No checklist items. Keep attention on the task outcome.</div>{% endfor %}
           </div>
         </section>
 

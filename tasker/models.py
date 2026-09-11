@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from core.storage import private_document_storage
+
 import uuid
 from datetime import timedelta
 
@@ -357,7 +359,7 @@ def task_attachment_path(instance, filename):
 
 class TaskAttachment(AuditedSoftDeleteModel):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
-    file = models.FileField(upload_to=task_attachment_path, null=True, blank=True)
+    file = models.FileField(storage=private_document_storage, upload_to=task_attachment_path, null=True, blank=True)
     original_name = models.CharField(max_length=255)
     content_type = models.CharField(max_length=150, blank=True)
     file_size = models.PositiveBigIntegerField(default=0)

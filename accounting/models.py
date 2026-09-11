@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from core.storage import private_document_storage
+
 from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 
@@ -112,10 +114,19 @@ class NumberSequence(models.Model):
     prefix = models.CharField(max_length=10, default="")
     next_number = models.IntegerField(default=1)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['company', 'key'], condition=models.Q(company__isnull=False), name='unique_company_number_sequence'),
+            models.UniqueConstraint(fields=['key'], condition=models.Q(company__isnull=True), name='unique_legacy_number_sequence'),
+        ]
+
+    @transaction.atomic
     def next(self) -> str:
-        value = f"{self.prefix}{self.next_number:05d}"
-        self.next_number += 1
-        self.save(update_fields=["next_number"])
+        locked = NumberSequence.objects.select_for_update().get(pk=self.pk)
+        value = f"{locked.prefix}{locked.next_number:05d}"
+        locked.next_number += 1
+        locked.save(update_fields=['next_number'])
+        self.next_number = locked.next_number
         return value
 
 
@@ -131,7 +142,7 @@ class JournalEntry(models.Model):
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     number = models.CharField(max_length=20, unique=True, blank=True, default="")
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     memo = models.CharField(max_length=255, blank=True, null=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     fx_rate = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("1.0"))
@@ -206,12 +217,13 @@ class ExpenseCategory(models.Model):
 
 
 class Expense(models.Model):
+    submission_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     DRAFT = "DRAFT"; POSTED = "POSTED"; VOID = "VOID"
     STATUS_CHOICES = [(DRAFT, "Draft"), (POSTED, "Posted"), (VOID, "Void")]
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     doc_no = models.CharField(max_length=20, unique=True, blank=True, default="")
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     payee = models.CharField(max_length=150)
     category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT)
     amount = models.DecimalField(max_digits=18, decimal_places=6)
@@ -219,7 +231,7 @@ class Expense(models.Model):
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     fx_rate = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("1.0"))
     notes = models.TextField(blank=True, null=True)
-    attachment = models.FileField(upload_to="expenses/", blank=True, null=True)
+    attachment = models.FileField(storage=private_document_storage, upload_to="expenses/", blank=True, null=True)
     posted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=DRAFT)
 
@@ -236,7 +248,7 @@ class SupplierBill(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     doc_no = models.CharField(max_length=20, unique=True, blank=True, default="")
     supplier = models.ForeignKey("inventory.Supplier", on_delete=models.PROTECT)
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     due_date = models.DateField(blank=True, null=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     fx_rate = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("1.0"))
@@ -266,7 +278,7 @@ class ARPayment(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     receipt_no = models.CharField(max_length=20, unique=True, blank=True, default="")
     customer = models.ForeignKey("customers.Customer", on_delete=models.PROTECT)
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     fx_rate = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("1.0"))
     bank = models.ForeignKey(BankAccount, on_delete=models.PROTECT)
@@ -285,7 +297,7 @@ class APPayment(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     payment_no = models.CharField(max_length=20, unique=True, blank=True, default="")
     supplier = models.ForeignKey("inventory.Supplier", on_delete=models.PROTECT)
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     fx_rate = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("1.0"))
     bank = models.ForeignKey(BankAccount, on_delete=models.PROTECT)

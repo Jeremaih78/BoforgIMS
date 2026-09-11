@@ -194,6 +194,47 @@ a.btn.btn-force-white:active {
   position: relative;
 }
 
+/* Shared business workflows: flex children must be allowed to shrink. */
+.content, .card, .card-body, .row > * { min-width: 0; }
+.content { width: 0; }
+.sidebar { flex-shrink: 0; }
+.sidebar.offcanvas-lg { background: var(--bg-2); }
+.table-responsive, .table-wrapper { max-width: 100%; overflow-x: auto; }
+input:not([type=checkbox]):not([type=radio]), select, textarea { max-width: 100%; }
+form input:not([type=checkbox]):not([type=radio]):not([type=hidden]), form select, form textarea {
+  min-height: 44px; font-size: 1rem; border-radius: .375rem;
+}
+.topbar { flex-wrap: wrap; gap: .5rem; }
+.topbar .text-secondary { overflow-wrap: anywhere; max-width: 12rem; }
+.btn, .page-link, .sidebar .nav-link { min-height: 44px; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid #ffcf66; outline-offset: 3px;
+}
+.skip-link { position: fixed; top: -100px; left: 1rem; z-index: 2000; background: #fff; color: #111; padding: .75rem; }
+.skip-link:focus { top: .5rem; }
+.errorlist { color: #ff9c9c; padding-left: 1.25rem; }
+.modal-content { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+@media (max-width: 991.98px) {
+  .sidebar.offcanvas-lg { width: min(290px, 90vw); }
+  .content > .container-fluid { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 575.98px) {
+  .container-fluid > .d-flex, .card > .d-flex { flex-wrap: wrap; gap: .5rem; }
+  form input:not([type=checkbox]):not([type=radio]):not([type=hidden]), form select, form textarea { width: 100%; }
+  .table td, .table th { white-space: normal; }
+  .table td .btn { margin-block: .125rem; }
+  h1 { font-size: 1.75rem; overflow-wrap: anywhere; }
+  .topbar .text-secondary { max-width: 7rem; }
+}
+@media print {
+  .sidebar, .topbar, .skip-link, .tasker-fab, .btn, .modal { display: none !important; }
+  body, .content, .card { background: white !important; color: black !important; }
+  .content { width: 100%; }
+  .table-responsive, .table-wrapper { overflow: visible; }
+  .table { width: 100%; }
+  tr { break-inside: avoid; }
+}
+
 .product-combobox__results {
   left: 0;
   max-height: 22rem;

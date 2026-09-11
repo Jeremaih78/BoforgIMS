@@ -1,10 +1,14 @@
 from decimal import Decimal
+from django.db import transaction
+from django.db.models.deletion import ProtectedError
+from django.views.decorators.http import require_POST
 
 from django.contrib import messages
+from core.permissions import ims_permission
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, F
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import (
@@ -38,6 +42,7 @@ from .services import (
 )
 
 @login_required
+@ims_permission('inventory.view_product', staff=True)
 def product_list(request):
     q = request.GET.get('q','')
     low = request.GET.get('low')
@@ -46,8 +51,8 @@ def product_list(request):
         qs = qs.filter(
             Q(name__icontains=q)|Q(sku__icontains=q)|Q(category__name__icontains=q)|Q(supplier__name__icontains=q)
         )
-    if low is not None:
-        qs = qs.filter(quantity__lte=5)
+    if low == '1':
+        qs = qs.filter(quantity__lte=F('reserved') + F('reorder_level'))
     qs = qs.select_related('category','supplier').order_by('name')
     paginator = Paginator(qs, 20)
     page = request.GET.get('page')
@@ -55,6 +60,7 @@ def product_list(request):
     return render(request,'inventory/product_list.html',{'products':products,'q':q,'low':low})
 
 @login_required
+@ims_permission('inventory.add_product', staff=True)
 def product_create(request):
     form = ProductForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
@@ -63,8 +69,10 @@ def product_create(request):
     return render(request, 'inventory/product_form.html', {'form': form, 'product': form.instance})
 
 @login_required
+@ims_permission('inventory.view_product', staff=True, write_permission='inventory.change_product')
+@transaction.atomic
 def product_edit(request, pk):
-    product = get_object_or_404(Product, pk=pk)
+    product = get_object_or_404(Product.objects.select_for_update(), pk=pk)
     form = ProductForm(request.POST or None, request.FILES or None, instance=product)
     if request.method == 'POST' and form.is_valid():
         form.save()
@@ -72,26 +80,34 @@ def product_edit(request, pk):
     return render(request, 'inventory/product_form.html', {'form': form, 'product': product})
 
 @login_required
+@ims_permission('inventory.delete_product', staff=False)
+@require_POST
 def product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    if not request.user.is_superuser:
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden('Only admin can delete products')
-    product.delete()
+    try:
+        product.delete()
+    except ProtectedError:
+        messages.error(request, 'This product has transaction history. Mark it inactive instead.')
     return redirect('ims:inventory:product_list')
 
 @login_required
+@ims_permission('inventory.add_stockmovement', staff=False)
 def movement_create(request):
     form = StockMovementForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         m = form.save(commit=False)
         m.user = request.user
-        m.save()
-        return redirect('ims:inventory:product_list')
+        try:
+            m.save()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            return redirect('ims:inventory:product_list')
     return render(request,'inventory/movement_form.html',{'form':form})
 
 
 @login_required
+@ims_permission('inventory.view_shipment', staff=False)
 def shipment_list(request):
     status = request.GET.get('status')
     shipments = Shipment.objects.select_related('supplier').order_by('-created_at')
@@ -109,6 +125,7 @@ def shipment_list(request):
 
 
 @login_required
+@ims_permission('inventory.add_shipment', staff=False)
 def shipment_create(request):
     form = ShipmentForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -121,8 +138,13 @@ def shipment_create(request):
 
 
 @login_required
+@ims_permission('inventory.view_shipment', write_permission='inventory.change_shipment')
+@transaction.atomic
 def shipment_detail(request, pk):
-    shipment = get_object_or_404(Shipment, pk=pk)
+    shipment = get_object_or_404(Shipment.objects.select_for_update(), pk=pk)
+    if request.method == 'POST' and shipment.status in (Shipment.STATUS_RECEIVED, Shipment.STATUS_CLOSED) and 'update_status' not in request.POST:
+        messages.error(request, 'Received shipment items and costs cannot be changed.')
+        return redirect('ims:inventory:shipment_detail', pk)
     item_form = ShipmentItemForm(prefix='item', shipment=shipment)
     cost_form = ShipmentCostForm(prefix='cost')
     if request.method == 'POST':
@@ -193,6 +215,7 @@ def shipment_detail(request, pk):
 
 
 @login_required
+@ims_permission('inventory.change_shipment', staff=False)
 def shipment_receive(request, pk):
     shipment = get_object_or_404(Shipment, pk=pk)
     if shipment.status not in {Shipment.STATUS_ARRIVED, Shipment.STATUS_CLEARED}:
@@ -239,6 +262,7 @@ def shipment_receive(request, pk):
 
 
 @login_required
+@ims_permission('inventory.view_shipment', staff=False)
 def shipment_dashboard(request):
     def paginate_items(items, param_name):
         paginator = Paginator(items, 5)

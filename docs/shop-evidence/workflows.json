@@ -1,0 +1,10 @@
+{
+  "menu_escape": true,
+  "department_filter": true,
+  "add_to_cart": true,
+  "whatsapp_link": true,
+  "javascript_errors": [],
+  "homepage_faq": true,
+  "package_add_remove": true,
+  "out_of_stock_button_absent": true
+}

@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from accounting.models import Account, Currency, JournalEntry, JournalLine
 from inventory.models import (
+    Product,
     Shipment,
     ShipmentItem,
     ProductUnit,
@@ -25,11 +26,11 @@ class ShipmentServiceError(ValidationError):
 
 def _base_currency() -> Currency:
     code = getattr(settings, 'BASE_CURRENCY_CODE', 'USD')
-    return Currency.objects.get_or_create(code=code, defaults={'name': code, 'is_base': True})[0]
+    return Currency.objects.get_or_create(company=None, code=code, defaults={'name': code, 'is_base': True})[0]
 
 
 def _get_account(code: str) -> Account:
-    return Account.objects.get(code=code)
+    return Account.objects.get(company=None, code=code)
 
 
 def allocate_landed_costs(shipment: Shipment, *, basis: str | None = None) -> Decimal:
@@ -90,15 +91,31 @@ def receive_shipment(*, shipment_id: int, receipts: Iterable[Mapping], received_
 
     recorded = []
     now = timezone.now()
+    seen = set()
     for payload in receipts:
+        if not isinstance(payload, Mapping):
+            raise ShipmentServiceError('Each receipt must be an object.')
         item_id = payload.get('item_id')
+        if not isinstance(item_id, int) or isinstance(item_id, bool) or item_id in seen:
+            raise ShipmentServiceError('Each item must appear once with an integer item ID.')
+        seen.add(item_id)
         if item_id not in items_by_id:
             raise ShipmentServiceError(f"Shipment item {item_id} does not belong to shipment {shipment.shipment_code}.")
         item = items_by_id[item_id]
-        quantity = int(payload.get('quantity') or 0)
+        try:
+            value = Decimal(str(payload.get('quantity', 0)))
+            if not value.is_finite() or value != value.to_integral_value():
+                raise ValueError
+            quantity = int(value)
+        except (ArithmeticError, TypeError, ValueError):
+            raise ShipmentServiceError('Receipt quantity must be a whole number.')
         if quantity <= 0:
             raise ShipmentServiceError('Receipt quantity must be positive.')
         serials = payload.get('serials') or []
+        if not isinstance(serials, list) or any(not isinstance(serial, str) for serial in serials):
+            raise ShipmentServiceError('Serial numbers must be a list of strings.')
+        if len(set(s.strip() for s in serials)) != len(serials):
+            raise ShipmentServiceError('Serial numbers must be distinct.')
         if item.requires_serials and len(serials) != quantity:
             raise ShipmentServiceError(f'{item.product} requires serial numbers for every unit received.')
         if item.quantity_received + quantity > item.quantity_expected:
@@ -115,6 +132,7 @@ def receive_shipment(*, shipment_id: int, receipts: Iterable[Mapping], received_
 
     allocate_landed_costs(shipment, basis=basis)
 
+    list(Product.objects.select_for_update().filter(pk__in=[row['item'].product_id for row in recorded]).order_by('pk'))
     for row in recorded:
         item = ShipmentItem.objects.get(pk=row['item'].pk)
         unit_cost = item.landed_unit_cost or item.unit_purchase_price

@@ -1,45 +1,5 @@
-﻿{% load static %}
-{% load hosts %}
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Your Cart | Boforg Shop</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-</head>
-<body class="bg-gray-50 text-gray-900">
-  <header class="bg-white shadow-sm">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-      <a href="{% url 'shop:catalog' %}" class="text-lg font-semibold">Boforg Shop</a>
-      <nav class="flex gap-5 text-sm font-medium">
-        <a href="{% host_url 'website:home' host 'website' %}" class="hover:text-blue-600">Home</a>
-        <a href="{% url 'shop:catalog' %}" class="hover:text-blue-600">Shop</a>
-        <a href="{% url 'shop:checkout' %}" class="text-blue-600">Checkout</a>
-      </nav>
-      <div class="flex items-center gap-2 text-sm text-gray-600">
-        <span>Cart</span>
-        {% include 'shop/partials/cart_counter.html' with count=cart_count %}
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto px-4 py-10">
-    <h1 class="text-3xl font-bold">Shopping Cart</h1>
-    <p class="mt-2 text-sm text-gray-600">Review your selections before checkout.</p>
-
-    {% include 'shop/partials/cart_content.html' %}
-  </main>
-
-  <footer class="border-t bg-white">
-    <div class="max-w-6xl mx-auto px-4 py-10 text-sm text-gray-500 flex justify-between">
-      <div>&copy; {% now "Y" %} Boforg Technologies Private Limited.</div>
-      <div class="flex gap-4">
-        <a class="hover:text-blue-600" href="{% host_url 'legal:privacy' host 'website' %}">Privacy</a>
-        <a class="hover:text-blue-600" href="{% host_url 'legal:terms' host 'website' %}">Terms</a>
-      </div>
-    </div>
-  </footer>
-</body>
-</html>
+{% extends 'public/base.html' %}
+{% block title %}Your cart | Boforg{% endblock %}
+{% block content %}<section class="store-wrap store-section">
+<h1>Your cart</h1>
+<p>Review your items, then check out or ask us to help on WhatsApp.</p>{% include 'shop/partials/cart_content.html' %}</section>{% endblock %}

@@ -5,10 +5,12 @@ from django.urls import include, path
 
 from config.host_urls.common import with_debug_media
 from users.views import dashboard
+from core.views import private_document
 
 
 ims_patterns = (
     [
+        path("documents/<path:name>", private_document, name="private_document"),
         path("", dashboard, name="dashboard"),
         path(
             "inventory/",

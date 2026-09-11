@@ -20,6 +20,11 @@ def get_or_create_cart(request) -> Cart:
 
 def add_product_to_cart(cart: Cart, product: Product, quantity: int = 1) -> Tuple[CartItem, bool]:
     with transaction.atomic():
+        Cart.objects.select_for_update().get(pk=cart.pk)
+        product = Product.objects.select_for_update().get(pk=product.pk)
+        existing = cart.items.filter(product=product).values_list('quantity', flat=True).first() or 0
+        if quantity < 1 or not product.shop_purchasable or (product.track_inventory and existing + quantity > product.available_stock):
+            raise ValueError('This quantity is not currently available. Please review your cart.')
         item, created = CartItem.objects.select_for_update().get_or_create(
             cart=cart,
             product=product,
@@ -32,7 +37,9 @@ def add_product_to_cart(cart: Cart, product: Product, quantity: int = 1) -> Tupl
 
 
 def remove_product_from_cart(cart: Cart, product: Product) -> None:
-    CartItem.objects.filter(cart=cart, product=product).delete()
+    with transaction.atomic():
+        Cart.objects.select_for_update().get(pk=cart.pk)
+        CartItem.objects.filter(cart=cart, product=product).delete()
 
 
 def clear_cart(cart: Cart) -> None:

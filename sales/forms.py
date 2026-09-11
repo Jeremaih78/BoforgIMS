@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django import forms
 from django.db.models import Q
@@ -31,12 +32,24 @@ class CustomerOrderedFormMixin:
 
 
 class QuotationForm(CustomerOrderedFormMixin, forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field, forms.DateField):
+                field.widget = forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'})
+
     class Meta:
         model = Quotation
         fields = ['customer', 'date', 'notes']
 
 
 class InvoiceForm(CustomerOrderedFormMixin, forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field, forms.DateField):
+                field.widget = forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'})
+
     class Meta:
         model = Invoice
         fields = ['customer', 'date', 'due_date', 'notes']
@@ -83,9 +96,15 @@ class DocumentLineForm(forms.ModelForm):
             unit_price = product.price
             cleaned['unit_price'] = unit_price
         price_decimal = Decimal(str(cleaned['unit_price']))
+        if price_decimal < 0:
+            self.add_error('unit_price', 'Price cannot be negative.')
+        if product.track_inventory and quantity != quantity.to_integral_value():
+            self.add_error('quantity', 'Stock quantities must be whole units.')
         tax_value = cleaned.get('tax_rate_percent')
         if tax_value in (None, ''):
             tax_value = getattr(product, 'tax_rate', 0) or 0
+        if not 0 <= Decimal(str(tax_value)) <= 100:
+            self.add_error('tax_rate_percent', 'Tax must be between 0 and 100.')
         cleaned['tax_rate_percent'] = Decimal(str(tax_value)).quantize(Decimal('0.01'))
         cleaned['quantity'] = quantity
         cleaned['line_total'] = (price_decimal * quantity).quantize(Decimal('0.01'))
@@ -109,9 +128,23 @@ class ComboSelectionForm(forms.Form):
 
 
 class PaymentForm(forms.ModelForm):
+    submission_key = forms.UUIDField(initial=uuid4, widget=forms.HiddenInput)
+
+    def clean_amount(self):
+        amount = self.cleaned_data['amount']
+        if amount <= 0:
+            raise forms.ValidationError('Payment must be positive.')
+        return amount
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field, forms.DateField):
+                field.widget = forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'})
+
     class Meta:
         model = Payment
-        fields = ['invoice', 'amount', 'date', 'method', 'note']
+        fields = ['amount', 'date', 'method', 'note']
 
 
 class InvoiceLineSerialAssignmentForm(forms.Form):

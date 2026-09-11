@@ -25,7 +25,7 @@ class PricingService:
     def apply_best_rule(product: Product, qty: int, base_price: Decimal) -> PricingResult:
         now = timezone.now()
         qs = PriceRule.objects.filter(is_active=True).filter(
-            Q(product__isnull=True) | Q(product=product) | Q(category=product.category)
+            Q(scope=PriceRule.CART) | Q(scope=PriceRule.PRODUCT, product=product) | Q(scope=PriceRule.CATEGORY, category=product.category)
         )
         qs = qs.filter(min_qty__lte=qty)
         qs = qs.filter(Q(start_at__isnull=True) | Q(start_at__lte=now))
@@ -41,7 +41,7 @@ class PricingService:
         if best is None:
             return PricingResult(base_price, Decimal('0'), Decimal('0'), None)
         if best.value_type == PriceRule.PERCENT:
-            return PricingResult(base_price, Decimal('0'), Decimal(best.value), best.id)
+            return PricingResult(base_price, Decimal('0'), min(Decimal(best.value), Decimal('100')), best.id)
         else:
             return PricingResult(base_price, Decimal(best.value), Decimal('0'), best.id)
 
@@ -55,57 +55,91 @@ class PricingService:
 
 class StockService:
     @staticmethod
+    def _demand(invoice):
+        demand = {}
+        for line in invoice.lines.select_related('product'):
+            if not line.product or not line.product.track_inventory:
+                continue
+            if line.quantity <= 0 or line.quantity != int(line.quantity):
+                raise ValueError('Stock quantities must be positive whole units.')
+            demand[line.product_id] = demand.get(line.product_id, 0) + int(line.quantity)
+        return demand
+
+    @staticmethod
     @transaction.atomic
     def reserve_stock(invoice: Invoice, force: bool = False) -> None:
-        for line in invoice.items.select_related('product'):
-            product = line.product
-            if not product or not product.track_inventory:
-                continue
-            qty = int(line.quantity)
-            product = Product.objects.select_for_update().get(pk=product.pk)
-            available = (product.quantity or 0) - (product.reserved or 0)
-            if available < qty and not force:
-                raise ValueError(f"Insufficient stock for {product.sku}: need {qty}, available {available}")
-            res, _ = StockReservation.objects.get_or_create(invoice=invoice, product=product, defaults={'quantity': 0})
-            delta = qty - res.quantity
-            if delta != 0:
-                res.quantity = qty
-                res.save()
-                product.reserved = (product.reserved or 0) + delta
-                product.save(update_fields=['reserved'])
+        invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
+        if invoice.stock_finalized or invoice.status == Invoice.PAID:
+            raise ValueError('Finalized invoices cannot reserve stock again.')
+        demand = StockService._demand(invoice)
+        reservations = list(StockReservation.objects.filter(invoice=invoice))
+        existing = {}
+        for res in reservations:
+            if res.product_id in existing:
+                raise ValueError('Duplicate historical reservations require reconciliation.')
+            existing[res.product_id] = res
+        products = Product.objects.select_for_update().filter(pk__in=set(demand) | set(existing)).order_by('pk')
+        for product in products:
+            res = existing.get(product.pk)
+            previous = res.quantity if res else 0
+            wanted = demand.get(product.pk, 0)
+            delta = wanted - previous
+            if product.reserved < previous:
+                raise ValueError('Historical reserved stock requires reconciliation.')
+            if delta > product.quantity - product.reserved:
+                raise ValueError(f'Insufficient stock for {product.sku}: need {wanted}, available {product.quantity - product.reserved + previous}')
+            product.reserved += delta
+            product.save(update_fields=['reserved'])
+            if wanted:
+                if res:
+                    res.quantity = wanted
+                    res.save(update_fields=['quantity'])
+                else:
+                    StockReservation.objects.create(invoice=invoice, product=product, quantity=wanted)
+            elif res:
+                res.delete()
 
     @staticmethod
     @transaction.atomic
     def release_reservation(invoice: Invoice) -> None:
-        for res in StockReservation.objects.select_for_update().filter(invoice=invoice).select_related('product'):
+        Invoice.objects.select_for_update().get(pk=invoice.pk)
+        for res in StockReservation.objects.filter(invoice=invoice).order_by('product_id'):
             product = Product.objects.select_for_update().get(pk=res.product_id)
-            product.reserved = max(0, (product.reserved or 0) - int(res.quantity))
+            if product.reserved < res.quantity:
+                raise ValueError('Historical reserved stock requires reconciliation.')
+            product.reserved -= res.quantity
             product.save(update_fields=['reserved'])
         StockReservation.objects.filter(invoice=invoice).delete()
         ProductUnit.objects.filter(sale_line__invoice=invoice, status=ProductUnit.STATUS_RESERVED).update(
-            sale_line=None,
-            status=ProductUnit.STATUS_AVAILABLE,
-            sold_at=None,
+            sale_line=None, status=ProductUnit.STATUS_AVAILABLE, sold_at=None,
         )
 
     @staticmethod
     @transaction.atomic
     def finalize_sale(invoice: Invoice) -> None:
-        serial_lines = invoice.items.select_related('product').filter(product__tracking_mode=Product.TRACK_SERIAL)
-        for line in serial_lines:
-            required = int(line.quantity)
-            units = list(ProductUnit.objects.select_for_update().filter(sale_line=line))
-            if len(units) != required:
-                raise ValueError(f'{line.product} requires {required} serial numbers before finalizing.')
+        from inventory.models import StockMovement
+        locked = Invoice.objects.select_for_update().get(pk=invoice.pk)
+        if locked.stock_finalized:
+            return
+        if locked.status == Invoice.PAID:
+            raise ValueError('Legacy paid invoice requires reconciliation before stock changes.')
+        StockService.reserve_stock(locked)
+        for line in locked.lines.select_related('product').filter(product__tracking_mode=Product.TRACK_SERIAL):
+            units = list(ProductUnit.objects.select_for_update().filter(sale_line=line).order_by('pk'))
+            if len(units) != int(line.quantity) or any(unit.status != ProductUnit.STATUS_RESERVED for unit in units):
+                raise ValueError(f'{line.product} requires {int(line.quantity)} reserved serial numbers before finalizing.')
             for unit in units:
                 unit.mark_sold(line)
-        for res in StockReservation.objects.select_for_update().filter(invoice=invoice).select_related('product'):
+        for res in StockReservation.objects.filter(invoice=locked).order_by('product_id'):
             product = Product.objects.select_for_update().get(pk=res.product_id)
-            qty = int(res.quantity)
-            product.quantity = (product.quantity or 0) - qty
-            product.reserved = max(0, (product.reserved or 0) - qty)
-            product.save(update_fields=['quantity', 'reserved'])
-        StockReservation.objects.filter(invoice=invoice).delete()
+            product.reserved -= res.quantity
+            product.save(update_fields=['reserved'])
+            StockMovement.objects.create(product=product, movement_type=StockMovement.OUT,
+                quantity=res.quantity, note=f'Invoice {locked.number}', user=locked.created_by)
+        StockReservation.objects.filter(invoice=locked).delete()
+        locked.stock_finalized = True
+        locked.save(update_fields=['stock_finalized'])
+        invoice.stock_finalized = True
 
     @staticmethod
     def amount_paid(invoice: Invoice):

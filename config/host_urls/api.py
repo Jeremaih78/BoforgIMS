@@ -12,7 +12,7 @@ from sales.api import InvoiceLineSerialAPIView
 class APIProductViewSet(ProductViewSet):
     """Expose catalogue reads publicly but require authentication for writes."""
 
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = ProductViewSet.permission_classes
 
 
 def api_index(request):

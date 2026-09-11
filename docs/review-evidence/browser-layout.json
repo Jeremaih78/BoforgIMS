@@ -1,0 +1,422 @@
+[
+  {
+    "route": "/ims/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/customers/new/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/invoice/1/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/quotation/1/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/shipments/2/receive/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/expenses/new/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/credit-control/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/tasker/tasks/synthetic-final-layout-task/focus/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/shop/cart/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360,
+    "overflow": []
+  },
+  {
+    "route": "/ims/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/customers/new/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/invoice/1/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/quotation/1/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/shipments/2/receive/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/expenses/new/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/credit-control/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/tasker/tasks/synthetic-final-layout-task/focus/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/shop/cart/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390,
+    "overflow": []
+  },
+  {
+    "route": "/ims/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/customers/new/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/invoice/1/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/quotation/1/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/shipments/2/receive/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/expenses/new/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/credit-control/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/tasker/tasks/synthetic-final-layout-task/focus/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/shop/cart/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768,
+    "overflow": []
+  },
+  {
+    "route": "/ims/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/customers/new/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/invoice/1/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/quotation/1/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/shipments/2/receive/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/expenses/new/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/credit-control/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/tasker/tasks/synthetic-final-layout-task/focus/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/shop/cart/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024,
+    "overflow": []
+  },
+  {
+    "route": "/ims/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/customers/new/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/invoice/1/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/sales/quotation/1/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/inventory/shipments/2/receive/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/expenses/new/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/accounting/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/credit-control/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/ims/tasker/tasks/synthetic-final-layout-task/focus/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  },
+  {
+    "route": "/shop/cart/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440,
+    "overflow": []
+  }
+]

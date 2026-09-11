@@ -132,4 +132,7 @@ cython_debug/
 # Django media uploads
 media/
 staticfiles/
+.local-review/
 
+
+private_media/

@@ -1,0 +1,19 @@
+{% load hosts %}<div class="store-grid">{% for package in packages %}<article class="store-card">
+<h3>{{ package.name }}</h3>
+<p>{{ package.description|linebreaksbr }}</p>
+<p class="store-price">{{ package.shop_currency }} {{ package.compute_price }}</p>
+<details>
+<summary>See everything included</summary>
+<ul>{% for component in package.items.all %}<li>{{ component.quantity }} ? {{ component.product.name }}</li>{% endfor %}</ul>
+</details>
+<p>{% if package.shop_available %}In stock{% else %}Out of stock{% endif %}</p>{% if package.shop_available %}<form data-cart-add method="post" action="{{ store_package_add }}">{% csrf_token %}<input type="hidden" name="combo_id" value="{{ package.pk }}">
+<button class="store-button">Add package to Cart</button>
+</form>{% endif %}<p>
+<a href="{{ package.shop_whatsapp }}" data-event="starter_package_click">Ask about this package on WhatsApp</a>
+</p>
+<small>Confirm the training and support included with this package.</small>
+</article>{% empty %}<div class="store-card">
+<h3>Let us help you build your first setup</h3>
+<p>Tell us what you want to print and your budget. We will help you choose compatible equipment and supplies.</p>
+<a class="store-button" href="{{ store_whatsapp }}">Find my starter package</a>
+</div>{% endfor %}</div>

@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from core.permissions import ims_permission
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.db.models import Q
@@ -8,6 +9,7 @@ from .models import Customer
 from .forms import CustomerForm
 
 @login_required
+@ims_permission('customers.view_customer', staff=True)
 def customer_list(request):
     q = request.GET.get('q','')
     qs = Customer.objects.filter(
@@ -19,6 +21,7 @@ def customer_list(request):
     return render(request,'customers/customer_list.html',{'customers':customers,'q':q})
 
 @login_required
+@ims_permission('customers.add_customer', staff=True)
 def customer_create(request):
     form = CustomerForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -27,6 +30,7 @@ def customer_create(request):
     return render(request,'customers/customer_form.html',{'form':form})
 
 @login_required
+@ims_permission('customers.change_customer', staff=True)
 def customer_edit(request, pk):
     c = get_object_or_404(Customer, pk=pk)
     form = CustomerForm(request.POST or None, instance=c)
@@ -37,6 +41,7 @@ def customer_edit(request, pk):
 
 
 @login_required
+@ims_permission('customers.add_customer', staff=True)
 @require_POST
 def customer_quick_create(request):
     form = CustomerForm(request.POST)

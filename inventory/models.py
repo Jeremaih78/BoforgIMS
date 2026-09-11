@@ -1,10 +1,13 @@
+from core.storage import private_document_storage
 from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
+from django.contrib.postgres.indexes import GinIndex, OpClass
+from django.db.models.functions import Upper
 from django.db.models import Sum
 from django.templatetags.static import static
 from django.utils import timezone
@@ -37,11 +40,13 @@ def default_currency_code():
 
 
 class Category(models.Model):
+    department = models.CharField(max_length=16, blank=True, db_index=True, choices=[('printing', 'Printing & Business Equipment'), ('fitness', 'Boforg Home Fitness')])
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True, blank=True, null=True)
 
     class Meta:
         ordering = ('name',)
+        indexes = [GinIndex(OpClass(Upper('name'), name='gin_trgm_ops'), name='category_name_search_gin')]
 
     def __str__(self):
         return self.name
@@ -88,6 +93,9 @@ class Product(models.Model):
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to=product_image_path, blank=True, null=True)
+    is_public = models.BooleanField(default=True, db_index=True, help_text='Show in the public shop. Hide internal charges here.')
+    short_description = models.CharField(max_length=240, blank=True)
+    recommended_products = models.ManyToManyField('self', blank=True, symmetrical=False)
     image_url = models.URLField(blank=True)  # Deprecated: retained temporarily for migration fallback
     is_active = models.BooleanField(default=True)
     tracking_mode = models.CharField(max_length=10, choices=TRACKING_CHOICES, default=TRACK_QUANTITY)
@@ -97,6 +105,9 @@ class Product(models.Model):
     class Meta:
         ordering = ('name',)
         indexes = [
+            GinIndex(OpClass(Upper('name'), name='gin_trgm_ops'), name='product_name_search_gin'),
+            GinIndex(OpClass(Upper('sku'), name='gin_trgm_ops'), name='product_sku_search_gin'),
+            GinIndex(OpClass(Upper('description'), name='gin_trgm_ops'), name='product_desc_search_gin'),
             models.Index(fields=['slug']),
             models.Index(fields=['is_active', 'updated_at']),
         ]
@@ -124,6 +135,10 @@ class Product(models.Model):
     def available_stock(self):
         return max((self.quantity or 0) - (self.reserved or 0), 0)
 
+    @property
+    def shop_purchasable(self):
+        return self.is_active and self.is_public and self.price > 0 and (not self.track_inventory or self.available_stock > 0)
+
     def get_primary_image_url(self):
         if self.image:
             try:
@@ -143,7 +158,7 @@ class StockMovement(models.Model):
     IN = 'IN'
     OUT = 'OUT'
     MOVEMENT_CHOICES = [(IN, 'In'), (OUT, 'Out')]
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='movements')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='movements')
     movement_type = models.CharField(max_length=3, choices=MOVEMENT_CHOICES)
     quantity = models.IntegerField()
     unit_cost = models.DecimalField(max_digits=12, decimal_places=4, blank=True, null=True)
@@ -151,27 +166,37 @@ class StockMovement(models.Model):
     note = models.CharField(max_length=255, blank=True, null=True)
     user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
 
+    def clean(self):
+        if self.quantity is None or self.quantity <= 0:
+            raise ValidationError({'quantity': 'Quantity must be positive.'})
+        if self.unit_cost is not None and self.unit_cost < 0:
+            raise ValidationError({'unit_cost': 'Cost cannot be negative.'})
+
+    @transaction.atomic
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        product = self.product
-        qty = int(self.quantity)
+        if not self._state.adding:
+            raise ValidationError('Stock movements are immutable; record a correcting movement.')
+        self.full_clean()
+        product = Product.objects.select_for_update().get(pk=self.product_id)
+        qty = self.quantity
+        if self.movement_type == self.OUT and qty > product.available_stock:
+            raise ValidationError('Insufficient available stock for this movement.')
         if self.movement_type == self.IN:
             if self.unit_cost is not None:
-                old_qty = product.quantity or 0
-                old_avg = product.avg_cost or 0
-                new_qty = old_qty + qty
-                if new_qty > 0:
-                    total_cost = (
-                        Decimal(str(old_avg)) * Decimal(str(old_qty))
-                    ) + (Decimal(str(self.unit_cost)) * Decimal(str(qty)))
-                    product.avg_cost = (total_cost / Decimal(str(new_qty))).quantize(Decimal('0.0001'))
-            product.quantity = (product.quantity or 0) + qty
+                new_qty = product.quantity + qty
+                total_cost = product.avg_cost * product.quantity + self.unit_cost * qty
+                product.avg_cost = (total_cost / new_qty).quantize(Decimal('0.0001'))
+            product.quantity += qty
         else:
-            product.quantity = (product.quantity or 0) - qty
-        product.save()
+            product.quantity -= qty
+        super().save(*args, **kwargs)
+        product.save(update_fields=['quantity', 'avg_cost'])
+        self.product = product
+
 
 
 class Combo(models.Model):
+    is_public = models.BooleanField(default=False, help_text='Publish this package in the shop after reviewing its components and description.')
     DISCOUNT_NONE = 'none'
     DISCOUNT_FIXED = 'fixed'
     DISCOUNT_PERCENT = 'percent'
@@ -197,7 +222,7 @@ class Combo(models.Model):
 
     def components_total(self):
         total = Decimal('0.00')
-        for item in self.items.select_related('product').all():
+        for item in self.items.all():
             price = Decimal(str(item.product.price or Decimal('0.00')))
             qty = Decimal(str(item.quantity))
             total += price * qty
@@ -431,7 +456,7 @@ class ShipmentCost(models.Model):
     amount_base = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'), editable=False)
     allocated = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    supporting_document = models.FileField(upload_to='shipment_costs/%Y/%m/', blank=True, null=True)
+    supporting_document = models.FileField(storage=private_document_storage, upload_to='shipment_costs/%Y/%m/', blank=True, null=True)
 
     class Meta:
         ordering = ['shipment', '-created_at']

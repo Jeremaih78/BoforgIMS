@@ -18,6 +18,8 @@ from .models import (
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'department')
+    list_filter = ('department',)
     search_fields = ['name']
     prepopulated_fields = {'slug': ('name',)}
 
@@ -31,9 +33,10 @@ class SupplierAdmin(admin.ModelAdmin):
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'sku', 'price', 'quantity', 'thumbnail', 'is_active')
     search_fields = ('name', 'sku')
-    list_filter = ('category', 'supplier', 'is_active')
+    list_filter = ('category', 'supplier', 'is_active', 'is_public')
+    filter_horizontal = ('recommended_products',)
     prepopulated_fields = {'slug': ('name',)}
-    readonly_fields = ('image_preview', 'created_at', 'updated_at')
+    readonly_fields = ('image_preview', 'created_at', 'updated_at', 'quantity', 'reserved', 'avg_cost')
     fields = (
         ('name', 'sku', 'slug'),
         ('category', 'supplier'),
@@ -41,6 +44,9 @@ class ProductAdmin(admin.ModelAdmin):
         ('quantity', 'reserved', 'track_inventory', 'tracking_mode'),
         ('reorder_level', 'tax_rate'),
         'description',
+        'short_description',
+        'recommended_products',
+        'is_public',
         'image',
         'image_preview',
         'is_active',
@@ -86,6 +92,12 @@ class ComboAdmin(admin.ModelAdmin):
 
 @admin.register(StockMovement)
 class StockMovementAdmin(admin.ModelAdmin):
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     list_display = ('product', 'movement_type', 'quantity', 'timestamp', 'user')
     list_filter = ('movement_type',)
 

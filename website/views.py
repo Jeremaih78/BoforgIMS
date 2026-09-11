@@ -1,4 +1,7 @@
 from datetime import timedelta
+import json
+from django.http import HttpResponse
+from django.utils.safestring import mark_safe
 
 from django.conf import settings
 from django.contrib import messages
@@ -11,6 +14,8 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from inventory.models import Category, Product, Supplier
+from shop.selectors import public_products
+from shop.packages import public_packages
 from sales.models import DocumentLine
 
 
@@ -19,26 +24,17 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        cache_key = 'website:home:v1'
-        cached = cache.get(cache_key)
-        if cached:
-            ctx.update(cached)
-            return ctx
-
         now = timezone.now()
         payload = {
-            'top_sellers': self._get_top_sellers(now),
-            'new_arrivals': list(self._get_new_arrivals()),
-            'featured_categories': list(self._get_featured_categories()),
-            'partner_brands': list(self._get_partner_brands()),
-            'testimonials': self._get_testimonials(),
-            'services': self._get_services(),
             'company': self._get_company_profile(),
             'now': now,
         }
         ctx.update(payload)
 
-        cache.set(cache_key, payload, getattr(settings, 'CACHE_TTL_HOME', 300))
+        ctx['structured_data'] = mark_safe(json.dumps({'@context': 'https://schema.org', '@type': 'Organization', 'name': 'Boforg Technologies (Private) Limited', 'url': self.request.build_absolute_uri(reverse('website:home')), 'address': {'@type': 'PostalAddress', 'addressLocality': 'Harare', 'addressCountry': 'ZW'}}).replace('<', chr(92) + 'u003c'))
+        ctx['packages'] = public_packages()
+        ctx['wa_phone_clean'] = settings.BOFORG_WHATSAPP_NUMBER
+        ctx['wa_text_general'] = 'Hello Boforg, please help me choose a printing business starter package.'
         return ctx
 
     def _get_top_sellers(self, now):
@@ -54,11 +50,11 @@ class HomeView(TemplateView):
             .order_by('-total_units')[:12]
         )
         top_ids = [row['product_id'] for row in top_lines]
-        products = Product.objects.filter(id__in=top_ids).select_related('category')
+        products = public_products().filter(id__in=top_ids).select_related('category')
         product_map = {p.id: p for p in products}
         ordered = [product_map[pid] for pid in top_ids if pid in product_map]
         if len(ordered) < 12:
-            fallback_qs = Product.objects.filter(is_active=True).exclude(id__in=top_ids)
+            fallback_qs = public_products().exclude(id__in=top_ids)
             if 'updated_at' in [f.name for f in Product._meta.get_fields() if hasattr(f, 'name')]:
                 fallback_qs = fallback_qs.order_by('-updated_at')
             else:
@@ -69,7 +65,7 @@ class HomeView(TemplateView):
     def _get_new_arrivals(self):
         order_field = '-created_at' if 'created_at' in [f.name for f in Product._meta.get_fields() if hasattr(f, 'name')] else '-id'
         return (
-            Product.objects.filter(is_active=True)
+            public_products()
             .order_by(order_field)
             .select_related('category')[:12]
         )
@@ -154,3 +150,13 @@ class NewsletterSubscribeView(View):
 
 
 
+
+
+def robots(request):
+    from shop.context_processors import public_url
+    shop_sitemap = public_url(request, 'shop:sitemap')
+    if shop_sitemap.startswith('//'):
+        shop_sitemap = request.scheme + ':' + shop_sitemap
+    else:
+        shop_sitemap = request.build_absolute_uri(shop_sitemap)
+    return HttpResponse('User-agent: *\nAllow: /\nSitemap: ' + shop_sitemap + '\n', content_type='text/plain')

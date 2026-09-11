@@ -1,0 +1,21 @@
+<header class="store-header">
+<div class="store-wrap store-top">
+<a class="store-brand" href="{{ store_home }}">Boforg<span>Start. Print. Grow.</span>
+</a>
+<a href="{{ store_shop }}?all=1#search" class="store-search-link">Search</a>
+<a href="{{ store_cart }}" class="store-cart">Cart <span id="cart-counter">{{ store_count|default:0 }}</span>
+</a>
+<button type="button" class="store-menu" aria-expanded="false" aria-controls="store-navigation">Menu</button>
+</div>
+<nav id="store-navigation" class="store-wrap store-nav" aria-label="Main navigation">
+<a href="{{ store_home }}#packages">Start a Business</a>
+<a href="{{ store_shop }}">Shop</a>
+<a href="{{ store_shop }}?q=DTF">DTF</a>
+<a href="{{ store_shop }}?q=sublimation">Sublimation</a>
+<a href="{{ store_shop }}?q=heat">Heat Press</a>
+<a href="{{ store_shop }}?q=vinyl">Vinyl Cutting</a>
+<a href="{{ store_shop }}?department=fitness">Home Fitness</a>
+<a href="{{ store_home }}#training">Training &amp; Support</a>
+<a href="{{ store_home }}#contact">Contact</a>
+</nav>
+</header>

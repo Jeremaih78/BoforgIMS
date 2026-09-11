@@ -12,11 +12,11 @@ from accounting.models import Expense, TaxRate
 
 def _base_currency() -> Currency:
     code = getattr(settings, "BASE_CURRENCY_CODE", "USD")
-    return Currency.objects.get_or_create(code=code, defaults={"name": code, "is_base": True})[0]
+    return Currency.objects.get_or_create(company=None, code=code, defaults={"name": code, "is_base": True})[0]
 
 
 def _get_account(code: str) -> Account:
-    return Account.objects.get(code=code)
+    return Account.objects.get(company=None, code=code)
 
 
 def _default_bank() -> BankAccount:
@@ -45,12 +45,12 @@ def _split_invoice_amounts(inv: Invoice) -> tuple[Decimal, Decimal, Decimal]:
 
 @transaction.atomic
 def post_sales_invoice(invoice_id: int) -> JournalEntry:
-    inv = Invoice.objects.select_related("customer").prefetch_related("lines").get(pk=invoice_id)
+    inv = Invoice.objects.select_for_update().select_related("customer").prefetch_related("lines").get(pk=invoice_id)
     cur = _base_currency()
     net, tax, gross = _split_invoice_amounts(inv)
 
     # If already posted revenue JE for this invoice, skip
-    existing = JournalEntry.objects.filter(source="INVOICE", source_id=inv.id, is_posted=True).first()
+    existing = JournalEntry.objects.filter(source="INVOICE", source_id=inv.id, is_posted=True, lines__account__code="4000").first()
     if existing:
         return existing
 
@@ -83,11 +83,11 @@ def post_sales_invoice(invoice_id: int) -> JournalEntry:
 
 
 @transaction.atomic
-def post_ar_receipt(invoice_id: int, amount: Decimal) -> JournalEntry:
-    inv = Invoice.objects.select_related("customer").get(pk=invoice_id)
+def post_ar_receipt(invoice_id: int, amount: Decimal, payment_date=None) -> JournalEntry:
+    inv = Invoice.objects.select_for_update().select_related("customer").get(pk=invoice_id)
     cur = _base_currency()
     entry = JournalEntry.objects.create(
-        date=timezone.now().date(),
+        date=payment_date or timezone.localdate(),
         memo=f"Receipt for {inv.number}",
         currency=cur,
         fx_rate=Decimal("1.0"),
@@ -109,18 +109,27 @@ def post_ar_receipt(invoice_id: int, amount: Decimal) -> JournalEntry:
 def post_cogs_for_invoice(invoice_id: int) -> JournalEntry | None:
     """Post COGS at average cost. Uses product.price as proxy if avg_cost not maintained yet."""
     from inventory.models import Product
-    inv = Invoice.objects.prefetch_related("lines__product").get(pk=invoice_id)
+    inv = Invoice.objects.select_for_update().prefetch_related("lines__product").get(pk=invoice_id)
     cur = _base_currency()
+    existing = JournalEntry.objects.filter(source='INVOICE', source_id=inv.id,
+        is_posted=True, lines__account__code='5000').first()
+    if existing:
+        return existing
     total_cogs = Decimal("0")
+    product_ids = list(inv.lines.exclude(product=None).values_list('product_id', flat=True))
+    locked_products = {p.pk: p for p in Product.objects.select_for_update().filter(pk__in=product_ids).order_by('pk')}
     for it in inv.items.all():
-        p = it.product
+        p = locked_products.get(it.product_id)
         if not p:
             continue
         # Placeholder average cost: if Product has avg_cost use it; else use price
         avg_cost = getattr(p, "avg_cost", None)
         if not avg_cost or avg_cost == 0:
             avg_cost = p.price
-        total_cogs += (avg_cost * it.quantity)
+        if it.cost_unit_snapshot is None:
+            it.cost_unit_snapshot = avg_cost
+            it.save(update_fields=['cost_unit_snapshot'])
+        total_cogs += (it.cost_unit_snapshot * it.quantity)
     if total_cogs == 0:
         return None
     entry = JournalEntry.objects.create(
@@ -143,7 +152,7 @@ def post_cogs_for_invoice(invoice_id: int) -> JournalEntry | None:
 
 @transaction.atomic
 def post_expense(expense_id: int) -> JournalEntry:
-    exp = Expense.objects.select_related('category', 'tax').get(pk=expense_id)
+    exp = Expense.objects.select_for_update(of=('self',)).select_related('category', 'tax').get(pk=expense_id)
     cur = _base_currency()
     # Avoid double-posting for same expense
     existing = JournalEntry.objects.filter(source="EXPENSE", source_id=exp.id, is_posted=True).first()
@@ -155,7 +164,7 @@ def post_expense(expense_id: int) -> JournalEntry:
         rate = Decimal(exp.tax.rate) / Decimal("100")
     gross = Decimal(exp.amount)
     # Assume entered amount is gross; split into net + tax
-    net = (gross / (Decimal("1") + rate)) if rate > 0 else gross
+    net = (gross / (Decimal("1") + rate)).quantize(Decimal("0.01")) if rate > 0 else gross
     tax_amt = gross - net
 
     entry = JournalEntry.objects.create(
