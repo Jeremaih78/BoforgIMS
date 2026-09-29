@@ -2,8 +2,6 @@
 .tasker-route-loader span { animation:tasker-loader 1s ease-in-out infinite;background:linear-gradient(90deg,transparent,#4da3ff,#a86cff,transparent);display:block;height:100%;transform:translateX(-100%);width:55%; }
 .tasker-route-loader.is-active { opacity:1; }
 @keyframes tasker-loader { to { transform:translateX(280%); } }
-.tasker-fab { align-items:center;background:linear-gradient(135deg,#2d88ff,#6f5cff);border:0;border-radius:999px;bottom:1.5rem;box-shadow:0 .9rem 2.2rem rgba(45,136,255,.38);color:#fff;display:flex;font-size:.85rem;font-weight:750;gap:.55rem;padding:.78rem 1rem;position:fixed;right:1.5rem;transition:transform .16s ease,box-shadow .16s ease;z-index:1030; }
-.tasker-fab:hover { box-shadow:0 1.1rem 2.7rem rgba(45,136,255,.48);transform:translateY(-2px); }.tasker-fab kbd{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.25);font-size:.62rem;}
 .tasker-global-modal { background:#0f2435;border:1px solid rgba(255,255,255,.1);border-radius:1.15rem;box-shadow:0 1.5rem 4rem rgba(0,0,0,.5); }.tasker-global-modal .form-label{color:var(--muted);font-size:.8rem;}.tasker-ui-kicker{color:#82baff;font-size:.68rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;}
 .tasker-shortcut-row { align-items:center;border-top:1px solid rgba(255,255,255,.07);display:flex;font-size:.82rem;justify-content:space-between;padding:.75rem 0; }.tasker-shortcut-row:first-child{border-top:0}.tasker-shortcut-row kbd{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:.3rem;color:var(--text);font-size:.67rem;min-width:1.6rem;text-align:center;}
 .tasker-submit-spinner { animation:tasker-spin .7s linear infinite;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;height:.85rem;margin-right:.45rem;vertical-align:-.1rem;width:.85rem; }
@@ -12,5 +10,66 @@
 .tasker-circle-progress { align-items:center;background:conic-gradient(var(--primary) calc(var(--value) * 1%),rgba(255,255,255,.08) 0);border-radius:50%;display:flex;height:3.4rem;justify-content:center;position:relative;width:3.4rem;}.tasker-circle-progress::before{background:#162c41;border-radius:inherit;content:"";inset:.34rem;position:absolute}.tasker-circle-progress strong{font-size:.72rem;position:relative;}
 [data-tasker-animate] { animation:tasker-enter .3s ease both;animation-delay:calc(var(--stagger,0) * 45ms); }
 @keyframes tasker-enter { from { opacity:0;transform:translateY(.45rem); } }
-@media(max-width:991.98px){.tasker-fab{bottom:5rem;right:1rem}.tasker-fab span,.tasker-fab kbd{display:none}.tasker-fab{border-radius:50%;height:3.25rem;justify-content:center;padding:0;width:3.25rem}}
-@media(prefers-reduced-motion:reduce){.tasker-route-loader span,.tasker-submit-spinner,[data-tasker-animate]{animation:none}.tasker-fab,.task-card{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.tasker-route-loader span,.tasker-submit-spinner,[data-tasker-animate]{animation:none}.tasker-capture,.task-card{transition:none!important}}
+
+/* Bootstrap utilities and native controls must use the same dark palette. */
+.tasker-app {
+  --bs-body-color: var(--text);
+  --bs-body-color-rgb: 234, 243, 251;
+  --bs-body-bg: #13283c;
+  --bs-secondary-color: #b3c7d9;
+  --bs-secondary-color-rgb: 179, 199, 217;
+  --bs-tertiary-color: #a9c1d6;
+  --bs-emphasis-color: #f4f8fc;
+  --bs-primary: #82baff;
+  --bs-primary-rgb: 130, 186, 255;
+  --bs-success: #78e6b0;
+  --bs-border-color: #395166;
+  color-scheme: dark;
+  line-height: 1.6;
+}
+.tasker-app .text-muted, .tasker-app .text-secondary, .tasker-app .form-text { color: #b3c7d9 !important; }
+.tasker-app .content > .container-fluid { max-width: 1600px; padding: clamp(1rem, 2.4vw, 2rem); padding-bottom: 7rem; }
+.tasker-app .sidebar .nav-link { border: 0; border-radius: .6rem; margin-bottom: .2rem; font-size: .9rem; }
+.tasker-app .sidebar .nav-link.active { background: #4da3ff22 !important; box-shadow: inset 3px 0 #4da3ff; color: #eaf3fb; }
+.tasker-app .sidebar .nav-link:hover { background: #ffffff0d !important; }
+.tasker-app .form-control, .tasker-app .form-select { color: var(--text); border-color: #456077; }
+.tasker-app .form-control:focus, .tasker-app .form-select:focus { background-color: #0f2435; color: #f4f8fc; border-color: #82baff; }
+.tasker-app .form-select option { background: #0f2435; color: #eaf3fb; }
+.tasker-app form .input-group > input.form-control:not([type=checkbox]):not([type=radio]) { width: 1%; min-width: 0; }
+.tasker-app .tasker-card button[type="submit"] { flex-shrink: 0; }
+.tasker-app .form-control::placeholder { color: #a9c1d6; opacity: 1; }
+.tasker-app .btn { border-radius: .6rem; display: inline-flex; align-items: center; justify-content: center; }
+.tasker-app .btn-primary { color: #071827; font-weight: 650; }
+.tasker-app .btn-primary:hover { background: #82baff; border-color: #82baff; }
+.tasker-app .btn-primary > span { color: inherit; }
+.tasker-app .btn-outline-primary { --bs-btn-color: #82baff; --bs-btn-border-color: #619cda; --bs-btn-hover-bg: #234767; --bs-btn-hover-color: #fff; }
+.tasker-app .btn-outline-success { --bs-btn-color: #78e6b0; --bs-btn-border-color: #438c6c; }
+.tasker-app .btn-outline-danger { --bs-btn-color: #ff9c9c; --bs-btn-border-color: #bc6571; }
+.tasker-app .table { --bs-table-bg: transparent; --bs-table-color: var(--text); --bs-table-border-color: #395166; background: transparent; }
+.tasker-app .table th, .tasker-app .table td { color: var(--text); border-color: #395166; }
+.tasker-app .table thead th { color: #b3c7d9; }
+.tasker-app .tasker-icon-action { height: 2.75rem; width: 2.75rem; }
+.tasker-app .tasker-task-link { overflow-wrap: anywhere; }
+.tasker-app .tasker-ai-button { gap: .75rem; min-height: 48px; }
+.tasker-app .tasker-ai-button:not(:disabled):hover { background: #4da3ff1f; border-color: #619cda; }
+.tasker-app .tasker-ai-button:disabled { cursor: not-allowed; }
+.tasker-app .tasker-ai-button small { color: #c2c9f5; text-align: right; }
+.tasker-app .ai-action-card:disabled { opacity: 1; border-style: dashed; color: #b3c7d9; }
+.tasker-app .tasker-empty-state { border-radius: .85rem; background: #0f24354d; }
+.tasker-app .tasker-empty-state > i { color: #a9c1d6; }
+.tasker-app .tasker-timeline-item.is-complete { opacity: 1; }
+@media (min-width: 992px) {
+  .tasker-app .sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
+}
+@media (max-width: 575.98px) {
+  .tasker-app .tasker-card { padding: 1.15rem !important; }
+  .tasker-app .tasker-hero .btn { flex: 1 1 auto; }
+  .tasker-app .tasker-progress-card { gap: 1rem !important; }
+}
+
+/* Keep capture available without covering notes, cards or their actions. */
+.tasker-app .topbar { position: sticky; top: 0; z-index: 1020; background: #101f2c; }
+.tasker-capture { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .55rem .8rem; border: 1px solid #849cff; border-radius: .65rem; background: linear-gradient(135deg,#2d88ff,#6f5cff); color: white; font-weight: 650; }
+.tasker-capture kbd { background: #182752; color: white; font-size: .7rem; }
+@media(max-width:575.98px) { .tasker-capture span, .tasker-capture kbd { display: none; } .tasker-capture { width: 44px; justify-content: center; } .tasker-app .topbar .text-secondary { max-width: 5rem; } }

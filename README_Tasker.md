@@ -23,7 +23,7 @@ Phase 1 milestones 1 through 6 currently provide:
 - Checklists, comments, time entries, synchronized progress, and task activity history
 - Daily planning with a focus area, motivational quote, top four priorities, selected tasks, and notes
 - End of day reflection with energy, productive time, distractions, lessons, carry-over work, and tomorrow focus
-- A shared responsive UI layer with floating quick add, loading feedback, quick actions, and reduced-motion support
+- A shared responsive UI layer with toolbar quick add, loading feedback, quick actions, and reduced-motion support
 - Keyboard-first navigation and task capture
 - Bounded dashboard/detail queries, reusable selectors, and use-case-specific view modules
 - Provider-neutral, disabled-by-default AI contracts and a minimized context builder

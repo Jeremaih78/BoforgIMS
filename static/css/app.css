@@ -194,6 +194,27 @@ a.btn.btn-force-white:active {
   position: relative;
 }
 
+/* Searchable customer selection retains the sales form's light palette. */
+.customer-combobox { position: relative; }
+.customer-combobox__input { padding-right: 2.4rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%2367798b' stroke-width='2'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m11 11 5 5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .8rem center; }
+.customer-combobox__results { position: absolute; top: 46px; inset-inline: 0; z-index: 1060; max-height: min(20rem, 45vh); overflow-y: auto; overscroll-behavior: contain; background: #fff; color: #13283c; border: 1px solid #a9c1d6; border-radius: .6rem; box-shadow: 0 12px 32px #07182733; }
+.customer-combobox__option { padding: .75rem .9rem; cursor: pointer; border-bottom: 1px solid #e7edf3; }
+.customer-combobox__option strong, .customer-combobox__option small { display: block; overflow-wrap: anywhere; color: #13283c !important; }
+.customer-combobox__option small { color: #52677b !important; font-size: .8rem; margin-top: .2rem; }
+.customer-combobox__option:hover, .customer-combobox__option[aria-selected="true"] { background: #e7f2ff; box-shadow: inset 3px 0 var(--primary-2); }
+.customer-combobox__hint { font-size: .8rem; line-height: 1.5; margin-top: .45rem; color: var(--muted); }
+.form-card .customer-combobox__hint { color: #52677b !important; }
+.customer-combobox__empty { padding: 1rem; color: #52677b !important; }
+.sales-document-form { border: 1px solid #dce5ee; box-shadow: 0 16px 45px #0002; }
+.sales-document-form .sales-form-kicker { color: #2864a3 !important; text-transform: uppercase; font-size: .72rem; letter-spacing: .1em; font-weight: 700; margin-bottom: .6rem; }
+.sales-document-form .sales-form-intro { color: #52677b !important; font-size: .9rem; line-height: 1.6; }
+.sales-form-field { margin-bottom: 1.25rem; }
+.sales-form-field > label { display: block; font-weight: 600; margin-bottom: .4rem; }
+.sales-form-actions { border-top: 1px solid #e1e8ef; padding-top: 1.25rem; margin-top: .5rem; }
+.sales-document-form .errorlist, .sales-document-form .errorlist li { color: #a51d2d !important; font-size: .85rem; }
+.sales-document-form textarea { min-height: 88px !important; }
+.sales-document-form .btn-secondary { border-color: #b9c7d5; }
+
 /* Shared business workflows: flex children must be allowed to shrink. */
 .content, .card, .card-body, .row > * { min-width: 0; }
 .content { width: 0; }

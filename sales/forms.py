@@ -13,12 +13,26 @@ def newest_customer_queryset():
     return Customer.objects.order_by('-id')
 
 
+class CustomerSearchSelect(forms.Select):
+    """Keep native selection/validation while exposing searchable contact details."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        if value and hasattr(value, 'instance'):
+            option['attrs']['data-phone'] = value.instance.phone or ''
+            option['attrs']['data-email'] = value.instance.email or ''
+        return option
+
+
 class CustomerOrderedFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'customer' in self.fields:
             self.fields['customer'].queryset = newest_customer_queryset()
-            self.fields['customer'].widget.attrs.update({'class': 'form-select'})
+            self.fields['customer'].widget = CustomerSearchSelect(attrs={
+                'class': 'form-select', 'data-customer-search': '',
+            })
+            self.fields['customer'].widget.choices = self.fields['customer'].choices
         for name, field in self.fields.items():
             if name != 'customer':
                 widget = field.widget

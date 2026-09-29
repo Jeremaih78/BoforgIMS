@@ -25,17 +25,17 @@ class TaskerUIPolishTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def test_shared_ui_assets_fab_and_shortcuts_render_once(self):
+    def test_shared_ui_assets_capture_and_shortcuts_render_once(self):
         response = self.client.get(reverse("ims:tasker:index"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "tasker/css/ui.css")
         self.assertContains(response, "tasker/js/ui.js")
         self.assertContains(response, 'id="quickAddModal"', count=1)
-        self.assertContains(response, 'class="tasker-fab"')
+        self.assertContains(response, 'class="tasker-capture"')
         self.assertContains(response, "Keyboard shortcuts")
 
-    def test_floating_quick_add_is_hidden_without_add_permission(self):
+    def test_toolbar_quick_add_is_hidden_without_add_permission(self):
         viewer = get_user_model().objects.create_user(username="ux-viewer", password="pass")
         viewer.user_permissions.add(
             Permission.objects.get(content_type__app_label="tasker", codename="view_task")
@@ -44,7 +44,7 @@ class TaskerUIPolishTests(TestCase):
 
         response = self.client.get(reverse("ims:tasker:index"))
 
-        self.assertNotContains(response, 'class="tasker-fab"')
+        self.assertNotContains(response, 'class="tasker-capture"')
         self.assertNotContains(response, 'id="quickAddModal"')
 
     def test_global_quick_add_returns_to_safe_origin_page(self):

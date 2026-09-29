@@ -1,6 +1,6 @@
 {% load static hosts %}
 <!doctype html>
-<html lang="en">
+<html lang="en"{% if is_tasker_request %} data-bs-theme="dark"{% endif %}>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@
     {% block extra_css %}{% endblock %}
     <link rel="icon" href="{% static 'img/logo_white.png' %}">
   </head>
-  <body>
+  <body{% if is_tasker_request %} class="tasker-app"{% endif %}>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="app d-flex">
       <aside class="sidebar offcanvas-lg offcanvas-start p-3" id="imsNavigation" tabindex="-1" aria-labelledby="navigationTitle">
@@ -47,6 +47,7 @@
             <button class="btn btn-outline-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#imsNavigation" aria-controls="imsNavigation" aria-label="Open navigation"><i class="bi bi-list" aria-hidden="true"></i></button>
             <button class="btn btn-outline-light btn-sm" id="btn-back" aria-label="Back" title="Back"><i class="bi bi-arrow-left"></i></button>
             <button class="btn btn-outline-light btn-sm" id="btn-forward" aria-label="Forward" title="Forward"><i class="bi bi-arrow-right"></i></button>
+            {% if is_tasker_request and perms.tasker.add_task %}<button class="tasker-capture" type="button" data-bs-toggle="modal" data-bs-target="#quickAddModal" aria-label="Quick add task" title="Quick add task (N)"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Quick task</span><kbd>N</kbd></button>{% endif %}
           </div>
           <div class="d-flex align-items-center gap-2">
             {% if user.is_authenticated %}
@@ -74,9 +75,6 @@
     <div id="taskerUIConfig" hidden data-today-url="{% url 'ims:tasker:index' %}" data-create-url="{% url 'ims:tasker:task_create' %}" {% if perms.tasker.view_dailyplan %}data-planner-url="{% url 'ims:tasker:daily_plan' %}"{% endif %}></div>
     <div class="tasker-route-loader" id="taskerRouteLoader" aria-hidden="true"><span></span></div>
     {% if perms.tasker.add_task %}
-    <button class="tasker-fab" type="button" data-bs-toggle="modal" data-bs-target="#quickAddModal" aria-label="Quick add task" title="Quick add task (N)">
-      <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Quick task</span><kbd>N</kbd>
-    </button>
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="globalQuickAddLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content tasker-global-modal">
@@ -112,6 +110,7 @@
     </script>
     {% if is_tasker_request %}<script src="{% static 'tasker/js/ui.js' %}"></script>{% endif %}
     <script src="{% static 'js/ims.js' %}"></script>
+    <script src="{% static 'js/customer_combobox.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
   </body>
 </html>

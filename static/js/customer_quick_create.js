@@ -46,11 +46,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const select = document.getElementById(activeSelectId);
     if (select) {
       const option = new Option(data.customer.name, data.customer.id, true, true);
+      option.dataset.phone = data.customer.phone || '';
+      option.dataset.email = data.customer.email || '';
       select.add(option, select.options[0] || null);
       select.value = String(data.customer.id);
       select.dispatchEvent(new Event('change', {bubbles: true}));
-      select.focus();
     }
     modal.hide();
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      (document.getElementById(`${activeSelectId}-search`) || select)?.focus();
+    }, {once: true});
   });
 });
