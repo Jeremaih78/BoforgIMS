@@ -9,7 +9,10 @@ TWOPLACES = Decimal('0.01')
 
 
 def _validated_quantity(quantity):
-    qty = int(quantity or 1)
+    value = Decimal(str(quantity))
+    if not value.is_finite() or value != value.to_integral_value():
+        raise ValueError('Quantity must be a positive integer.')
+    qty = int(value)
     if qty <= 0:
         raise ValueError('Quantity must be a positive integer.')
     return qty
@@ -92,6 +95,8 @@ def combo_available_quantity(combo):
         if required <= 0:
             continue
         product = item.product
-        stock = getattr(product, 'quantity', 0) or 0
+        stock = product.available_stock
+        if not product.track_inventory:
+            continue
         limits.append(stock // required if required else 0)
     return min(limits) if limits else 0

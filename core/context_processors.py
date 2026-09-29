@@ -16,3 +16,11 @@ def analytics_allowed(request):
         return {"allow_analytics": False}
 
     return {"allow_analytics": True}
+
+
+def ims_navigation(request):
+    from core.permissions import allowed
+    user = getattr(request, 'user', None)
+    if not user or not getattr(user, 'is_active', False):
+        return {'ims_can_view_finance': False}
+    return {'ims_can_view_finance': allowed(user, 'accounting.view_journalentry')}

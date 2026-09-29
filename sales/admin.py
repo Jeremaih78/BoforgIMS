@@ -26,6 +26,15 @@ class QuotationAdmin(admin.ModelAdmin):
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     inlines = [DocumentLineInline]
     list_display = ('number', 'customer', 'date', 'due_date', 'status', 'total')
     search_fields = ('number', 'customer__name')
@@ -33,6 +42,15 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     list_display = ('invoice', 'amount', 'date', 'method')
     search_fields = ('invoice__number',)
 
@@ -45,4 +63,13 @@ class PriceRuleAdmin(admin.ModelAdmin):
 
 @admin.register(StockReservation)
 class StockReservationAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     list_display = ('invoice', 'product', 'quantity', 'created_at')

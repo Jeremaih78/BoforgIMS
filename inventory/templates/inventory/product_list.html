@@ -8,11 +8,21 @@
   </div>
 </div>
 <form class="mb-3">
-  <input class="form-control" name="q" placeholder="Search by name, SKU, category, supplier..." value="{{ q }}">
+  <input class="form-control" name="q" aria-label="Search products" placeholder="Search by name, SKU, category, supplier..." value="{{ q }}">
 </form>
+<div class="d-md-none product-mobile-list">
+  {% for p in products %}
+  <article class="card p-3 mb-3">
+    <h4 class="h6">{{ p.name }}</h4><p class="small text-muted mb-2">{{ p.sku }}</p>
+    <div class="d-flex justify-content-between gap-2"><strong>{{ p.currency }} {{ p.price }}</strong><span>{% if p.track_inventory %}Available: <strong>{{ p.available_stock }}</strong>{% else %}Service{% endif %}</span></div>
+    {% if p.track_inventory %}<p class="small text-muted mt-2 mb-2">On hand: {{ p.quantity }} &middot; Reserved: {{ p.reserved }}</p>{% endif %}
+    <a class="btn btn-outline-light mt-2" href="{% url 'ims:inventory:product_edit' p.pk %}">View / edit product</a>
+  </article>
+  {% empty %}<p>No products found. Try another name or SKU.</p>{% endfor %}
+</div>
 <div class="card p-2">
-<table class="table table-hover align-middle mb-0">
-  <thead><tr><th>Image</th><th>SKU</th><th>Name</th><th>Category</th><th>Supplier</th><th class="text-end">Qty</th><th class="text-end">Price</th><th></th></tr></thead>
+<table class="table table-hover align-middle mb-0 d-none d-md-table">
+  <thead><tr><th>Image</th><th>SKU</th><th>Name</th><th>Category</th><th>Supplier</th><th class="text-end">Available</th><th class="text-end">Price</th><th></th></tr></thead>
   <tbody>
     {% for p in products %}
     <tr>
@@ -29,12 +39,12 @@
       <td>{{ p.name }}</td>
       <td>{{ p.category }}</td>
       <td>{{ p.supplier }}</td>
-      <td class="text-end {% if p.quantity <= 5 %}text-warning{% endif %}">{{ p.quantity }}</td>
+      <td class="text-end {% if p.quantity <= 5 %}text-warning{% endif %}">{{ p.available_stock }}</td>
       <td class="text-end">{{ p.price }}</td>
       <td class="text-end">
         <a class="btn btn-sm btn-outline-primary text-dark" href="{% url 'ims:inventory:product_edit' p.pk %}">Edit</a>
         {% if user.is_superuser %}
-        <a class="btn btn-sm btn-outline-danger" href="{% url 'ims:inventory:product_delete' p.pk %}">Delete</a>
+        <form method="post" action="{% url 'ims:inventory:product_delete' p.pk %}" class="d-inline" onsubmit="return confirm('Delete this product? Products with history cannot be deleted.')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form>
         {% endif %}
       </td>
     </tr>
@@ -48,13 +58,13 @@
     <nav>
       <ul class="pagination pagination-sm mb-0">
         {% if products.has_previous %}
-        <li class="page-item"><a class="page-link" href="?q={{ q }}&low={{ low }}&page={{ products.previous_page_number }}">Prev</a></li>
+        <li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}{% if low %}&low=1{% endif %}&page={{ products.previous_page_number }}">Prev</a></li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">Prev</span></li>
         {% endif %}
         <li class="page-item disabled"><span class="page-link">Page {{ products.number }} of {{ products.paginator.num_pages }}</span></li>
         {% if products.has_next %}
-        <li class="page-item"><a class="page-link" href="?q={{ q }}&low={{ low }}&page={{ products.next_page_number }}">Next</a></li>
+        <li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}{% if low %}&low=1{% endif %}&page={{ products.next_page_number }}">Next</a></li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">Next</span></li>
         {% endif %}

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -51,6 +52,7 @@ class AccountingPostingTests(TestCase):
 class FinanceDashboardTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="finance", password="safe-pass")
+        self.user.groups.add(Group.objects.get_or_create(name="Admin")[0])
         self.customer = Customer.objects.create(name="Finance Customer")
         self.product_category = Category.objects.create(name="Machines")
         self.product = Product.objects.create(

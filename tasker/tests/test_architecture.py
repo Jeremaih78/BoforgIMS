@@ -88,6 +88,7 @@ class TaskerIntegrationBoundaryTests(TestCase):
 
     def test_tasker_assets_are_scoped_by_resolver_not_path_assumption(self):
         tasker_response = self.client.get(reverse("ims:tasker:index"))
+        self.user.user_permissions.add(Permission.objects.get(content_type__app_label="sales", codename="view_invoice"))
         ims_response = self.client.get(reverse("ims:dashboard"))
 
         self.assertContains(tasker_response, "tasker/css/ui.css")

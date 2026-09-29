@@ -23,8 +23,30 @@ def _coerce_amount(value) -> float:
         return 0.0
 
 
+class BoundedPaynowClient(PaynowClient):
+    """Keep the pinned 1.0.8 SDK signing/parser, but bound its HTTP request.
+
+    The SDK has no injectable transport or timeout. Keep private SDK access
+    isolated here and cover it with a contract test before upgrading Paynow.
+    """
+    def send(self, payment):
+        from urllib.parse import parse_qs
+        from paynow.model import InitResponse
+        if payment.total() <= 0:
+            raise ValueError('Payment total must be positive.')
+        data = self._Paynow__build(payment)
+        response = requests.post(self.URL_INITIATE_TRANSACTION, data=data,
+                                 timeout=(5, 15), allow_redirects=False)
+        response.raise_for_status()
+        payload = self._Paynow__rebuild_response(parse_qs(response.text))
+        if payload.get('status', '').lower() != 'error':
+            if not self._Paynow__verify_hash(payload, self.integration_key):
+                raise HashMismatchException('Invalid provider response signature.')
+        return InitResponse(payload)
+
+
 def _build_client(return_url: str = '', result_url: str = '') -> PaynowClient:
-    return PaynowClient(
+    return BoundedPaynowClient(
         PAYNOW_INTEGRATION_ID or '',
         PAYNOW_INTEGRATION_KEY or '',
         return_url,
@@ -67,7 +89,7 @@ def create_payment(
     try:
         response = client.send(payment)
     except (HashMismatchException, requests.RequestException, ValueError) as exc:
-        logger.exception('Error calling Paynow: %s', exc)
+        logger.warning('Paynow initiation failed (%s).', type(exc).__name__)
         return {'ok': False, 'error': str(exc), 'raw': {}}
 
     raw = getattr(response, 'data', {})
@@ -81,22 +103,23 @@ def create_payment(
 
     if not result['ok']:
         result['error'] = getattr(response, 'error', 'Paynow request failed')
-        logger.error('Paynow initiate returned non-ok status: %s', raw)
+        logger.warning('Paynow initiation returned a non-success status.')
 
     return result
 
 
 def poll_status(poll_url: str):
-    if not poll_url:
+    """Use the stored provider URL over verified HTTPS, with bounded network time."""
+    from urllib.parse import urlsplit, parse_qsl
+
+    parsed = urlsplit(poll_url or '')
+    if parsed.scheme != 'https' or parsed.hostname not in {'www.paynow.co.zw', 'paynow.co.zw'} or parsed.port not in (None, 443) or parsed.username:
         return {'status': 'unknown', 'raw': {}}
-
-    client = _build_client()
-
     try:
-        response = client.check_transaction_status(poll_url)
-    except requests.RequestException as exc:
-        logger.exception('Error polling Paynow: %s', exc)
-        return {'status': 'unknown', 'raw': {'error': str(exc)}}
-
-    raw = {key: value for key, value in response.__dict__.items()}
-    return {'status': raw.get('status', 'unknown'), 'raw': raw}
+        response = requests.post(poll_url, data={}, timeout=(5, 15), allow_redirects=False)
+        response.raise_for_status()
+        raw = dict(parse_qsl(response.text))
+        return {'status': raw.get('status', 'unknown').lower(), 'raw': raw}
+    except (requests.RequestException, ValueError):
+        logger.warning('Paynow status verification unavailable.')
+        return {'status': 'unknown', 'raw': {}}

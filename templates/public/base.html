@@ -1,0 +1,27 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Boforg | Printing equipment & Home Fitness{% endblock %}</title>
+<meta name="description" content="{{ page_description|default:'Start and grow your printing business with Boforg Technologies in Harare, Zimbabwe.' }}">
+<link rel="canonical" href="{{ canonical_url|default:request.build_absolute_uri }}">
+<meta property="og:title" content="{{ product.name|default:'Boforg Technologies' }}">
+<meta property="og:description" content="{{ page_description|default:'Printing equipment, supplies and support in Harare, Zimbabwe.' }}">
+<meta property="og:url" content="{{ canonical_url|default:request.build_absolute_uri }}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="{% static 'css/storefront.css' %}">{% block extra_css %}
+{% endblock %}
+{% if allow_analytics %}<script async src="https://www.googletagmanager.com/gtag/js?id=G-4D77P6R6XX">
+</script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-4D77P6R6XX');</script>{% endif %}
+{% if breadcrumb_data %}<script type="application/ld+json">{{ breadcrumb_data }}</script>{% endif %}
+{% if structured_data %}<script type="application/ld+json">{{ structured_data }}</script>{% endif %}</head>
+<body class="storefront">
+<a class="store-skip" href="#main">Skip to content</a>{% include 'public/header.html' %}<div id="cart-notification" class="store-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div><main id="main" class="store-main">{% if messages %}<div class="store-wrap" data-store-messages aria-live="polite">{% for message in messages %}<p class="store-message" data-level="{{ message.tags }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+{% block content %}
+{% endblock %}</main>{% include 'public/footer.html' %}<a class="store-help" href="{{ store_whatsapp }}" data-event="contact_support_click" target="_blank" rel="noopener">WhatsApp help</a>{% if allow_analytics %}{{ store_events|json_script:'store-events' }}{{ page_event|json_script:'store-page-event' }}{{ purchase_events|json_script:'store-purchase-events' }}{% endif %}<script defer src="{% static 'js/storefront.js' %}">
+</script>{% block extra_js %}
+{% endblock %}</body>
+</html>

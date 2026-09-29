@@ -194,6 +194,68 @@ a.btn.btn-force-white:active {
   position: relative;
 }
 
+/* Searchable customer selection retains the sales form's light palette. */
+.customer-combobox { position: relative; }
+.customer-combobox__input { padding-right: 2.4rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%2367798b' stroke-width='2'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m11 11 5 5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .8rem center; }
+.customer-combobox__results { position: absolute; top: 46px; inset-inline: 0; z-index: 1060; max-height: min(20rem, 45vh); overflow-y: auto; overscroll-behavior: contain; background: #fff; color: #13283c; border: 1px solid #a9c1d6; border-radius: .6rem; box-shadow: 0 12px 32px #07182733; }
+.customer-combobox__option { padding: .75rem .9rem; cursor: pointer; border-bottom: 1px solid #e7edf3; }
+.customer-combobox__option strong, .customer-combobox__option small { display: block; overflow-wrap: anywhere; color: #13283c !important; }
+.customer-combobox__option small { color: #52677b !important; font-size: .8rem; margin-top: .2rem; }
+.customer-combobox__option:hover, .customer-combobox__option[aria-selected="true"] { background: #e7f2ff; box-shadow: inset 3px 0 var(--primary-2); }
+.customer-combobox__hint { font-size: .8rem; line-height: 1.5; margin-top: .45rem; color: var(--muted); }
+.form-card .customer-combobox__hint { color: #52677b !important; }
+.customer-combobox__empty { padding: 1rem; color: #52677b !important; }
+.sales-document-form { border: 1px solid #dce5ee; box-shadow: 0 16px 45px #0002; }
+.sales-document-form .sales-form-kicker { color: #2864a3 !important; text-transform: uppercase; font-size: .72rem; letter-spacing: .1em; font-weight: 700; margin-bottom: .6rem; }
+.sales-document-form .sales-form-intro { color: #52677b !important; font-size: .9rem; line-height: 1.6; }
+.sales-form-field { margin-bottom: 1.25rem; }
+.sales-form-field > label { display: block; font-weight: 600; margin-bottom: .4rem; }
+.sales-form-actions { border-top: 1px solid #e1e8ef; padding-top: 1.25rem; margin-top: .5rem; }
+.sales-document-form .errorlist, .sales-document-form .errorlist li { color: #a51d2d !important; font-size: .85rem; }
+.sales-document-form textarea { min-height: 88px !important; }
+.sales-document-form .btn-secondary { border-color: #b9c7d5; }
+
+/* Shared business workflows: flex children must be allowed to shrink. */
+.content, .card, .card-body, .row > * { min-width: 0; }
+.content { width: 0; }
+.sidebar { flex-shrink: 0; }
+.sidebar.offcanvas-lg { background: var(--bg-2); }
+.table-responsive, .table-wrapper { max-width: 100%; overflow-x: auto; }
+input:not([type=checkbox]):not([type=radio]), select, textarea { max-width: 100%; }
+form input:not([type=checkbox]):not([type=radio]):not([type=hidden]), form select, form textarea {
+  min-height: 44px; font-size: 1rem; border-radius: .375rem;
+}
+.topbar { flex-wrap: wrap; gap: .5rem; }
+.topbar .text-secondary { overflow-wrap: anywhere; max-width: 12rem; }
+.btn, .page-link, .sidebar .nav-link { min-height: 44px; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid #ffcf66; outline-offset: 3px;
+}
+.skip-link { position: fixed; top: -100px; left: 1rem; z-index: 2000; background: #fff; color: #111; padding: .75rem; }
+.skip-link:focus { top: .5rem; }
+.errorlist { color: #ff9c9c; padding-left: 1.25rem; }
+.modal-content { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+@media (max-width: 991.98px) {
+  .sidebar.offcanvas-lg { width: min(290px, 90vw); }
+  .content > .container-fluid { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 575.98px) {
+  .container-fluid > .d-flex, .card > .d-flex { flex-wrap: wrap; gap: .5rem; }
+  form input:not([type=checkbox]):not([type=radio]):not([type=hidden]), form select, form textarea { width: 100%; }
+  .table td, .table th { white-space: normal; }
+  .table td .btn { margin-block: .125rem; }
+  h1 { font-size: 1.75rem; overflow-wrap: anywhere; }
+  .topbar .text-secondary { max-width: 7rem; }
+}
+@media print {
+  .sidebar, .topbar, .skip-link, .tasker-fab, .btn, .modal { display: none !important; }
+  body, .content, .card { background: white !important; color: black !important; }
+  .content { width: 100%; }
+  .table-responsive, .table-wrapper { overflow: visible; }
+  .table { width: 100%; }
+  tr { break-inside: avoid; }
+}
+
 .product-combobox__results {
   left: 0;
   max-height: 22rem;

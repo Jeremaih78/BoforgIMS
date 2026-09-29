@@ -1,111 +1,30 @@
-﻿{% load static %}
-{% load hosts %}
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>{{ product.name }} | Boforg Shop</title>
-  <meta name="description" content="{{ product.description|truncatewords:25 }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "name": "{{ product.name|escapejs }}",
-    "image": "{{ product.get_primary_image_url }}",
-    "description": "{{ product.description|truncatewords:25|escapejs }}",
-    "sku": "{{ product.sku }}",
-    "offers": {
-      "@type": "Offer",
-      "priceCurrency": "{{ product.currency }}",
-      "price": "{{ product.price }}",
-      "availability": "https://schema.org/{% if product.available_stock > 0 %}InStock{% else %}OutOfStock{% endif %}"
-    }
-  }
-  </script>
-</head>
-<body class="bg-gray-50 text-gray-900">
-  <header class="bg-white shadow-sm sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a href="{% url 'shop:catalog' %}" class="flex items-center gap-2 text-lg font-semibold">
-        <span>Boforg Shop</span>
-      </a>
-      <nav class="hidden md:flex gap-6 text-sm font-medium">
-        <a href="{% host_url 'website:home' host 'website' %}" class="hover:text-blue-600">Home</a>
-        <a href="{% url 'shop:catalog' %}" class="text-blue-600">Shop</a>
-      </nav>
-      <div class="flex items-center gap-3 text-sm">
-        <a href="{% url 'shop:cart_detail' %}" class="border rounded-xl px-3 py-1 flex items-center gap-2">
-          <span>Cart</span>
-          <div id="cart-counter">
-            {% include 'shop/partials/cart_counter.html' with count=cart_count %}
-          </div>
-        </a>
-        <a href="{% url 'shop:checkout' %}" class="hidden md:inline-flex bg-blue-600 text-white px-3 py-1 rounded-xl">Checkout</a>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto px-4 py-10 grid md:grid-cols-2 gap-8">
-    <section class="bg-white rounded-3xl shadow-sm border overflow-hidden">
-      <div class="aspect-square bg-gray-100">
-        <img src="{{ product.get_primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
-      </div>
-    </section>
-    <section>
-      <a href="{% url 'shop:catalog' %}" class="text-sm text-blue-600">&larr; Back to shop</a>
-      <h1 class="mt-4 text-3xl font-bold">{{ product.name }}</h1>
-      <div class="mt-2 text-gray-600">SKU: {{ product.sku }}</div>
-      {% if product.category %}
-      <div class="mt-1 text-sm text-gray-500">Category: {{ product.category.name }}</div>
-      {% endif %}
-      <div class="mt-6 text-3xl font-semibold text-blue-700">${{ product.price }}</div>
-      <div class="mt-2 text-sm text-gray-500">Availability: {% if product.available_stock > 0 %}<span class="text-green-600">In stock</span>{% else %}<span class="text-red-600">Out of stock</span>{% endif %}</div>
-      <div class="mt-6 prose prose-sm max-w-none text-gray-700">
-        {{ product.description|linebreaks }}
-      </div>
-      <form hx-post="{% url 'shop:cart_add' %}" hx-target="#cart-counter" hx-swap="outerHTML" class="mt-8 flex flex-col sm:flex-row gap-4">
-        {% csrf_token %}
-        <input type="hidden" name="product_id" value="{{ product.id }}">
-        <div class="flex items-center gap-2 border rounded-xl px-4 py-2 bg-white">
-          <span class="text-sm text-gray-500">Quantity</span>
-          <input type="number" name="quantity" value="1" min="1" class="w-16 border rounded-lg px-2 py-1" />
-        </div>
-        <button class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-semibold flex-1">Add to Cart</button>
-      </form>
-    </section>
-  </main>
-
-  {% if related_products %}
-  <section class="max-w-6xl mx-auto px-4 pb-16">
-    <h2 class="text-2xl font-semibold">You might also like</h2>
-    <div class="mt-6 grid sm:grid-cols-2 md:grid-cols-4 gap-6">
-      {% for item in related_products %}
-      <a href="{{ item.get_absolute_url }}" class="bg-white rounded-3xl shadow-sm border overflow-hidden">
-        <div class="aspect-square bg-gray-100">
-          <img src="{{ item.get_primary_image_url }}" alt="{{ item.name }}" class="w-full h-full object-cover">
-        </div>
-        <div class="p-4">
-          {% if item.category %}<div class="text-xs uppercase tracking-wide text-gray-500">{{ item.category.name }}</div>{% endif %}
-          <div class="mt-2 font-semibold text-gray-900">{{ item.name }}</div>
-          <div class="mt-1 text-blue-700 font-bold">${{ item.price }}</div>
-        </div>
-      </a>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
-
-  <footer class="border-t bg-white">
-    <div class="max-w-6xl mx-auto px-4 py-10 text-sm text-gray-500 flex flex-col md:flex-row justify-between gap-4">
-      <div>&copy; {% now "Y" %} Boforg Technologies Private Limited.</div>
-      <div class="flex gap-4">
-        <a class="hover:text-blue-600" href="{% host_url 'legal:privacy' host 'website' %}">Privacy</a>
-        <a class="hover:text-blue-600" href="{% host_url 'legal:terms' host 'website' %}">Terms</a>
-      </div>
-    </div>
-  </footer>
-</body>
-</html>
+{% extends 'public/base.html' %}
+{% block title %}{{ product.name }} | Boforg Shop{% endblock %}
+{% block content %}<section class="store-wrap store-section">
+<nav aria-label="Breadcrumb">
+<a href="{{ store_shop }}">Shop</a> / {% if product.category %}<a href="{{ store_shop }}?category={{ product.category.slug }}">{{ product.category.name }}</a> / {% endif %}{{ product.name }}</nav>
+<div class="store-detail">
+<img class="store-detail-image" src="{{ product.get_primary_image_url }}" alt="{{ product.name }}" width="600" height="600">
+<div>
+<p class="store-kicker">{{ product.category.name }}</p>
+<h1>{{ product.name }}</h1>
+<p>{{ product.short_description }}</p>
+<p class="store-price">{{ product.currency }} {{ product.price }}</p>
+<p>{% if product.shop_purchasable %}In stock{% else %}Out of stock ? ask about the next shipment.{% endif %}</p>{% if product.shop_purchasable %}<form data-cart-add method="post" action="{% url 'shop:cart_add' %}" class="store-buy">{% csrf_token %}<input type="hidden" name="product_id" value="{{ product.pk }}">
+<label for="quantity">Quantity</label>
+<input id="quantity" type="number" inputmode="numeric" name="quantity" min="1" max="{% if product.track_inventory %}{{ product.available_stock }}{% else %}9999{% endif %}" value="1">
+<button class="store-button">Add to Cart</button>
+</form>{% endif %}<a class="store-button secondary" href="{{ product_whatsapp }}" data-event="{% if product.shop_purchasable %}whatsapp_product_click{% else %}out_of_stock_whatsapp_click{% endif %}" target="_blank" rel="noopener">{% if product.shop_purchasable %}Ask about this product{% else %}Ask about next shipment{% endif %}</a>{% include 'public/trust.html' %}<small>SKU: {{ product.sku }}</small>
+</div>
+</div>
+<section class="store-copy">
+<h2>Overview</h2>{{ product.description|default:'Contact us for specifications and advice on whether this product suits your needs.'|linebreaks }}<h2>Delivery, collection &amp; support</h2>
+<p>Contact Boforg in Harare to confirm delivery options, collection arrangements and support for this product. Check compatibility with your equipment before ordering.</p>
+</section>{% if recommended_products %}<h2>You may also need</h2>
+<div class="store-grid store-four">{% for product in recommended_products %}
+{% include 'shop/partials/product_card.html' %}
+{% endfor %}</div>{% endif %}
+{% if related_products %}<h2>Explore related products</h2>
+<div class="store-grid store-four">{% for product in related_products %}
+{% include 'shop/partials/product_card.html' %}
+{% endfor %}</div>{% endif %}</section>{% endblock %}

@@ -17,6 +17,18 @@ class ProductSerializer(serializers.ModelSerializer):
             'image',
         ]
 
+    def validate_price(self, value):
+        if value < 0:
+            raise serializers.ValidationError('Price cannot be negative.')
+        return value
+
+    def validate_quantity(self, value):
+        if value < 0:
+            raise serializers.ValidationError('Quantity cannot be negative.')
+        if self.instance and value != self.instance.quantity:
+            raise serializers.ValidationError('Use a stock movement to change existing stock.')
+        return value
+
     def validate_image(self, image):
         if image:
             max_size = 5 * 1024 * 1024

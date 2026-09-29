@@ -166,7 +166,7 @@ def get_closing_cash_balance(date_to: date, filters: dict | None = None) -> Deci
 
 def get_total_cogs(period: Period, filters: dict | None = None) -> Decimal:
     amount = ExpressionWrapper(
-        F("quantity") * F("product__avg_cost"),
+        F("quantity") * Coalesce(F("cost_unit_snapshot"), F("product__avg_cost")),
         output_field=DecimalField(max_digits=18, decimal_places=6),
     )
     total = invoice_line_queryset(period, filters).filter(product__isnull=False).aggregate(total=Coalesce(Sum(amount), ZERO))["total"]
@@ -247,7 +247,7 @@ def revenue_by_product(period: Period, filters: dict | None = None):
 
 def profitability_by_product(period: Period, filters: dict | None = None):
     amount = ExpressionWrapper(
-        F("quantity") * F("product__avg_cost"),
+        F("quantity") * Coalesce(F("cost_unit_snapshot"), F("product__avg_cost")),
         output_field=DecimalField(max_digits=18, decimal_places=6),
     )
     rows = invoice_line_queryset(period, filters).filter(product__isnull=False).values("product__name", "product_id").annotate(

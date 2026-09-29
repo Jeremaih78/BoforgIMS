@@ -1,10 +1,12 @@
 ﻿from django.urls import include, path
 
 from users.views import dashboard
+from core.views import private_document
 
 app_name = 'ims'
 
 urlpatterns = [
+    path('documents/<path:name>', private_document, name='private_document'),
     path('', dashboard, name='dashboard'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('inventory/', include(('inventory.urls', 'inventory'), namespace='inventory')),

@@ -1,0 +1,380 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "width": 320,
+    "scroll": 320
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 320,
+    "scroll": 320
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 320,
+    "scroll": 320
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 320,
+    "scroll": 320
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 320,
+    "scroll": 320
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 320,
+    "scroll": 320
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 320,
+    "scroll": 320
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 360,
+    "scroll": 360
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 360,
+    "scroll": 360
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 360,
+    "scroll": 360
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 375,
+    "scroll": 375
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 375,
+    "scroll": 375
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 375,
+    "scroll": 375
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 375,
+    "scroll": 375
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 375,
+    "scroll": 375
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 375,
+    "scroll": 375
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 375,
+    "scroll": 375
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 390,
+    "scroll": 390
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 390,
+    "scroll": 390
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 390,
+    "scroll": 390
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 412,
+    "scroll": 412
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 412,
+    "scroll": 412
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 412,
+    "scroll": 412
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 412,
+    "scroll": 412
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 412,
+    "scroll": 412
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 412,
+    "scroll": 412
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 412,
+    "scroll": 412
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 430,
+    "scroll": 430
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 430,
+    "scroll": 430
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 430,
+    "scroll": 430
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 430,
+    "scroll": 430
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 430,
+    "scroll": 430
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 430,
+    "scroll": 430
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 430,
+    "scroll": 430
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 768,
+    "scroll": 768
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 768,
+    "scroll": 768
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 768,
+    "scroll": 768
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 1024,
+    "scroll": 1024
+  },
+  {
+    "path": "/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440
+  },
+  {
+    "path": "/shop/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440
+  },
+  {
+    "path": "/shop/?department=fitness",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440
+  },
+  {
+    "path": "/shop/?q=heat",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440
+  },
+  {
+    "path": "/shop/products/studio-heat-press-cro-press/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440
+  },
+  {
+    "path": "/shop/cart/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440
+  },
+  {
+    "path": "/shop/checkout/",
+    "status": 200,
+    "width": 1440,
+    "scroll": 1440
+  }
+]

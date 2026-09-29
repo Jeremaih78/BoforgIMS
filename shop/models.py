@@ -25,14 +25,14 @@ class Cart(models.Model):
 
     @property
     def item_count(self):
-        return self.items.aggregate(total=models.Sum('quantity'))['total'] or 0
+        return (self.items.aggregate(total=models.Sum('quantity'))['total'] or 0) + (self.packages.aggregate(total=models.Sum('quantity'))['total'] or 0)
 
     @property
     def subtotal(self):
         total = self.items.aggregate(
             total=models.Sum(models.F('quantity') * models.F('product__price'), output_field=models.DecimalField(max_digits=12, decimal_places=2))
         )['total']
-        return total or Decimal('0.00')
+        return (total or Decimal('0.00')) + sum((p.line_total for p in self.packages.select_related('combo').prefetch_related('combo__items__product')), Decimal('0.00'))
 
 
 class CartItem(models.Model):
@@ -129,3 +129,16 @@ class Payment(models.Model):
     @property
     def is_paid(self):
         return self.status == self.Status.PAID
+
+
+class CartPackage(models.Model):
+    cart = models.ForeignKey(Cart, related_name='packages', on_delete=models.CASCADE)
+    combo = models.ForeignKey('inventory.Combo', on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['cart', 'combo'], name='unique_cart_package')]
+
+    @property
+    def line_total(self):
+        return self.combo.compute_price() * self.quantity

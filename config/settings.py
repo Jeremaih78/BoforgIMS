@@ -5,12 +5,20 @@ import sys
 import dj_database_url
 from dotenv import load_dotenv
 
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Load this checkout's configuration even when a service starts elsewhere.
+# Explicit process/service environment variables keep precedence.
+load_dotenv(BASE_DIR / '.env', override=False)
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'kgd$wg@0t_hw)lkys-@6ez=kgpwcqk5%f$sk+q(lf)xmo#k6se')
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.utils import get_random_secret_key
+
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() == 'true'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured('Set DJANGO_SECRET_KEY before starting production.')
+    SECRET_KEY = get_random_secret_key()
 
 BOFORG_PUBLIC_HOSTS = (
     'boforg.co.zw',
@@ -47,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'django.contrib.sitemaps',
     'django.contrib.postgres',
     'django_hosts',
     'rest_framework',
@@ -100,6 +109,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.analytics_allowed',
+                'shop.context_processors.storefront',
+                'core.context_processors.ims_navigation',
                 'tasker.context_processors.tasker_ui',
             ],
         },
@@ -109,20 +120,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
-
-# Developmentr DATABASES
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
-#         'USER': os.environ.get('POSTGRES_USER', 'postgres'),
-#         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2204'),
-#         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-#         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-#     }
-# }
-
-# Production Databases
 
 if DATABASE_URL:
     DATABASES = {
@@ -134,7 +131,7 @@ else:
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('POSTGRES_DB', 'boforg_ims'),
             'USER': os.environ.get('POSTGRES_USER', 'boforg'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'boforg2024'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
             'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         }
@@ -174,6 +171,7 @@ if DEBUG or "test" in sys.argv:
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+PRIVATE_MEDIA_ROOT = os.environ.get("PRIVATE_MEDIA_ROOT", str(BASE_DIR / "private_media"))
 
 if os.getenv("AWS_STORAGE_BUCKET_NAME"):
     INSTALLED_APPS += ["storages"]
@@ -275,3 +273,5 @@ if DEBUG:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+
+BOFORG_WHATSAPP_NUMBER = os.environ.get('BOFORG_WHATSAPP_NUMBER', '263786264994')

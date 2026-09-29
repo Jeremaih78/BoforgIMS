@@ -5,8 +5,11 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
+from core.permissions import ims_permission
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.views.decorators.http import require_POST
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -47,6 +50,7 @@ from .services.messaging import send_whatsapp_reminder
 
 
 @login_required
+@ims_permission('credit_control.view_debtoraccount', staff=False)
 def dashboard(request):
     for customer in Customer.objects.all():
         sync_debtor_account_summary(customer)
@@ -58,6 +62,7 @@ def dashboard(request):
 
 
 @login_required
+@ims_permission('credit_control.view_debtoraccount', staff=False)
 def debtors_list(request):
     for customer in Customer.objects.all():
         sync_debtor_account_summary(customer)
@@ -85,6 +90,7 @@ def debtors_list(request):
 
 
 @login_required
+@ims_permission('credit_control.view_debtoraccount', staff=False)
 def debtor_detail(request, customer_id: int):
     customer = get_object_or_404(Customer, id=customer_id)
     account = sync_debtor_account_summary(customer)
@@ -129,6 +135,7 @@ def debtor_detail(request, customer_id: int):
 
 
 @login_required
+@ims_permission('credit_control.view_creditoraccount', staff=False)
 def creditors_list(request):
     for supplier in Supplier.objects.all():
         sync_creditor_account_summary(supplier)
@@ -155,6 +162,7 @@ def creditors_list(request):
 
 
 @login_required
+@ims_permission('credit_control.view_creditoraccount', staff=False)
 def creditor_detail(request, supplier_id: int):
     supplier = get_object_or_404(Supplier, id=supplier_id)
     account = sync_creditor_account_summary(supplier)
@@ -197,6 +205,7 @@ def creditor_detail(request, supplier_id: int):
 
 
 @login_required
+@ims_permission('credit_control.view_debtorfollowup', staff=False)
 def followups(request):
     debtor_followups = DebtorFollowUp.objects.select_related("customer", "invoice").order_by("-follow_up_date")
     creditor_followups = CreditorFollowUp.objects.select_related("supplier", "bill").order_by("-follow_up_date")
@@ -211,6 +220,8 @@ def followups(request):
 
 
 @login_required
+@ims_permission('credit_control.add_debtorfollowup', staff=False)
+@transaction.atomic
 def add_debtor_followup(request, customer_id: int | None = None):
     initial = {}
     if customer_id:
@@ -239,6 +250,7 @@ def add_debtor_followup(request, customer_id: int | None = None):
 
 
 @login_required
+@ims_permission('credit_control.add_creditorfollowup', staff=False)
 def add_creditor_followup(request, supplier_id: int | None = None):
     initial = {}
     if supplier_id:
@@ -258,6 +270,7 @@ def add_creditor_followup(request, supplier_id: int | None = None):
 
 
 @login_required
+@ims_permission('credit_control.view_promisetopay', staff=False)
 def promises(request):
     qs = PromiseToPay.objects.select_related("customer", "invoice").order_by("promised_date")
     if request.GET.get("status"):
@@ -266,6 +279,7 @@ def promises(request):
 
 
 @login_required
+@ims_permission('credit_control.add_promisetopay', staff=False)
 def promise_create(request):
     form = PromiseToPayForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -279,6 +293,7 @@ def promise_create(request):
 
 
 @login_required
+@ims_permission('credit_control.view_paymentdispute', staff=False)
 def disputes(request):
     qs = PaymentDispute.objects.select_related("customer", "supplier", "invoice", "bill").order_by("-opened_date")
     if request.GET.get("status"):
@@ -287,6 +302,7 @@ def disputes(request):
 
 
 @login_required
+@ims_permission('credit_control.add_paymentdispute', staff=False)
 def dispute_create(request):
     form = PaymentDisputeForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -301,6 +317,7 @@ def dispute_create(request):
 
 
 @login_required
+@ims_permission('credit_control.view_collectiontask', staff=False, write_permission='credit_control.change_collectiontask')
 def tasks(request):
     if request.GET.get("run_auto") == "1":
         created = auto_create_collection_tasks()
@@ -318,6 +335,7 @@ def tasks(request):
 
 
 @login_required
+@ims_permission('credit_control.add_collectiontask', staff=False)
 def task_create(request):
     form = CollectionTaskForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -330,6 +348,7 @@ def task_create(request):
 
 
 @login_required
+@ims_permission('credit_control.view_debtoraccount', staff=False)
 def aging_reports(request):
     context = {
         "debtor_rows": build_debtor_aging(),
@@ -339,6 +358,7 @@ def aging_reports(request):
 
 
 @login_required
+@ims_permission('credit_control.view_debtoraccount', staff=False)
 def report_export_csv(request, report_name: str):
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{report_name}.csv"'
@@ -441,6 +461,7 @@ def report_export_csv(request, report_name: str):
 
 
 @login_required
+@ims_permission('credit_control.view_debtoraccount', staff=False)
 def report_export_pdf(request, report_name: str):
     context = {
         "report_name": report_name,
@@ -460,6 +481,8 @@ def report_export_pdf(request, report_name: str):
 
 
 @login_required
+@ims_permission('credit_control.add_debtorfollowup', staff=False)
+@require_POST
 def send_debtor_whatsapp(request, customer_id: int, invoice_id: int | None = None):
     customer = get_object_or_404(Customer, id=customer_id)
     invoice = None
@@ -472,6 +495,7 @@ def send_debtor_whatsapp(request, customer_id: int, invoice_id: int | None = Non
 
 
 @login_required
+@ims_permission('credit_control.view_debtoraccount', staff=False)
 def statement_customer(request, customer_id: int):
     customer = get_object_or_404(Customer, id=customer_id)
     invoices = Invoice.objects.filter(customer=customer).order_by("date")
@@ -480,6 +504,7 @@ def statement_customer(request, customer_id: int):
 
 
 @login_required
+@ims_permission('credit_control.view_notification', staff=False, write_permission='credit_control.change_notification')
 def notifications(request):
     qs = Notification.objects.filter(user=request.user).order_by("-created_at")
     if request.GET.get("mark_all") == "1":

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import csv
+import logging
+from django.db import transaction, IntegrityError
 import json
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect
 from django.db.models import Sum
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
+from core.permissions import ims_permission
 from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -48,6 +51,7 @@ from django.core.paginator import Paginator
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def accounting_dashboard(request):
     period, group_by, filters = _finance_controls(request)
     today = current_period('today')
@@ -148,6 +152,7 @@ def _chart_json(payload):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def finance_cashflow(request):
     period, group_by, filters = _finance_controls(request)
     rows = cashflow_trend(period, group_by, filters)
@@ -174,6 +179,7 @@ def finance_cashflow(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def finance_expenses(request):
     period, group_by, filters = _finance_controls(request)
     rows = top_expenses(period, filters)
@@ -197,6 +203,7 @@ def finance_expenses(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def finance_revenue(request):
     period, group_by, filters = _finance_controls(request)
     basis = request.GET.get('basis', 'accrual')
@@ -222,6 +229,7 @@ def finance_revenue(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def finance_profitability(request):
     period, group_by, filters = _finance_controls(request)
     revenue = get_total_revenue(period, 'accrual', filters)
@@ -250,6 +258,7 @@ def finance_profitability(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def finance_export(request, report_name, fmt):
     period, group_by, filters = _finance_controls(request)
     rows, headers = _report_rows(report_name, period, group_by, filters)
@@ -292,6 +301,7 @@ def _report_rows(report_name, period, group_by, filters):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def expense_list(request):
     q_from_raw = request.GET.get('from')
     q_to_raw = request.GET.get('to')
@@ -318,21 +328,35 @@ def expense_list(request):
 
 
 @login_required
+@ims_permission('accounting.add_expense', staff=False)
 def expense_create(request):
     form = ExpenseForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
-        exp = form.save()
+        key = form.cleaned_data['submission_key']
+        if Expense.objects.filter(submission_key=key).exists():
+            return redirect('ims:accounting:expense_list')
         try:
-            post_expense(exp.id)
-            exp.posted = True
-            exp.save(update_fields=['posted'])
+            with transaction.atomic():
+                exp = form.save(commit=False)
+                exp.submission_key = key
+                exp.save()
+                post_expense(exp.id)
+                exp.posted = True
+                exp.save(update_fields=['posted'])
+        except IntegrityError:
+            if Expense.objects.filter(submission_key=key).exists():
+                return redirect('ims:accounting:expense_list')
+            form.add_error(None, 'Expense was not saved. Ask a manager to review accounting configuration.')
         except Exception:
-            pass
-        return redirect('ims:accounting:expense_list')
+            logging.getLogger(__name__).exception('Expense posting failed')
+            form.add_error(None, 'Expense was not saved. Ask a manager to review accounting configuration.')
+        else:
+            return redirect('ims:accounting:expense_list')
     return render(request, 'accounting/expense_form.html', {'form': form})
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def inventory_valuation(request):
     products = Product.objects.all().order_by('name')
     rows = []
@@ -347,6 +371,7 @@ def inventory_valuation(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def inventory_valuation_pdf(request):
     from sales.pdf_utils import render_pdf_from_html
     products = Product.objects.all().order_by('name')
@@ -367,6 +392,7 @@ def inventory_valuation_pdf(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def sales_summary(request):
     period = request.GET.get('period', 'monthly')
     qs = Invoice.objects.all()
@@ -396,6 +422,7 @@ def sales_summary(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def sales_summary_pdf(request):
     from sales.pdf_utils import render_pdf_from_html
     period = request.GET.get('period', 'monthly')
@@ -422,6 +449,7 @@ def sales_summary_pdf(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def expenses_report(request):
     # simple by-category totals within date range
     q_from_raw = request.GET.get('from')
@@ -445,6 +473,7 @@ def expenses_report(request):
 
 
 @login_required
+@ims_permission('accounting.view_journalentry', staff=False)
 def expenses_report_pdf(request):
     from sales.pdf_utils import render_pdf_from_html
     q_from_raw = request.GET.get('from')

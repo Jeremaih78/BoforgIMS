@@ -2,7 +2,8 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
+from uuid import uuid4
 from django.utils import timezone
 
 from customers.models import Customer
@@ -30,14 +31,18 @@ class Quotation(models.Model):
     STATUS_CHOICES = [(DRAFT, 'Draft'), (SENT, 'Sent'), (CONVERTED, 'Converted')]
 
     number = models.CharField(max_length=20, unique=True, default='')
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    date = models.DateField(default=timezone.now)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
+    date = models.DateField(default=timezone.localdate)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=DRAFT)
     notes = models.TextField(blank=True, null=True)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
-        if not self.number:
-            self.number = next_number(Quotation, 'Q-')
+        if not self.number and self._state.adding:
+            self.number = uuid4().hex[:20]
+            super().save(*args, **kwargs)
+            self.number = f'Q-{self.pk:05d}'
+            return super().save(update_fields=['number'])
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -45,7 +50,7 @@ class Quotation(models.Model):
 
     @property
     def total(self):
-        return sum(line.line_total for line in self.lines.all())
+        return sum((line.line_total for line in self.lines.all()), Decimal('0.00'))
 
     @property
     def items(self):
@@ -105,17 +110,22 @@ class Invoice(models.Model):
     ]
 
     number = models.CharField(max_length=20, unique=True, default='')
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    date = models.DateField(default=timezone.now)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
+    date = models.DateField(default=timezone.localdate)
+    stock_finalized = models.BooleanField(default=False, editable=False)
     due_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
     quotation = models.ForeignKey(Quotation, null=True, blank=True, on_delete=models.SET_NULL)
     notes = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
-        if not self.number:
-            self.number = next_number(Invoice, 'INV-')
+        if not self.number and self._state.adding:
+            self.number = uuid4().hex[:20]
+            super().save(*args, **kwargs)
+            self.number = f'INV-{self.pk:05d}'
+            return super().save(update_fields=['number'])
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -123,7 +133,7 @@ class Invoice(models.Model):
 
     @property
     def total(self):
-        return sum(line.line_total for line in self.lines.all())
+        return sum((line.line_total for line in self.lines.all()), Decimal('0.00'))
 
     @property
     def items(self):
@@ -179,6 +189,7 @@ class Invoice(models.Model):
 
 
 class DocumentLine(models.Model):
+    cost_unit_snapshot = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True, editable=False)
     product = models.ForeignKey("inventory.Product", null=True, blank=True, on_delete=models.PROTECT)
     combo = models.ForeignKey("inventory.Combo", null=True, blank=True, on_delete=models.PROTECT)
     description = models.CharField(max_length=255, blank=True)
@@ -212,14 +223,32 @@ class DocumentLine(models.Model):
 
 
 class Payment(models.Model):
-    invoice = models.ForeignKey(Invoice, related_name='payments', on_delete=models.CASCADE)
+    submission_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    invoice = models.ForeignKey(Invoice, related_name='payments', on_delete=models.PROTECT)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=timezone.localdate)
     method = models.CharField(max_length=50, default='Cash')
     note = models.CharField(max_length=200, blank=True, null=True)
 
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('Payments are immutable; use a reviewed correcting entry.')
+        if self.amount is None or Decimal(self.amount) <= 0:
+            raise ValidationError({'amount': 'Payment must be positive.'})
+        invoice = Invoice.objects.select_for_update().get(pk=self.invoice_id)
+        # Same invoice -> product -> journal sequence lock order as staff checkout.
+        list(Product.objects.select_for_update().filter(pk__in=invoice.lines.values_list('product_id', flat=True)).order_by('pk'))
+        super().save(*args, **kwargs)
+
 
 class StockReservation(models.Model):
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['invoice', 'product'], name='unique_invoice_product_reservation'),
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name='reservation_quantity_positive'),
+        ]
+
     invoice = models.ForeignKey(Invoice, related_name='reservations', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField()

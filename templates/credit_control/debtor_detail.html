@@ -4,7 +4,7 @@
   <h4 class="mb-0">Debtor: {{ customer.name }}</h4>
   <div class="d-flex gap-2">
     <a href="{% url 'ims:credit_control:add_debtor_followup' customer.id %}" class="btn btn-sm btn-primary">Add Follow-up</a>
-    <a href="{% url 'ims:credit_control:send_debtor_whatsapp' customer.id %}" class="btn btn-sm btn-success">Send WhatsApp</a>
+    <form method="post" action="{% url 'ims:credit_control:send_debtor_whatsapp' customer.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-success">Send WhatsApp</button></form>
     <a href="{% url 'ims:credit_control:promise_create' %}" class="btn btn-sm btn-outline-light">Record Promise</a>
     <a href="{% url 'ims:credit_control:dispute_create' %}" class="btn btn-sm btn-outline-light">Mark Disputed</a>
     <a href="{% url 'ims:credit_control:statement_customer' customer.id %}" class="btn btn-sm btn-outline-light">Statement</a>
@@ -27,7 +27,7 @@
 <div class="row g-3">
   <div class="col-lg-6">
     <div class="card p-3 h-100"><h6>Outstanding Invoices</h6><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
-      {% for inv in invoices %}<tr><td>{{ inv.number }}</td><td>{{ inv.date }}</td><td>{{ inv.due_date|default:'-' }}</td><td>{{ inv.total }}</td><td>{{ inv.status }}</td><td><a href="{% url 'ims:credit_control:send_debtor_whatsapp' customer.id %}" class="btn btn-sm btn-outline-success">Remind</a></td></tr>{% empty %}<tr><td colspan="6">No invoices</td></tr>{% endfor %}
+      {% for inv in invoices %}<tr><td>{{ inv.number }}</td><td>{{ inv.date }}</td><td>{{ inv.due_date|default:'-' }}</td><td>{{ inv.total }}</td><td>{{ inv.status }}</td><td><form method="post" action="{% url 'ims:credit_control:send_debtor_whatsapp' customer.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-success">Remind</button></form></td></tr>{% empty %}<tr><td colspan="6">No invoices</td></tr>{% endfor %}
     </tbody></table></div></div>
   </div>
   <div class="col-lg-6">

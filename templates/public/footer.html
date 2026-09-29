@@ -1,0 +1,24 @@
+{% load hosts %}<footer class="store-footer" id="contact">
+<div class="store-wrap store-grid">
+<div>
+<h2>Boforg Technologies</h2>
+<p>Printing equipment, supplies and support.<br>Harare, Zimbabwe.</p>
+<p>Ask us about delivery, collection and training for your chosen equipment.</p>
+</div>
+<div>
+<h3>Explore</h3>
+<a href="{{ store_home }}#packages">Start a printing business</a>
+<a href="{{ store_shop }}?all=1">View all products</a>
+<a href="{{ store_whatsapp }}" data-event="contact_support_click">Contact Boforg on WhatsApp</a>
+</div>
+<div>
+<h3>Customer information</h3>
+<a href="{% host_url 'legal:privacy' host 'website' %}">Privacy</a>
+<a href="{% host_url 'legal:terms' host 'website' %}">Terms</a>
+<a href="{% host_url 'return_policy' host 'website' %}">Returns &amp; refunds</a>
+</div>
+</div>
+<div class="store-wrap">
+<small>&copy; {% now 'Y' %} Boforg Technologies (Private) Limited</small>
+</div>
+</footer>

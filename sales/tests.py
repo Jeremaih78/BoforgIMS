@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -67,6 +68,7 @@ class ComboIntegrationTests(TestCase):
 
         self.customer = Customer.objects.create(name='Example Customer')
         self.user = get_user_model().objects.create_user(username='combo-user', password='safe-pass')
+        self.user.groups.add(Group.objects.get_or_create(name="Staff")[0])
 
     def test_combo_available_quantity_uses_lowest_stock(self):
         expected_initial = min(self.product_a.quantity // 2, self.product_b.quantity // 1)
@@ -179,6 +181,7 @@ class InvoiceStatusDisplayTests(TestCase):
 class SalesCustomerQuickCreateTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='sales-user', password='safe-pass')
+        self.user.groups.add(Group.objects.get_or_create(name="Staff")[0])
 
     def test_invoice_and_quotation_customer_fields_show_newest_first(self):
         old_customer = Customer.objects.create(name='Old Customer')
@@ -213,6 +216,7 @@ class SalesCustomerQuickCreateTests(TestCase):
 class ProductSearchTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='search-user', password='safe-pass')
+        self.user.groups.add(Group.objects.get_or_create(name="Staff")[0])
         self.category = Category.objects.create(name='Large Format Printers')
         self.product = Product.objects.create(
             name='Eco Solvent Printer',
@@ -267,6 +271,7 @@ class ProductSearchTests(TestCase):
 class SalesLineDeleteTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='line-user', password='safe-pass')
+        self.user.groups.add(Group.objects.get_or_create(name="Staff")[0])
         self.customer = Customer.objects.create(name='Line Customer')
 
     def test_remove_quotation_line(self):

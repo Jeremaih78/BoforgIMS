@@ -1,0 +1,13 @@
+<article class="store-card store-product">
+<a href="{% url 'shop:product_detail' product.slug %}" data-event="select_item" data-item="{{ product.sku }}">
+<img src="{{ product.get_primary_image_url }}" alt="{{ product.name }}" width="400" height="400" loading="lazy">
+<span class="store-muted">{{ product.category.name }}</span>
+<h3>{{ product.name }}</h3>
+</a>
+<p>{{ product.short_description }}</p>
+<strong class="store-price">{{ product.currency }} {{ product.price }}</strong>
+<p class="store-stock">{% if product.shop_purchasable %}In stock{% else %}Out of stock{% endif %}</p>
+<a class="store-button secondary" href="{% url 'shop:product_detail' product.slug %}">View details</a>{% if product.shop_purchasable %}<form data-cart-add method="post" action="{% url 'shop:cart_add' %}">{% csrf_token %}<input type="hidden" name="product_id" value="{{ product.pk }}">
+<input type="hidden" name="next" value="{{ request.get_full_path }}">
+<button class="store-button">Add to Cart</button>
+</form>{% else %}<a href="{{ store_whatsapp }}" data-event="out_of_stock_whatsapp_click">Ask about next shipment</a>{% endif %}</article>

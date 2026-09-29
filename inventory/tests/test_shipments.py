@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group
 import os
 import shutil
 import tempfile
@@ -17,6 +18,7 @@ from inventory.services import allocate_landed_costs, receive_shipment, Shipment
 class ShipmentServiceTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user('ops@example.com', 'ops@example.com', 'pass1234')
+        self.user.groups.add(Group.objects.get_or_create(name="Admin")[0])
         self.supplier = Supplier.objects.create(name='Test Supplier')
         self.currency, _ = Currency.objects.get_or_create(code='USD', defaults={'name': 'US Dollar', 'is_base': True})
         Account.objects.get_or_create(code='1300', defaults={'name': 'Inventory', 'type': Account.ASSET})
@@ -89,6 +91,7 @@ class ShipmentCostAttachmentTests(TestCase):
         self.addCleanup(override.__exit__, None, None, None)
 
         self.user = get_user_model().objects.create_user('ops@example.com', 'ops@example.com', 'pass1234')
+        self.user.groups.add(Group.objects.get_or_create(name="Admin")[0])
         self.supplier = Supplier.objects.create(name='Test Supplier')
         self.currency, _ = Currency.objects.get_or_create(code='USD', defaults={'name': 'US Dollar', 'is_base': True})
         Account.objects.get_or_create(code='1300', defaults={'name': 'Inventory', 'type': Account.ASSET})

@@ -6,7 +6,7 @@
   <div class="d-flex gap-2">
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:quotation_pdf' quotation.id %}?preview=1" target="_blank">Print PDF</a>
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:quotation_pdf' quotation.id %}">Download PDF</a>
-    <a class="btn btn-sm btn-primary" href="{% url 'ims:sales:quotation_to_invoice' quotation.id %}">Convert to Invoice</a>
+    <form method="post" action="{% url 'ims:sales:quotation_to_invoice' quotation.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-primary" type="submit">Convert to Invoice</button></form>
   </div>
 </div>
 <div class="card p-3 mb-3">

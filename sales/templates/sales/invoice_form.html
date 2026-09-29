@@ -2,18 +2,19 @@
 {% load static %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card p-4 form-card">
-      <h4 class="mb-3">New Invoice</h4>
+  <div class="col-12 col-md-9 col-lg-7 col-xl-6">
+    <div class="card p-4 form-card sales-document-form">
+      <div class="sales-form-kicker">Sales / Invoice</div><h1 class="h4 mb-2">New Invoice</h1><p class="sales-form-intro">Choose a customer and set the dates. You can add products in the next step.</p>
       {% include 'sales/includes/customer_quick_create_modal.html' with customer_select_id=form.customer.id_for_label customer_quick_create_modal_rendered=False %}
       <form method="post">
         {% csrf_token %}
-        <p>{{ form.customer.label_tag }} {{ form.customer }}</p>
-        <p>{{ form.date.label_tag }} {{ form.date }}</p>
-        <p>{{ form.due_date.label_tag }} {{ form.due_date }}</p>
-        <p>{{ form.notes.label_tag }} {{ form.notes }}</p>
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary">Create</button>
+        {{ form.non_field_errors }}
+        <div class="sales-form-field">{{ form.customer.label_tag }} {{ form.customer }} {{ form.customer.errors }}</div>
+        <div class="sales-form-field">{{ form.date.label_tag }} {{ form.date }} {{ form.date.errors }}</div>
+        <div class="sales-form-field">{{ form.due_date.label_tag }} {{ form.due_date }} {{ form.due_date.errors }}</div>
+        <div class="sales-form-field">{{ form.notes.label_tag }} {{ form.notes }} {{ form.notes.errors }}</div>
+        <div class="d-flex flex-wrap gap-2 sales-form-actions">
+          <button class="btn btn-primary">Continue to products <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></button>
           <a href="{% url 'ims:sales:sales_home' %}" class="btn btn-secondary">Cancel</a>
         </div>
       </form>

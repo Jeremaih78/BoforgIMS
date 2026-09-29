@@ -52,6 +52,10 @@ class ProductForm(forms.ModelForm):
                 if 'form-control' not in classes:
                     classes.append('form-control')
                 widget.attrs['class'] = ' '.join(filter(None, classes))
+        if self.instance.pk:
+            for name in ('quantity', 'reserved', 'avg_cost'):
+                self.fields[name].disabled = True
+                self.fields[name].help_text = 'Updated by stock movements and reservations.'
         image_field = self.fields.get('image')
         if image_field:
             image_field.widget.attrs.update({'accept': 'image/*'})
@@ -91,6 +95,12 @@ class ProductForm(forms.ModelForm):
         cleaned_data = super().clean()
         if cleaned_data.get('remove_image') and cleaned_data.get('image'):
             self.add_error('remove_image', 'Uncheck "Remove image" if you are uploading a replacement.')
+        for name in ('price', 'avg_cost', 'quantity', 'reserved', 'tax_rate'):
+            value = cleaned_data.get(name)
+            if value is not None and value < 0:
+                self.add_error(name, 'Value cannot be negative.')
+        if not self.instance.pk and cleaned_data.get('reserved', 0):
+            self.add_error('reserved', 'New products cannot have reservations.')
         return cleaned_data
 
     def save(self, commit=True):
@@ -180,6 +190,8 @@ class ShipmentCostForm(forms.ModelForm):
     def clean_supporting_document(self):
         upload = self.cleaned_data.get('supporting_document')
         if upload:
+            from core.uploads import validate_document
+            validate_document(upload)
             max_size = 10 * 1024 * 1024  # 10 MB
             size = getattr(upload, 'size', 0) or 0
             if size > max_size:

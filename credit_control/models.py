@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from core.storage import private_document_storage
+
 from decimal import Decimal
 
 from django.conf import settings
@@ -154,7 +156,7 @@ class DebtorFollowUp(TimeStampedModel):
     promised_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
     promised_payment_date = models.DateField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="debtor_followups_created")
-    attachment = models.FileField(upload_to="credit_control/followups/debtors/", null=True, blank=True)
+    attachment = models.FileField(storage=private_document_storage, upload_to="credit_control/followups/debtors/", null=True, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.OPEN)
 
     class Meta:
