@@ -8,6 +8,7 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.contrib.postgres.indexes import GinIndex, OpClass
 from django.db.models.functions import Upper
+from django.db.models.functions import Trim
 from django.db.models import Sum
 from django.templatetags.static import static
 from django.utils import timezone
@@ -99,6 +100,8 @@ class Product(models.Model):
     image_url = models.URLField(blank=True)  # Deprecated: retained temporarily for migration fallback
     is_active = models.BooleanField(default=True)
     tracking_mode = models.CharField(max_length=10, choices=TRACKING_CHOICES, default=TRACK_QUANTITY)
+    identity_enforced = models.BooleanField(default=False, editable=False)
+    warranty_days = models.PositiveIntegerField(default=0, help_text='Default warranty in days; 0 means not specified.')
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -173,11 +176,13 @@ class StockMovement(models.Model):
             raise ValidationError({'unit_cost': 'Cost cannot be negative.'})
 
     @transaction.atomic
-    def save(self, *args, **kwargs):
+    def save(self, *args, unit_operation=False, **kwargs):
         if not self._state.adding:
             raise ValidationError('Stock movements are immutable; record a correcting movement.')
         self.full_clean()
         product = Product.objects.select_for_update().get(pk=self.product_id)
+        if product.identity_enforced and product.is_serial_tracked and not unit_operation:
+            raise ValidationError('Use serialized receiving or unit actions to move this stock.')
         qty = self.quantity
         if self.movement_type == self.OUT and qty > product.available_stock:
             raise ValidationError('Insufficient available stock for this movement.')
@@ -529,7 +534,13 @@ class ProductUnit(models.Model):
     STATUS_SOLD = 'SOLD'
     STATUS_FAULTY = 'FAULTY'
     STATUS_RETURNED = 'RETURNED'
+    STATUS_REPAIR = 'REPAIR'
+    STATUS_SUPPLIER_RETURN = 'SUPPLIER_RET'
+    STATUS_WRITTEN_OFF = 'WRITTEN_OFF'
     STATUS_CHOICES = [
+        (STATUS_REPAIR, 'Under repair'),
+        (STATUS_SUPPLIER_RETURN, 'Returned to supplier'),
+        (STATUS_WRITTEN_OFF, 'Written off'),
         (STATUS_AVAILABLE, 'Available'),
         (STATUS_RESERVED, 'Reserved'),
         (STATUS_SOLD, 'Sold'),
@@ -537,10 +548,13 @@ class ProductUnit(models.Model):
         (STATUS_RETURNED, 'Returned'),
     ]
 
-    serial_number = models.CharField(max_length=120, unique=True)
+    unit_id = models.CharField(max_length=40, unique=True, null=True, editable=False)
+    serial_number = models.CharField('Manufacturer serial', max_length=120, unique=True, null=True, blank=True)
+    location = models.CharField(max_length=100, blank=True, db_index=True)
+    order_item = models.ForeignKey('shop.OrderItem', on_delete=models.PROTECT, null=True, blank=True, related_name='units')
     product = models.ForeignKey(Product, related_name='units', on_delete=models.PROTECT)
-    shipment = models.ForeignKey(Shipment, related_name='units', on_delete=models.PROTECT)
-    shipment_item = models.ForeignKey(ShipmentItem, related_name='units', on_delete=models.PROTECT)
+    shipment = models.ForeignKey(Shipment, related_name='units', on_delete=models.PROTECT, null=True, blank=True)
+    shipment_item = models.ForeignKey(ShipmentItem, related_name='units', on_delete=models.PROTECT, null=True, blank=True)
     purchase_price = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0.0000'))
     landed_cost = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal('0.0000'))
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
@@ -554,13 +568,17 @@ class ProductUnit(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(Upper(Trim('serial_number')), name='unit_manufacturer_serial_normalized_unique'),
+            models.CheckConstraint(condition=models.Q(sale_line__isnull=True) | models.Q(order_item__isnull=True), name='unit_one_sale_assignment'),
+        ]
         indexes = [
             models.Index(fields=['serial_number']),
             models.Index(fields=['product', 'status']),
         ]
 
     def __str__(self):
-        return f"{self.product.sku} #{self.serial_number}"
+        return f"{self.unit_id or self.pk} · {self.product.sku}"
 
     def clean(self):
         super().clean()
@@ -571,21 +589,39 @@ class ProductUnit(models.Model):
 
     @property
     def profit_amount(self) -> Decimal | None:
-        if not self.sale_line:
-            return None
-        return Decimal(str(self.sale_line.line_total)) - Decimal(str(self.landed_cost))
+        sale = self.sales_history.first()
+        if sale:
+            return sale.unit_price - sale.unit_cost
+        if self.sale_line:
+            return Decimal(str(self.sale_line.unit_price)) - Decimal(str(self.landed_cost))
+        return None
 
-    def mark_sold(self, sale_line, timestamp=None):
-        self.sale_line = sale_line
-        self.status = self.STATUS_SOLD
-        self.sold_at = timestamp or timezone.now()
-        self.save(update_fields=['sale_line', 'status', 'sold_at', 'updated_at'])
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        if not adding:
+            original = type(self).objects.only('unit_id', 'serial_number', 'product_id').get(pk=self.pk)
+            if (self.unit_id, self.serial_number, self.product_id) != (original.unit_id, original.serial_number, original.product_id):
+                raise ValidationError('Unit identity is permanent. Use audited serial correction for manufacturer details.')
+        if adding:
+            self.serial_number = (self.serial_number or '').strip() or None
+            if self.serial_number and type(self).objects.filter(serial_number__iexact=self.serial_number).exists():
+                raise ValidationError('Manufacturer serial already exists.')
+        super().save(*args, **kwargs)
+        if adding:
+            self.unit_id = f'BF-U-{self.pk:09d}'
+            type(self).objects.filter(pk=self.pk).update(unit_id=self.unit_id)
+
+    def mark_sold(self, sale_line=None, timestamp=None, actor=None, order_item=None):
+        from inventory.services.identity import record_sale
+        record_sale(self, sale_line=sale_line, order_item=order_item, actor=actor, timestamp=timestamp)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Physical identities are permanent. Use an audited write-off instead.')
 
     def mark_faulty(self, notes='', timestamp=None):
-        self.status = self.STATUS_FAULTY
-        self.fault_notes = notes or ''
-        self.fault_reported_at = timestamp or timezone.now()
-        self.save(update_fields=['status', 'fault_notes', 'fault_reported_at', 'updated_at'])
+        from inventory.services.identity import transition_unit
+        return transition_unit(unit_id=self.pk, action='fault', actor=self.created_by, note=notes)
 
 
 class ShipmentEventLog(models.Model):
@@ -611,3 +647,7 @@ class ShipmentEventLog(models.Model):
 
     def __str__(self):
         return f"{self.shipment.shipment_code} {self.event_type} {self.created_at:%Y-%m-%d}"
+
+
+# Domain models are split for readability; imported here for Django discovery.
+from .identity_models import ProductBarcode, UnitEvent, UnitSale, ScanRequest, Stocktake, StocktakeLine, StocktakeScan, ServiceCase  # noqa: E402,F401

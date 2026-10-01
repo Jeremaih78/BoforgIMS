@@ -1,0 +1,30 @@
+.identity-page { max-width: 1450px; margin: auto; --bs-secondary-color: #b3c7d9; }
+.identity-page .text-muted,.identity-page .form-text { color: #b3c7d9 !important; }
+.identity-page a:not(.btn) { color: #8dccff; }
+.identity-page a:not(.btn):hover { color: #c6e6ff; }
+.identity-page .form-control:focus,.identity-page .form-select:focus { background: #0f2435; color: #eaf3fb; }
+.identity-page .form-select option { background:#0f2435; color:#eaf3fb; }
+.identity-nav { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1.4rem; }
+.identity-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:1rem; }
+.identity-tile { background:#162c41; border:1px solid #395166; border-radius:1rem; padding:1.2rem; }
+.identity-tile strong { display:block; font-size:1.2rem; overflow-wrap:anywhere; }
+.identity-kicker { color:#a9c1d6; font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; }
+.identity-history { border-left:2px solid #395166; padding-left:1.2rem; margin-left:.5rem; }
+.identity-history article { margin-bottom:1.4rem; overflow-wrap:anywhere; }
+.scan-panel { background:#13283c; color:#eaf3fb; border:1px solid #4b7091; border-radius:1rem; padding:1.1rem; }
+.scan-panel .form-control { background:#0f2435; color:#eaf3fb; }
+.scan-panel .form-control:focus { background:#0f2435; color:#fff; }
+.scan-panel .scan-form input[name=code] { min-width:0; font-family:ui-monospace,monospace; }
+.scan-panel .scan-options { display:flex; flex-wrap:wrap; gap:1rem; padding:.6rem 0; font-size:.8rem; }
+.scan-panel .scan-options label { color:#b3c7d9; }
+.scan-panel .scan-feedback { color:#91e5b9; overflow-wrap:anywhere; }
+.scan-panel .scan-error { color:#ffb4b4; }
+.scan-choices { max-height:20rem; overflow-y:auto; }
+.serial-progress { font-size:.85rem; }
+.identity-page .errorlist { color:#ffb4b4; }
+.identity-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; border-top:1px solid #395166; padding:1rem 0; }
+.identity-row > div { min-width:0; overflow-wrap:anywhere; }
+.identity-row select { max-width:13rem; }
+.identity-count { font-variant-numeric:tabular-nums; font-weight:700; }
+.identity-page label:has(input[type=checkbox]) { display:flex; align-items:center; gap:.5rem; }
+@media(max-width:575.98px) { .identity-row { align-items:flex-start; } .identity-page h1{font-size:1.7rem;} .scan-panel{padding:.8rem;} }

@@ -413,7 +413,13 @@ def invoice_line_delete(request, pk, line_id):
         messages.error(request, 'Paid invoice lines cannot be removed.')
         return redirect('ims:sales:invoice_edit', pk)
     line = get_object_or_404(DocumentLine, pk=line_id, invoice=invoice)
-    ProductUnit.objects.filter(sale_line=line, status=ProductUnit.STATUS_RESERVED).update(sale_line=None, status=ProductUnit.STATUS_AVAILABLE)
+    from inventory.services.identity import event
+    Product.objects.select_for_update().get(pk=line.product_id) if line.product_id else None
+    for unit in ProductUnit.objects.select_for_update().filter(sale_line=line, status=ProductUnit.STATUS_RESERVED):
+        unit.sale_line = None
+        unit.status = ProductUnit.STATUS_AVAILABLE
+        unit.save(update_fields=['sale_line', 'status', 'updated_at'])
+        event(unit, kind='RELEASED', actor=request.user, invoice=invoice, previous='RESERVED')
     line.delete()
     try:
         StockService.reserve_stock(invoice)
@@ -445,8 +451,8 @@ def invoice_line_serials(request, line_id):
     form = InvoiceLineSerialAssignmentForm(request.POST or None, line=line)
     if request.method == 'POST' and form.is_valid():
         try:
-            assign_serials(line_id=line.pk, serials=list(form.cleaned_data['serials'].values_list('serial_number', flat=True)))
-        except ValueError as exc:
+            assign_serials(line_id=line.pk, serials=list(form.cleaned_data['serials'].values_list('unit_id', flat=True)), actor=request.user)
+        except (ValueError, ValidationError) as exc:
             form.add_error(None, str(exc))
         else:
             messages.success(request, 'Serial numbers updated.')

@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/identity.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/scanner.js' %}" defer></script>{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Invoice {{ invoice.number }}</h3>
@@ -8,6 +10,7 @@
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:invoice_pdf' invoice.id %}">Download PDF</a>
   </div>
 </div>
+{% url 'ims:sales:document_scan' 'invoice' invoice.pk as scan_url %}{% include 'inventory/identity/scan_panel.html' with scan_title='Scan products or physical units into this invoice' %}
 <div class="card p-3 mb-3">
   {% include 'sales/includes/customer_quick_create_modal.html' with customer_select_id=form.customer.id_for_label customer_quick_create_modal_rendered=False %}
   <form method="post">
@@ -83,7 +86,7 @@
     </div>
     <div class="card p-3 mt-3">
       <h5>Lines</h5>
-      <table class="table align-middle">
+      <table class="table align-middle" data-scan-refresh>
         <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th><th class="text-end">Action</th></tr></thead>
         <tbody>
           {% for line in lines %}
@@ -96,9 +99,9 @@
               {% endif %}
               {% if line.product.is_serial_tracked %}
               <div class="small mt-1">
-                <span class="badge text-bg-info me-1">Serial Required</span>
+                <span class="badge text-bg-info me-1">Unit required</span>
                 Assigned {{ line.product_units.count }} / {{ line.quantity|floatformat:"0" }}
-                <a class="ms-2" href="{% url 'ims:sales:invoice_line_serials' line.id %}">Manage Serials</a>
+                <a class="ms-2" href="{% url 'ims:sales:invoice_line_serials' line.id %}">Choose units</a>
               </div>
               {% endif %}
               {% else %}

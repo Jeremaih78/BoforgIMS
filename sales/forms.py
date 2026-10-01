@@ -172,7 +172,7 @@ class InvoiceLineSerialAssignmentForm(forms.Form):
         self.line = line
         super().__init__(*args, **kwargs)
         qs = ProductUnit.objects.filter(product=line.product).filter(
-            Q(status=ProductUnit.STATUS_AVAILABLE) | Q(sale_line=line)
+            Q(status=ProductUnit.STATUS_AVAILABLE, order_item__isnull=True) | Q(sale_line=line)
         )
         self.fields['serials'].queryset = qs
         self.fields['serials'].label = f'Assign {int(line.quantity)} serials'

@@ -82,6 +82,8 @@ def allocate_landed_costs(shipment: Shipment, *, basis: str | None = None) -> De
 @transaction.atomic
 def receive_shipment(*, shipment_id: int, receipts: Iterable[Mapping], received_by, basis: str | None = None, note: str = '') -> Shipment:
     """Finalize a shipment receipt, enforcing serial capture, landed costs, stock posting, and accounting."""
+    from .identity import identity_lock, validate_serial, event, check_consistency, ON_HAND
+    identity_lock()
     shipment = Shipment.objects.select_for_update().get(pk=shipment_id)
     shipment.require_status({Shipment.STATUS_ARRIVED, Shipment.STATUS_CLEARED})
     item_qs = ShipmentItem.objects.select_for_update().filter(shipment=shipment).select_related('product')
@@ -92,6 +94,7 @@ def receive_shipment(*, shipment_id: int, receipts: Iterable[Mapping], received_
     recorded = []
     now = timezone.now()
     seen = set()
+    captured_serials = set()
     for payload in receipts:
         if not isinstance(payload, Mapping):
             raise ShipmentServiceError('Each receipt must be an object.')
@@ -116,15 +119,32 @@ def receive_shipment(*, shipment_id: int, receipts: Iterable[Mapping], received_
             raise ShipmentServiceError('Serial numbers must be a list of strings.')
         if len(set(s.strip() for s in serials)) != len(serials):
             raise ShipmentServiceError('Serial numbers must be distinct.')
-        if item.requires_serials and len(serials) != quantity:
+        if item.requires_serials and len(serials) != quantity and payload.get('generate_ids') is not True:
             raise ShipmentServiceError(f'{item.product} requires serial numbers for every unit received.')
+        if len(serials) > quantity:
+            raise ShipmentServiceError('More serials supplied than units received.')
+        if item.requires_serials:
+            try:
+                serials = [validate_serial(s) for s in serials]
+                for serial in filter(None, serials):
+                    if serial in captured_serials:
+                        raise ShipmentServiceError('A manufacturer serial is duplicated in this receipt.')
+                    captured_serials.add(serial)
+            except ValidationError as exc:
+                raise ShipmentServiceError(exc.messages)
+            serials += [None] * (quantity - len(serials))
+        if item.tracking_mode != item.product.tracking_mode:
+            raise ShipmentServiceError('Shipment tracking mode must match the product. Correct it before receipt.')
         if item.quantity_received + quantity > item.quantity_expected:
             raise ShipmentServiceError('Quantity received cannot exceed quantity expected.')
         item.quantity_received += quantity
         item.last_received_at = now
         item.full_clean()
         item.save(update_fields=['quantity_received', 'last_received_at'])
-        recorded.append({'item': item, 'quantity': quantity, 'serials': serials})
+        location = payload.get('location', '')
+        if not isinstance(location, str) or len(location) > 100:
+            raise ShipmentServiceError('Storage location must be text of up to 100 characters.')
+        recorded.append({'item': item, 'quantity': quantity, 'serials': serials, 'location': location.strip()})
 
     shipment.refresh_from_db()
     if not shipment.is_fully_received:
@@ -136,7 +156,9 @@ def receive_shipment(*, shipment_id: int, receipts: Iterable[Mapping], received_
     for row in recorded:
         item = ShipmentItem.objects.get(pk=row['item'].pk)
         unit_cost = item.landed_unit_cost or item.unit_purchase_price
-        StockMovement.objects.create(
+        product = Product.objects.get(pk=item.product_id)
+        check_consistency(product)
+        movement = StockMovement(
             product=item.product,
             movement_type=StockMovement.IN,
             quantity=row['quantity'],
@@ -144,24 +166,21 @@ def receive_shipment(*, shipment_id: int, receipts: Iterable[Mapping], received_
             note=f'Shipment {shipment.shipment_code}',
             user=received_by,
         )
+        movement.save(unit_operation=True)
         if item.requires_serials:
-            cleaned = []
             for serial in row['serials']:
-                value = (serial or '').strip()
-                if not value:
-                    raise ShipmentServiceError('Serial numbers cannot be blank.')
-                cleaned.append(value)
-            for serial in cleaned:
-                ProductUnit.objects.create(
-                    serial_number=serial,
-                    product=item.product,
-                    shipment=shipment,
-                    shipment_item=item,
-                    purchase_price=item.unit_purchase_price,
-                    landed_cost=unit_cost,
-                    status=ProductUnit.STATUS_AVAILABLE,
-                    created_by=received_by,
+                unit = ProductUnit.objects.create(
+                    serial_number=serial, product=item.product, shipment=shipment, shipment_item=item,
+                    purchase_price=item.unit_purchase_price, landed_cost=unit_cost,
+                    location=row['location'],
+                    status=ProductUnit.STATUS_AVAILABLE, created_by=received_by,
                 )
+                event(unit, kind='RECEIVED', actor=received_by, movement=movement, note=shipment.shipment_code)
+            product.refresh_from_db()
+            if product.quantity == product.units.filter(status__in=ON_HAND).count():
+                product.identity_enforced = True
+                product.save(update_fields=['identity_enforced'])
+            check_consistency(product)
 
     ShipmentEventLog.objects.create(
         shipment=shipment,

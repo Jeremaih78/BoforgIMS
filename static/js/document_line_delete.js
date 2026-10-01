@@ -1,6 +1,7 @@
 (function () {
-  document.querySelectorAll('.js-line-delete-form').forEach((form) => {
-    form.addEventListener('submit', async (event) => {
+  document.addEventListener('submit', async (event) => {
+      const form = event.target.closest('.js-line-delete-form');
+      if (!form) return;
       event.preventDefault();
       const button = form.querySelector('button[type="submit"]');
       if (button) button.disabled = true;
@@ -21,6 +22,5 @@
       if (row) row.remove();
       const totalEl = document.querySelector(form.dataset.totalTarget);
       if (totalEl) totalEl.textContent = data.total;
-    });
   });
 })();

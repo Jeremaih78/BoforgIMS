@@ -80,6 +80,8 @@ class StockService:
             existing[res.product_id] = res
         products = Product.objects.select_for_update().filter(pk__in=set(demand) | set(existing)).order_by('pk')
         for product in products:
+            from inventory.services.identity import check_consistency
+            check_consistency(product)
             res = existing.get(product.pk)
             previous = res.quantity if res else 0
             wanted = demand.get(product.pk, 0)
@@ -110,9 +112,12 @@ class StockService:
             product.reserved -= res.quantity
             product.save(update_fields=['reserved'])
         StockReservation.objects.filter(invoice=invoice).delete()
-        ProductUnit.objects.filter(sale_line__invoice=invoice, status=ProductUnit.STATUS_RESERVED).update(
-            sale_line=None, status=ProductUnit.STATUS_AVAILABLE, sold_at=None,
-        )
+        from inventory.services.identity import event
+        for unit in ProductUnit.objects.select_for_update().filter(sale_line__invoice=invoice, status=ProductUnit.STATUS_RESERVED).order_by('pk'):
+            unit.sale_line = None
+            unit.status = ProductUnit.STATUS_AVAILABLE
+            unit.save(update_fields=['sale_line', 'status', 'updated_at'])
+            event(unit, kind='RELEASED', actor=invoice.created_by, invoice=invoice, previous='RESERVED')
 
     @staticmethod
     @transaction.atomic
@@ -129,13 +134,14 @@ class StockService:
             if len(units) != int(line.quantity) or any(unit.status != ProductUnit.STATUS_RESERVED for unit in units):
                 raise ValueError(f'{line.product} requires {int(line.quantity)} reserved serial numbers before finalizing.')
             for unit in units:
-                unit.mark_sold(line)
+                unit.mark_sold(line, actor=locked.created_by)
         for res in StockReservation.objects.filter(invoice=locked).order_by('product_id'):
             product = Product.objects.select_for_update().get(pk=res.product_id)
             product.reserved -= res.quantity
             product.save(update_fields=['reserved'])
-            StockMovement.objects.create(product=product, movement_type=StockMovement.OUT,
-                quantity=res.quantity, note=f'Invoice {locked.number}', user=locked.created_by)
+            from inventory.services.identity import stock_move, check_consistency
+            stock_move(product, StockMovement.OUT, res.quantity, locked.created_by, f'Invoice {locked.number}')
+            check_consistency(product)
         StockReservation.objects.filter(invoice=locked).delete()
         locked.stock_finalized = True
         locked.save(update_fields=['stock_finalized'])

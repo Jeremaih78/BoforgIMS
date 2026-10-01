@@ -1,0 +1,13 @@
+{% extends 'inventory/identity/base.html' %}{% load static %}
+{% block identity_content %}
+<div class="identity-kicker">Manufacturer / alternate barcode</div><h1>Assign a product barcode</h1>
+<p>Choose the existing product this barcode identifies. This adds a lookup code; it does not receive stock or create a physical unit.</p>
+<form method="post" class="identity-tile">{% csrf_token %}{{ form.non_field_errors }}
+<label for="id_code">Scanned barcode</label>{{ form.code }}{{ form.code.errors }}
+<label class="mt-3" for="assign-product-search">Find the product</label>
+<div class="product-combobox" data-product-combobox data-search-url="{% url 'ims:sales:product_search' %}">
+{{ form.product }}<div class="input-group"><input id="assign-product-search" class="form-control product-combobox__input" placeholder="Search product name or SKU" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="assign-product-results" required><button class="btn btn-outline-secondary product-combobox__clear" type="button" aria-label="Clear selected product">Clear</button></div>
+<div id="assign-product-results" class="product-combobox__results list-group shadow" role="listbox" hidden></div></div>{{ form.product.errors }}
+<button class="btn btn-primary mt-3">Assign barcode to selected product</button></form>
+{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/product_combobox.js' %}" defer></script>{% endblock %}

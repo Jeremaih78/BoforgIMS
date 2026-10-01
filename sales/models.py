@@ -189,6 +189,7 @@ class Invoice(models.Model):
 
 
 class DocumentLine(models.Model):
+    scan_generated = models.BooleanField(default=False, editable=False)
     cost_unit_snapshot = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True, editable=False)
     product = models.ForeignKey("inventory.Product", null=True, blank=True, on_delete=models.PROTECT)
     combo = models.ForeignKey("inventory.Combo", null=True, blank=True, on_delete=models.PROTECT)

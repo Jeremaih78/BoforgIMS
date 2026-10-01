@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block extra_js %}<script src="{% static 'js/scanner.js' %}" defer></script>{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
@@ -18,7 +20,7 @@
         Expected: {{ form.item.quantity_expected }} |
         Received: {{ form.item.quantity_received }}
         {% if form.item.requires_serials %}
-        | Tracking: Serial numbers required
+        | Tracking: individual Boforg Unit IDs; manufacturer serials optional
         {% endif %}
       </div>
       {{ form.as_p }}

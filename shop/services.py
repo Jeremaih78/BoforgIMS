@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
-from inventory.models import Product
+from inventory.models import Product, ProductUnit
 
 from .models import Cart, Order, OrderItem
 
@@ -94,7 +94,7 @@ def create_order_from_cart(cart: Cart, *, email: str, full_name: str = '', notes
             continue
         ensure_product_available(product, cart_item.quantity)
         line_total = (product.price or Decimal('0.00')) * cart_item.quantity
-        OrderItem.objects.create(
+        order_item = OrderItem.objects.create(
             order=order,
             product=product,
             product_name=product.name,
@@ -102,6 +102,17 @@ def create_order_from_cart(cart: Cart, *, email: str, full_name: str = '', notes
             quantity=cart_item.quantity,
             line_total=line_total,
         )
+        if product.is_serial_tracked:
+            from inventory.services.identity import check_consistency, event
+            check_consistency(product)
+            units = list(ProductUnit.objects.select_for_update().filter(product=product, status='AVAILABLE', sale_line__isnull=True, order_item__isnull=True).order_by('pk')[:cart_item.quantity])
+            if len(units) != cart_item.quantity:
+                raise OrderCreationError('Serialized stock requires reconciliation before online checkout.')
+            for unit in units:
+                unit.status = 'RESERVED'
+                unit.order_item = order_item
+                unit.save(update_fields=['status', 'order_item', 'updated_at'])
+                event(unit, kind='SHOP_RESERVED', actor=None, note=order.number, previous='AVAILABLE')
         if product.track_inventory:
             Product.objects.filter(pk=product.pk).update(reserved=F('reserved') + cart_item.quantity)
             reserved_products.append((product.pk, cart_item.quantity))
@@ -142,9 +153,18 @@ def mark_order_as_paid(order: Order) -> None:
         available = product.quantity - product.reserved + release
         if available < item.quantity or product.reserved < release:
             raise OrderCreationError('Verified payment requires stock reconciliation.')
-        product.quantity -= item.quantity
+        from inventory.services.identity import stock_move, check_consistency
+        check_consistency(product)
+        if product.is_serial_tracked:
+            units = list(ProductUnit.objects.select_for_update().filter(order_item=item, status='RESERVED').order_by('pk'))
+            if len(units) != item.quantity:
+                raise OrderCreationError('Verified payment needs staff review: exact units are no longer reserved.')
+            for unit in units:
+                unit.mark_sold(order_item=item)
         product.reserved -= release
-        product.save(update_fields=['quantity', 'reserved'])
+        product.save(update_fields=['reserved'])
+        stock_move(product, 'OUT', item.quantity, None, f'Shop {locked.number}')
+        check_consistency(product)
     locked.status = Order.Status.PAID
     locked.save(update_fields=['status', 'updated_at'])
     order.status = locked.status
@@ -164,6 +184,12 @@ def mark_order_as_failed(order: Order) -> None:
             raise OrderCreationError('Reservation requires staff reconciliation.')
         product.reserved -= item.quantity
         product.save(update_fields=['reserved'])
+        from inventory.services.identity import event
+        for unit in ProductUnit.objects.select_for_update().filter(order_item=item, status='RESERVED').order_by('pk'):
+            unit.order_item = None
+            unit.status = 'AVAILABLE'
+            unit.save(update_fields=['order_item', 'status', 'updated_at'])
+            event(unit, kind='SHOP_RELEASED', actor=None, note=locked.number, previous='RESERVED')
     locked.status = Order.Status.FAILED
     locked.save(update_fields=['status', 'updated_at'])
     order.status = locked.status
