@@ -49,11 +49,11 @@ def product_list(request):
     qs = Product.objects.all()
     if q:
         qs = qs.filter(
-            Q(name__icontains=q)|Q(sku__icontains=q)|Q(category__name__icontains=q)|Q(supplier__name__icontains=q)
+            Q(name__icontains=q)|Q(sku__icontains=q)|Q(category__name__icontains=q)|Q(supplier__name__icontains=q)|Q(barcodes__code__iexact=q)|Q(units__unit_id__iexact=q)|Q(units__serial_number__iexact=q)
         )
     if low == '1':
         qs = qs.filter(quantity__lte=F('reserved') + F('reorder_level'))
-    qs = qs.select_related('category','supplier').order_by('name')
+    qs = qs.distinct().select_related('category','supplier').order_by('name')
     paginator = Paginator(qs, 20)
     page = request.GET.get('page')
     products = paginator.get_page(page)
@@ -237,6 +237,8 @@ def shipment_receive(request, pk):
                         'item_id': form.cleaned_data['item_id'],
                         'quantity': quantity,
                         'serials': form.cleaned_data['serial_list'],
+                        'generate_ids': form.cleaned_data['generate_ids'],
+                        'location': form.cleaned_data['location'],
                     })
             if not receipts:
                 messages.error(request, 'Enter at least one quantity to receive.')
@@ -249,7 +251,7 @@ def shipment_receive(request, pk):
                     )
                     messages.success(request, 'Shipment received successfully.')
                     return redirect('ims:inventory:shipment_detail', shipment.id)
-                except ShipmentServiceError as exc:
+                except ValidationError as exc:
                     messages.error(request, exc.messages[0] if isinstance(exc.messages, list) else str(exc))
     return render(
         request,

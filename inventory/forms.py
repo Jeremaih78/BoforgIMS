@@ -12,7 +12,11 @@ from .models import (
 
 
 class ProductForm(forms.ModelForm):
+    warranty_days = forms.IntegerField(required=False, min_value=0, initial=0, help_text='Warranty duration in days; zero means no configured warranty.')
     remove_image = forms.BooleanField(required=False, initial=False, label="Remove image")
+
+    def clean_warranty_days(self):
+        return self.cleaned_data.get('warranty_days') or 0
 
     class Meta:
         model = Product
@@ -29,6 +33,7 @@ class ProductForm(forms.ModelForm):
             'reserved',
             'track_inventory',
             'tracking_mode',
+            'warranty_days',
             'reorder_level',
             'tax_rate',
             'description',
@@ -70,7 +75,10 @@ class ProductForm(forms.ModelForm):
             tracking_field.required = False
 
     def clean_tracking_mode(self):
-        return self.cleaned_data.get('tracking_mode') or Product.TRACK_QUANTITY
+        value = self.cleaned_data.get('tracking_mode') or Product.TRACK_QUANTITY
+        if self.instance.pk and value != self.instance.tracking_mode and (self.instance.quantity or self.instance.reserved or self.instance.units.exists()):
+            raise ValidationError('Use Identify existing stock to enable unit tracking. Products with unit history cannot revert to quantity tracking.')
+        return value
 
     def clean_image(self):
         image = self.cleaned_data.get('image')
@@ -101,10 +109,22 @@ class ProductForm(forms.ModelForm):
                 self.add_error(name, 'Value cannot be negative.')
         if not self.instance.pk and cleaned_data.get('reserved', 0):
             self.add_error('reserved', 'New products cannot have reservations.')
+        if not self.instance.pk and cleaned_data.get('tracking_mode') == Product.TRACK_SERIAL and cleaned_data.get('quantity', 0):
+            self.add_error('quantity', 'Start at zero and receive physical units through a shipment.')
+        if cleaned_data.get('tracking_mode') == Product.TRACK_SERIAL and not cleaned_data.get('track_inventory'):
+            self.add_error('track_inventory', 'Physical unit tracking requires inventory tracking.')
+        sku = cleaned_data.get('sku', '').strip().upper()
+        if sku:
+            from .models import ProductBarcode, ProductUnit
+            from django.db.models.functions import Upper, Trim
+            if sku.startswith(('BF-P-', 'BF-U-')) or ProductBarcode.objects.filter(code=sku).exclude(product_id=self.instance.pk).exists() or ProductUnit.objects.annotate(canonical=Upper(Trim('serial_number'))).filter(canonical=sku).exists():
+                self.add_error('sku', 'This SKU conflicts with a barcode or reserved Boforg identifier.')
         return cleaned_data
 
     def save(self, commit=True):
         product = super().save(commit=False)
+        if product.is_serial_tracked and not product.quantity and not product.reserved:
+            product.identity_enforced = True
         remove_image = self.cleaned_data.get('remove_image')
         if remove_image:
             if product.pk and product.image:
@@ -158,7 +178,7 @@ class ShipmentItemForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         product = cleaned.get('product')
-        if product and not cleaned.get('tracking_mode'):
+        if product:
             cleaned['tracking_mode'] = product.tracking_mode
         return cleaned
 
@@ -200,9 +220,11 @@ class ShipmentCostForm(forms.ModelForm):
 
 
 class ShipmentItemReceiptForm(forms.Form):
+    location = forms.CharField(max_length=100, required=False, help_text='Storage location assigned to all physical units in this receipt line.')
     item_id = forms.IntegerField(widget=forms.HiddenInput)
     quantity = forms.IntegerField(min_value=0)
-    serials = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}), required=False)
+    serials = forms.CharField(label='Manufacturer serials (optional, one per line)', widget=forms.Textarea(attrs={'rows': 3, 'data-serial-capture': '', 'class': 'form-control'}), required=False)
+    generate_ids = forms.BooleanField(initial=True, required=False, label='Generate Boforg Unit IDs for units without manufacturer serials')
 
     def __init__(self, *args, item: ShipmentItem, **kwargs):
         self.item = item
@@ -210,8 +232,10 @@ class ShipmentItemReceiptForm(forms.Form):
         self.fields['item_id'].initial = item.id
         self.fields['quantity'].initial = max(item.quantity_expected - item.quantity_received, 0)
         if not item.requires_serials:
+            self.fields['location'].widget = forms.HiddenInput()
             self.fields['serials'].widget = forms.HiddenInput()
             self.fields['serials'].required = False
+            self.fields['generate_ids'].widget = forms.HiddenInput()
 
     def clean(self):
         cleaned = super().clean()
@@ -224,8 +248,12 @@ class ShipmentItemReceiptForm(forms.Form):
         if self.item.requires_serials:
             if quantity == 0:
                 serials = []
-            if quantity != len(serials):
+            if quantity != len(serials) and not cleaned.get('generate_ids'):
                 raise ValidationError(f'{self.item.product} requires {quantity} serial numbers.')
+        if len(serials) > quantity:
+            raise ValidationError('More serials captured than units received.')
+        if len({s.upper() for s in serials}) != len(serials):
+            raise ValidationError('A manufacturer serial was scanned more than once.')
         cleaned['serial_list'] = serials
         return cleaned
 

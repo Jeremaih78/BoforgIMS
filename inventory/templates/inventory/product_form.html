@@ -3,7 +3,7 @@
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
     <div class="card p-4 form-card">
-      <h4 class="mb-3">Product</h4>
+      <h4 class="mb-3">Product</h4>{% if product.pk %}<a class="btn btn-outline-primary mb-3" href="{% url 'ims:inventory:product_identity' product.pk %}">Barcodes, labels & physical units</a>{% endif %}
       <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {% for hidden in form.hidden_fields %}

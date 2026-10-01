@@ -19,9 +19,13 @@
     let activeIndex = -1;
     let debounceTimer;
     let requestController;
+    let searchVersion = 0;
     let selectedLabel = input.value;
 
     const close = () => {
+      searchVersion += 1;
+      requestController?.abort();
+      clearTimeout(debounceTimer);
       results.hidden = true;
       results.innerHTML = '';
       input.setAttribute('aria-expanded', 'false');
@@ -81,29 +85,33 @@
     };
 
     const search = async () => {
-      requestController?.abort();
+      close();
+      const version = searchVersion;
+      const query = input.value.trim();
       requestController = new AbortController();
       results.innerHTML = '<div class="list-group-item text-secondary"><span class="spinner-border spinner-border-sm me-2"></span>Searching…</div>';
       results.hidden = false;
       input.setAttribute('aria-expanded', 'true');
       try {
         const url = new URL(root.dataset.searchUrl, window.location.origin);
-        url.searchParams.set('q', input.value.trim());
+        url.searchParams.set('q', query);
         const response = await fetch(url, {
           headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
           signal: requestController.signal,
         });
         if (!response.ok) throw new Error(`Search failed (${response.status})`);
-        render(await response.json());
+        const payload = await response.json();
+        if (version !== searchVersion || input.value.trim() !== query) return;
+        render(payload);
       } catch (error) {
-        if (error.name === 'AbortError') return;
+        if (error.name === 'AbortError' || version !== searchVersion) return;
         results.innerHTML = '<div class="list-group-item text-danger">Product search is unavailable. Try again.</div>';
       }
     };
 
     input.addEventListener('input', () => {
       if (input.value !== selectedLabel) hidden.value = '';
-      clearTimeout(debounceTimer);
+      close();
       debounceTimer = setTimeout(search, 180);
     });
     input.addEventListener('focus', () => {
@@ -113,7 +121,7 @@
     input.addEventListener('keydown', (event) => {
       if (event.key === 'ArrowDown') { event.preventDefault(); setActive(activeIndex + 1); }
       else if (event.key === 'ArrowUp') { event.preventDefault(); setActive(activeIndex - 1); }
-      else if (event.key === 'Enter' && activeIndex >= 0) { event.preventDefault(); options[activeIndex].dispatchEvent(new MouseEvent('mousedown')); }
+      else if (event.key === 'Enter') { event.preventDefault(); if (activeIndex >= 0) options[activeIndex].dispatchEvent(new MouseEvent('mousedown')); }
       else if (event.key === 'Escape') close();
     });
     clearButton.addEventListener('click', () => {

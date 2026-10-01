@@ -1,0 +1,11 @@
+<section class="scan-panel mb-3" data-scanner data-endpoint="{{ scan_url }}" {% if scan_navigate %}data-navigate{% endif %}>
+  <form class="scan-form" method="post" action="{{ scan_url }}">
+    {% csrf_token %}
+    <label class="form-label fw-semibold" for="scan-{{ scan_context|default:'main' }}">{{ scan_title|default:'Scan / search' }}</label>
+    <div class="d-flex gap-2"><input class="form-control" id="scan-{{ scan_context|default:'main' }}" name="code" maxlength="120" autocomplete="off" placeholder="Scan a barcode, Unit ID or manufacturer serial" required><button class="btn btn-primary" type="submit">Scan</button></div>
+    <div class="scan-options"><label><input type="checkbox" data-keep-focus checked> Keep ready for next scan</label><label><input type="checkbox" data-sound> Sound</label></div>
+  </form>
+  <p class="scan-feedback mb-0" role="status" aria-live="polite">Ready. Type and press Enter, or use your scanner.</p>
+  <div class="scan-choices d-grid gap-2 mt-2"></div>
+  <button class="btn btn-outline-warning mt-2" type="button" data-retry hidden>Retry the same scan</button>
+</section>

@@ -31,8 +31,10 @@ class SupplierAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    from .forms import ProductForm
+    form = ProductForm
     list_display = ('name', 'sku', 'price', 'quantity', 'thumbnail', 'is_active')
-    search_fields = ('name', 'sku')
+    search_fields = ('name', 'sku', 'barcodes__code', 'units__unit_id', 'units__serial_number')
     list_filter = ('category', 'supplier', 'is_active', 'is_public')
     filter_horizontal = ('recommended_products',)
     prepopulated_fields = {'slug': ('name',)}
@@ -175,11 +177,18 @@ class ShipmentAdmin(admin.ModelAdmin):
 
 @admin.register(ProductUnit)
 class ProductUnitAdmin(admin.ModelAdmin):
-    list_display = ('serial_number', 'product', 'shipment', 'status', 'landed_cost', 'sale_line')
-    search_fields = ('serial_number', 'product__name', 'product__sku', 'shipment__shipment_code')
+    list_display = ('unit_id', 'serial_number', 'product', 'shipment', 'status', 'location', 'sale_line')
+    search_fields = ('unit_id', 'serial_number', 'product__name', 'product__sku', 'shipment__shipment_code')
     list_filter = ('status', 'product__category')
     autocomplete_fields = ['product', 'shipment']
-    readonly_fields = ('created_at', 'updated_at', 'sold_at', 'fault_reported_at')
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(ShipmentEventLog)
@@ -187,3 +196,19 @@ class ShipmentEventLogAdmin(admin.ModelAdmin):
     list_display = ('shipment', 'event_type', 'previous_status', 'new_status', 'actor', 'created_at')
     list_filter = ('event_type', 'new_status')
     search_fields = ('shipment__shipment_code', 'actor__username')
+
+
+from .models import ProductBarcode, UnitEvent, UnitSale, Stocktake, StocktakeLine, StocktakeScan, ScanRequest, ServiceCase
+
+class InventoryAuditAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+for model in (ProductBarcode, UnitEvent, UnitSale, Stocktake, StocktakeLine, StocktakeScan, ScanRequest, ServiceCase):
+    admin.site.register(model, InventoryAuditAdmin)

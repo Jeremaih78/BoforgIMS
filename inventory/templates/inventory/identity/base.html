@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/identity.css' %}">{% endblock %}
+{% block content %}<div class="identity-page">
+<nav class="identity-nav" aria-label="Inventory operations"><a class="btn btn-secondary" href="{% url 'ims:inventory:identity_home' %}">Scan & units</a><a class="btn btn-secondary" href="{% url 'ims:inventory:product_list' %}">Products</a><a class="btn btn-secondary" href="{% url 'ims:inventory:shipment_list' %}">Receiving</a><a class="btn btn-secondary" href="{% url 'ims:inventory:stocktakes' %}">Stocktakes</a><a class="btn btn-secondary" href="{% url 'ims:inventory:scanner_test' %}">Scanner test</a></nav>
+{% block identity_content %}{% endblock %}</div>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/scanner.js' %}" defer></script>{% endblock %}

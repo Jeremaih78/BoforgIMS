@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from . import views
+from . import views, identity_views
 from .api import ProductViewSet, ComboViewSet, ShipmentViewSet
 
 app_name = 'inventory'
@@ -13,6 +13,18 @@ router.register('api/combos', ComboViewSet, basename='combo')
 router.register('api/shipments', ShipmentViewSet, basename='shipment')
 
 urlpatterns = [
+    path('identity/', identity_views.operations, name='identity_home'),
+    path('identity/assign/', identity_views.assign_unknown, name='assign_barcode'),
+    path('identity/lookup/', identity_views.lookup, name='scan_lookup'),
+    path('identity/products/<int:pk>/', identity_views.product_identity, name='product_identity'),
+    path('units/<str:unit_id>/', identity_views.passport, name='unit_passport'),
+    path('identity/labels/', identity_views.labels, name='labels'),
+    path('stocktakes/', identity_views.stocktakes, name='stocktakes'),
+    path('stocktakes/<int:pk>/', identity_views.stocktake_detail, name='stocktake_detail'),
+    path('stocktakes/<int:pk>/scan/', identity_views.stocktake_scan, name='stocktake_scan'),
+    path('units/<str:unit_id>/case/', identity_views.case_open, name='case_open'),
+    path('service-cases/<int:pk>/', identity_views.case_detail, name='case_detail'),
+    path('scanner-test/', identity_views.scanner_test, name='scanner_test'),
     path('', views.product_list, name='product_list'),
     path('new/', views.product_create, name='product_create'),
     path('<int:pk>/edit/', views.product_edit, name='product_edit'),

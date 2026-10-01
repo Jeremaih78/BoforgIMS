@@ -1,10 +1,11 @@
 from django.urls import path
-from . import views
+from . import views, scan_views
 from .api import InvoiceLineSerialAPIView
 
 app_name = 'sales'
 
 urlpatterns = [
+    path('<str:kind>/<int:pk>/scan/', scan_views.scan, name='document_scan'),
     path('', views.sales_home, name='sales_home'),
     path('api/products/search/', views.product_search, name='product_search'),
     path('quotation/new/', views.quotation_create, name='quotation_create'),

@@ -118,7 +118,7 @@
     <tbody>
       {% for it in inv.items.all %}
       <tr>
-        <td>{{ it.product|default:it.description }}</td>
+        <td>{{ it.product|default:it.description }}{% if it.unitsale_set.exists %}{% for sale in it.unitsale_set.all %}<br><small>{{ sale.unit.unit_id }}{% if sale.unit.serial_number %} · Mfr: {{ sale.unit.serial_number }}{% endif %}</small>{% endfor %}{% else %}{% for unit in it.product_units.all %}<br><small>{{ unit.unit_id }}{% if unit.serial_number %} · Mfr: {{ unit.serial_number }}{% endif %}</small>{% endfor %}{% endif %}</td>
         <td class="right">{{ it.quantity }}</td>
         <td class="right">{{ it.unit_price }}</td>
         <td class="right">{{ it.total }}</td>

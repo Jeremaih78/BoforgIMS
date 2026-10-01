@@ -8,7 +8,7 @@
   </div>
 </div>
 <form class="mb-3">
-  <input class="form-control" name="q" aria-label="Search products" placeholder="Search by name, SKU, category, supplier..." value="{{ q }}">
+  <input class="form-control" name="q" aria-label="Search products" placeholder="Search name, SKU, barcode, category or supplier..." value="{{ q }}">
 </form>
 <div class="d-md-none product-mobile-list">
   {% for p in products %}
@@ -16,7 +16,7 @@
     <h4 class="h6">{{ p.name }}</h4><p class="small text-muted mb-2">{{ p.sku }}</p>
     <div class="d-flex justify-content-between gap-2"><strong>{{ p.currency }} {{ p.price }}</strong><span>{% if p.track_inventory %}Available: <strong>{{ p.available_stock }}</strong>{% else %}Service{% endif %}</span></div>
     {% if p.track_inventory %}<p class="small text-muted mt-2 mb-2">On hand: {{ p.quantity }} &middot; Reserved: {{ p.reserved }}</p>{% endif %}
-    <a class="btn btn-outline-light mt-2" href="{% url 'ims:inventory:product_edit' p.pk %}">View / edit product</a>
+    <a class="btn btn-primary mt-2" href="{% url 'ims:inventory:product_identity' p.pk %}">Barcodes & units</a><a class="btn btn-outline-light mt-2" href="{% url 'ims:inventory:product_edit' p.pk %}">View / edit product</a>
   </article>
   {% empty %}<p>No products found. Try another name or SKU.</p>{% endfor %}
 </div>
@@ -42,7 +42,7 @@
       <td class="text-end {% if p.quantity <= 5 %}text-warning{% endif %}">{{ p.available_stock }}</td>
       <td class="text-end">{{ p.price }}</td>
       <td class="text-end">
-        <a class="btn btn-sm btn-outline-primary text-dark" href="{% url 'ims:inventory:product_edit' p.pk %}">Edit</a>
+        <a class="btn btn-sm btn-outline-light" href="{% url 'ims:inventory:product_identity' p.pk %}">Barcodes & units</a> <a class="btn btn-sm btn-outline-primary" href="{% url 'ims:inventory:product_edit' p.pk %}">Edit</a>
         {% if user.is_superuser %}
         <form method="post" action="{% url 'ims:inventory:product_delete' p.pk %}" class="d-inline" onsubmit="return confirm('Delete this product? Products with history cannot be deleted.')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form>
         {% endif %}

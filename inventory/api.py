@@ -1,4 +1,5 @@
 from django.db.models import F
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from rest_framework.exceptions import ValidationError
@@ -110,7 +111,7 @@ class ShipmentViewSet(ReadOnlyModelViewSet):
                 receipts=receipts,
                 received_by=request.user,
             )
-        except ShipmentServiceError as exc:
+        except (ShipmentServiceError, DjangoValidationError) as exc:
             message = exc.messages[0] if isinstance(exc.messages, list) else str(exc)
             return Response({'detail': message}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(self.get_object())
