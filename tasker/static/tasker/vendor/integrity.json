@@ -22,6 +22,16 @@
         "file": "bootstrap/LICENSE",
         "size": 1093,
         "sha256": "8c14611ae41ac6fd543c13349f22188eb12c69b3e59105c5eca3925a8e4eca3e"
+      },
+      {
+        "file": "bootstrap/js/bootstrap.bundle.min.js.map",
+        "size": 332090,
+        "sha256": "5e3e0763164143baaa1ca0706b6100ba0452f911d6ce9713b48e3dbe07b35125"
+      },
+      {
+        "file": "bootstrap/css/bootstrap.min.css.map",
+        "size": 589892,
+        "sha256": "f12338536350a422c64d02d6e43ff1dea493c3156ad823fe19761cdd5d56c05b"
       }
     ]
   },

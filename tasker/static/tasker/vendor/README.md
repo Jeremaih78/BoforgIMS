@@ -1,6 +1,6 @@
 # Tasker pinned frontend assets
 
-These copies remove a runtime CDN dependency for Tasker pages. IMS pages retain their existing asset configuration. No package installation or package scripts were run. Only the named CSS, JavaScript, fonts and license files listed below were copied from each archive. Source maps are omitted; runtime behavior does not require them.
+These copies remove a runtime CDN dependency for Tasker pages. IMS pages retain their existing asset configuration. No package installation or package scripts were run. Only the named CSS, JavaScript, source maps, fonts and license files listed below were copied from each archive. Bootstrap source maps are included because the pinned CSS/JavaScript reference them and production manifest storage validates those references during static collection.
 
 ## Sources and verification
 
@@ -16,6 +16,8 @@ These copies remove a runtime CDN dependency for Tasker pages. IMS pages retain 
 | --- | ---: | --- |
 | `bootstrap/css/bootstrap.min.css` | 232803 | `3c8f27e6009ccfd710a905e6dcf12d0ee3c6f2ac7da05b0572d3e0d12e736fc8` |
 | `bootstrap/js/bootstrap.bundle.min.js` | 80721 | `0833b2e9c3a26c258476c46266e6877fc75218625162e0460be9a3a098a61c6c` |
+| `bootstrap/js/bootstrap.bundle.min.js.map` | 332090 | `5e3e0763164143baaa1ca0706b6100ba0452f911d6ce9713b48e3dbe07b35125` |
+| `bootstrap/css/bootstrap.min.css.map` | 589892 | `f12338536350a422c64d02d6e43ff1dea493c3156ad823fe19761cdd5d56c05b` |
 | `bootstrap/LICENSE` | 1093 | `8c14611ae41ac6fd543c13349f22188eb12c69b3e59105c5eca3925a8e4eca3e` |
 
 ### bootstrap-icons 1.11.3
