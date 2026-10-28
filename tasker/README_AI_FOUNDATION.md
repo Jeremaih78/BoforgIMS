@@ -1,6 +1,6 @@
 # Boforg AI Tasker — Phase 2 AI Foundation
 
-This milestone provides the internal infrastructure for future AI productivity features. It deliberately does not expose chat, planning, recommendations, task generation, or autonomous actions.
+The foundation provides the internal infrastructure used by the six personal productivity features documented in [README_AI_PERSONAL_ASSISTANT.md](README_AI_PERSONAL_ASSISTANT.md). Stage 1 correctness changes are documented in [the implementation report](../docs/TASKER_STAGE1_IMPLEMENTATION_2026-10-22.md). Live enablement remains configuration-controlled; this update makes no autonomous external actions available.
 
 ## Safety posture
 
@@ -100,13 +100,15 @@ Streaming callers iterate `AIService().stream_text(...)`. For HTTP SSE, wrap tho
 
 The OpenAI SDK is configured with `max_retries=0`; `AIService` owns bounded exponential backoff so the exact attempt count is auditable. Transient connection, timeout, 408, 409, 429, and server failures may retry up to the configured limit. Permanent provider errors do not retry. A stream retries only before emitting text, preventing duplicate partial responses.
 
-Timeouts are set on the provider client. Per-minute limits use the Django cache (Redis in production when configured); daily request and token quotas use durable PostgreSQL usage logs.
+Timeouts are set on the provider client. Minute/day request admission and per-attempt token reservations use durable PostgreSQL usage logs under a short per-user row lock. No lock spans provider I/O or retry sleeps. The current request is counted once after admission, so a limit of one permits one request. Retries consume additional token capacity without consuming another logical-request allowance.
+
+Migration 0011 adds quota reservation/charge/attempt/settlement fields and an index. Measured final usage releases unused capacity; earlier unknown attempts, interrupted streams and possibly billed failures retain conservative charges. Provider construction failures release unused reservations. Soft-deleted logs still count, and settlement is idempotent. Historical unknown usage or multiple attempts are conservatively charged at least that configuration's daily token allowance on the historical admission day. This can exhaust today's allowance for unresolved same-day legacy calls. Provider token totals are preserved separately. No weekly monetary spending cap is implemented here.
 
 ## Logging and privacy
 
 Every service invocation produces an `AIUsageLog`, including disabled, unauthorized, rate-limited, failed, interrupted, and successful attempts. Logs retain stable internal request UUIDs and OpenAI request/response IDs for support. Provider exception text is replaced with controlled messages before persistence.
 
-Conversation content is intentionally stored in `AIMessage` for future employee memory and must remain owner-scoped. It is not displayed on the organization usage dashboard. Future retention/export controls must be implemented before broad conversational features launch.
+Conversation content is stored in `AIMessage` and is not displayed on the organization usage dashboard. Staff admin access to conversations/messages/feedback and private daily plans/reviews is owner-scoped and read-only; superusers retain privileged operational access. Scratchpad/reflection/task-note text is excluded from personal AI requests. Full retention/export controls remain later work; disabling provider response storage is not a promise of zero retention.
 
 ## Usage dashboard
 

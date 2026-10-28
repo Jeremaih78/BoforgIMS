@@ -1,70 +1,64 @@
-﻿<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Terms of Service – Boforg Technologies Private Limited (botintegration)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex">
-  <style>
-    body {font-family: system-ui, Arial, sans-serif; line-height: 1.6; margin: 2rem; max-width: 900px}
-    h1,h2 {line-height:1.25}
-    .box {background:#fafafa; border:1px solid #eee; padding:1rem; border-radius:8px}
-    small {color:#666}
-  </style>
-</head>
-<body>
-  <h1>Terms of Service</h1>
-  <p><small>Effective date: 26 September 2025</small></p>
+{% extends "legal/base.html" %}
+{% block page_title %}Terms of Service{% endblock %}
+{% block description %}Terms for Boforg's website, shop, IMS, Tasker, AI features and authorized WhatsApp, Facebook and Instagram services.{% endblock %}
+{% block canonical_path %}/legal/terms/{% endblock %}
+{% block terms_current %}aria-current="page"{% endblock %}
+{% block heading %}Terms of Service{% endblock %}
+{% block content %}
+  <p class="lede">These terms govern your use of the websites, business software and connected services provided by Boforg Technologies Private Limited ("Boforg", "we", "us"). They apply alongside any order, subscription or service agreement we have made with you and any mandatory rights under applicable law.</p>
 
-  <h2>1) Agreement</h2>
-  <p>These Terms govern your use of <strong>botintegration</strong> provided by <strong>Boforg Technologies Private Limited</strong> (“we”, “us”). By using the service, you agree to these Terms.</p>
+  <h2 id="scope">1. Services covered and availability</h2>
+  <p>Our services include the Boforg company website and shop, Inventory Management System (IMS), Tasker productivity tools and enabled AI features, related APIs, and authorized Meta integrations including Boforg WABA and services previously described as botintegration.</p>
+  <p>Access and functionality depend on the service, your permissions and the features enabled for your organization. Boforg WABA is currently in setup and review. Automated invoice/quotation PDF delivery, client onboarding and WhatsApp Business App coexistence are planned features; they become available only when implemented, enabled and supported for the relevant account. A demonstration or development plan is not a commitment that an unlaunched feature is already operational.</p>
 
-  <h2>2) Access &amp; accounts</h2>
+  <h2 id="accounts">2. Accounts and authority</h2>
   <ul>
-    <li>You must have authority to connect any Meta pages/accounts you link.</li>
-    <li>You are responsible for safeguarding credentials and tokens.</li>
+    <li>Provide accurate account and business information and keep your contact details current.</li>
+    <li>Use only accounts, business assets and records that you are authorized to access. Obtain any necessary authority before connecting a client's WhatsApp, Facebook or Instagram account.</li>
+    <li>Keep sign-in details, access tokens and other credentials private. Tell us promptly if you suspect unauthorized access.</li>
+    <li>Respect access permissions. An account for one service or business does not authorize access to another business's information or restricted IMS/Tasker functions.</li>
   </ul>
 
-  <h2>3) Use of the service</h2>
-  <ul>
-    <li>Comply with Meta Platform Terms, applicable laws, and these Terms.</li>
-    <li>No unlawful, harmful, harassing, or deceptive activities.</li>
-    <li>No reverse engineering, scraping, or rate abuse beyond permitted API limits.</li>
-  </ul>
+  <h2 id="acceptable-use">3. Acceptable use</h2>
+  <p>Use our services lawfully and in accordance with these terms and the rules of any connected provider. Do not send unsolicited or deceptive messages, impersonate others, upload unlawful material, collect information without authority, bypass access controls, expose credentials or disrupt service availability.</p>
 
-  <h2>4) Content &amp; permissions</h2>
-  <p>You grant us the rights necessary to process, store, and transmit content solely to provide the service (e.g., posting, replying, analytics) and to comply with law.</p>
+  <h2 id="whatsapp">4. WhatsApp and other Meta services</h2>
+  <p>Where a messaging feature is enabled, the sending business is responsible for recipient information, document contents, necessary privacy notices and permission to communicate. It must honor opt-outs and use approved templates where Meta requires them. Review recipients, invoice or quotation details and attachments before issuing a message or document.</p>
+  <p>Authorized Meta account details, templates, messages, attachments and status information may be processed to operate the requested connection and communication service. Facebook/Instagram posting, replies or reporting apply only where those integrations and permissions are actually available.</p>
+  <p>A submitted or accepted API request does not prove that a message was delivered or read. Delivery can depend on the recipient, account eligibility, connectivity, templates, billing, platform limits and provider decisions. Where a delivery result is uncertain, confirm its outcome before attempting another send.</p>
+  <p>Connecting or using our service does not guarantee Meta verification, app approval, coexistence eligibility or uninterrupted platform access. Meta's and WhatsApp's applicable terms and policies also govern their services.</p>
 
-  <h2>5) Third-party services</h2>
-  <p>The service interoperates with Meta’s APIs and other providers. We are not responsible for third-party terms, policies, outages, or changes.</p>
+  <h2 id="business-records">5. Shop, IMS and business records</h2>
+  <p>Check order, product, customer and payment information before confirming a transaction. The relevant quotation, order or service agreement specifies commercial terms. Applicable returns information is available in our <a href="/return-policy/">returns policy</a>; nothing here removes mandatory customer rights.</p>
+  <p>For IMS use, authorized users remain responsible for reviewing entries and following their organization's controls for prices, taxes, stock, invoices, payments and accounting. Changing or deleting a record may be restricted by transaction history, permissions or record-keeping duties.</p>
 
-  <h2>6) Service changes</h2>
-  <p>We may change, suspend, or discontinue features. We aim for high availability but do not guarantee uninterrupted service.</p>
+  <h2 id="tasker-ai">6. Tasker and AI features</h2>
+  <p>Tasker supports work planning, tracking, coordination and reporting according to enabled features and access. Where AI is enabled, submitted requests and selected work context may be sent to OpenAI and generated responses may be stored in the service.</p>
+  <p>AI suggestions can be inaccurate or incomplete. Review them before relying on them or applying changes. They do not replace your organization's approval processes or professional judgment. Only provide information that you are entitled to submit for the feature. See the <a href="/legal/privacy/#ai">AI section of our privacy policy</a> for the relevant data handling.</p>
 
-  <h2>7) Fees</h2>
-  <p>If fees apply, they will be stated in an order form or plan page. Unpaid amounts may lead to suspension.</p>
+  <h2 id="content">7. Your content and information</h2>
+  <p>You retain your rights in the information and documents you provide. You give Boforg the permissions needed to process, store and transmit them to deliver the requested service and meet applicable obligations. You are responsible for having the necessary rights and notices when providing other people's information.</p>
+  <p>Our <a href="/legal/privacy/">privacy policy</a> explains information handling and providers. Requests to correct or delete information can be made using our <a href="/legal/data-deletion/">data deletion instructions</a>. Disconnecting an account is separate from erasing existing business records.</p>
 
-  <h2>8) Disclaimers</h2>
-  <p>THE SERVICE IS PROVIDED “AS IS” WITHOUT WARRANTIES OF ANY KIND. We do not warrant accuracy, availability, or fitness for a particular purpose.</p>
+  <h2 id="providers">8. Third-party services</h2>
+  <p>Relevant features depend on providers such as Hostinger, Cloudflare, Meta/WhatsApp, Paynow, OpenAI, Google Analytics and jsDelivr, plus optional storage providers where enabled, as described in the privacy policy. Their applicable terms, privacy practices, limits and availability also apply to their own services. Provider changes or outages may affect connected features.</p>
 
-  <h2>9) Limitation of liability</h2>
-  <p>To the maximum extent permitted by law, our liability arising out of or related to the service is limited to the amounts you paid in the 12 months before the claim, and we are not liable for indirect or consequential damages.</p>
+  <h2 id="fees">9. Fees</h2>
+  <p>Any Boforg service fees, billing period and payment terms will be stated in the applicable offer, order or agreement. Third-party messaging, payment or other provider charges may apply separately according to the service selected. Unpaid amounts may result in suspension where permitted by the agreement and applicable law.</p>
 
-  <h2>10) Indemnity</h2>
-  <p>You will defend and indemnify us from claims arising from your content or use of the service in violation of these Terms or applicable law.</p>
+  <h2 id="suspension">10. Service changes, suspension and termination</h2>
+  <p>We may maintain, change or discontinue features and may suspend access to address misuse, security risks, provider restrictions or breaches of these terms. Any applicable service agreement and mandatory law continue to apply. You may stop using the service and request disconnection or deletion through the published contact process.</p>
+  <p>After termination, we may retain information still needed for an applicable accounting, security, dispute or legal purpose. We will assess deletion requests and explain relevant retention limits; termination does not automatically erase every record or recipient-held copy.</p>
+  <p>Information received from Meta follows the specific deletion rule in our <a href="/legal/privacy/#retention">privacy policy</a>: it is deleted as soon as reasonably possible when required, with retention permitted only where applicable law or regulation requires it.</p>
 
-  <h2>11) Term &amp; termination</h2>
-  <p>You may stop using the service at any time. We may suspend or terminate access for violations or risks to the platform, security, or other users. Upon termination, we may retain minimal logs as required by law or for legitimate business purposes.</p>
+  <h2 id="liability">11. Availability and liability</h2>
+  <p>Except for commitments in an applicable agreement or rights that cannot be excluded by law, services are provided as available without a guarantee of uninterrupted access, error-free results or suitability for every purpose.</p>
+  <p>To the extent permitted by law, Boforg's liability arising from the service is limited to the amounts you paid us for that service in the twelve months before the claim, and excludes indirect or consequential loss. This does not exclude liability or rights that applicable law does not allow us to exclude or limit.</p>
+  <p>To the extent permitted by law, business users are responsible for claims and reasonable costs resulting from their unlawful content, unauthorized disclosure of information or misuse of the service. Any separate written agreement and mandatory legal protections take precedence where applicable.</p>
 
-  <h2>12) Governing law</h2>
-  <p>These Terms are governed by the laws of Zimbabwe. Venue and jurisdiction lie in the courts located in Harare, Zimbabwe.</p>
+  <h2 id="law">12. Governing law and questions</h2>
+  <p>These terms are governed by the laws of Zimbabwe, subject to any mandatory protections that apply. Disputes are subject to the competent courts in Harare, Zimbabwe, unless applicable law or an agreed written contract requires otherwise. Contact <a href="mailto:info@boforg.co.zw">info@boforg.co.zw</a> for questions, concerns or service requests.</p>
 
-  <h2>13) Changes</h2>
-  <p>We may update these Terms and will revise the effective date above. Continued use after changes means you accept the updated Terms.</p>
-
-  <p class="box"><strong>Contact:</strong> Boforg Technologies Private Limited, Robert Mugabe Street, Harare, Zimbabwe — <a href="mailto:adriannzvimbo@gmail.com">adriannzvimbo@gmail.com</a><br>
-  Domain: <a href="https://boforg.co.zw">https://boforg.co.zw</a></p>
-
-  <p><small>This is not legal advice. Consider consulting counsel for your specific use case.</small></p>
-</body>
-</html>
+  <h2 id="changes">13. Updates</h2>
+  <p>We will display a revised date when these terms change and provide additional notice where appropriate or required. Existing orders, written commitments and mandatory legal rights are subject to their applicable terms and law.</p>
+{% endblock %}

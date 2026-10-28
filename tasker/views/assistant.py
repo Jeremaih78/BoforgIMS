@@ -7,6 +7,8 @@ from django.views.decorators.http import require_GET, require_POST
 
 from tasker.ai.exceptions import AIServiceError
 from tasker.ai.personal_assistant import (
+    AIStaleProposalError,
+    NoReadyTasksError,
     PersonalProductivityAssistant,
     apply_suggested_steps,
     personal_ai_availability,
@@ -44,12 +46,12 @@ def assistant_day_action(request, action):
     if action not in DAY_FEATURES:
         raise Http404
     feature, title = DAY_FEATURES[action]
-    if feature == "next_task" and not Task.objects.filter(
+    if feature in {"next_task", "plan_day", "prioritize"} and not Task.objects.filter(
         owner=request.user,
         archived=False,
-        status__in=(Task.Status.PENDING, Task.Status.IN_PROGRESS, Task.Status.BLOCKED),
+        status__in=(Task.Status.PENDING, Task.Status.IN_PROGRESS),
     ).exists():
-        messages.info(request, "You have no active personal tasks to recommend.")
+        messages.info(request, NoReadyTasksError.user_message)
         return redirect("ims:tasker:index")
     return _run(request, feature=feature, title=title)
 
@@ -77,6 +79,9 @@ def _run(request, *, feature, title, task=None):
         payload, message = PersonalProductivityAssistant().run(
             user=request.user, feature=feature, task=task
         )
+    except NoReadyTasksError as exc:
+        messages.info(request, exc.user_message)
+        return redirect("ims:tasker:index")
     except AIServiceError as exc:
         messages.error(request, exc.user_message)
         if task:
@@ -106,6 +111,9 @@ def assistant_apply_steps(request, slug, message_pk):
         count = apply_suggested_steps(
             user=request.user, task=task, message_id=message_pk, selected_indexes=indexes
         )
+    except AIStaleProposalError as exc:
+        messages.warning(request, exc.user_message)
+        return redirect("ims:tasker:task_detail", slug=task.slug)
     except (AIServiceError, AIMessage.DoesNotExist, PermissionError):
         raise PermissionDenied
     if count:

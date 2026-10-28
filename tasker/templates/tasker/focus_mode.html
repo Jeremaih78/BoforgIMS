@@ -1,20 +1,24 @@
 {% load static tasker_tags %}
 <!doctype html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-bs-theme="dark" data-tasker-user="{{ user.pk }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Focus · {{ task.title }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="{% static 'tasker/js/ui_preferences.js' %}?v=stage3-20261022-final"></script>
+  <link href="{% static 'tasker/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'tasker/vendor/bootstrap-icons/font/bootstrap-icons.css' %}" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'tasker/css/focus.css' %}">
+  <link rel="stylesheet" href="{% static 'tasker/css/shell.css' %}?v=stage3-20261022-final">
+  <link rel="stylesheet" href="{% static 'tasker/css/focus_workbench.css' %}?v=stage5-20261027-final2">
 </head>
-<body>
-  <main class="focus-shell">
+<body class="tasker-app tasker-focus-app">
+  <a class="tasker-skip-link" href="#focus-main">Skip to current task</a>
+  <main class="focus-shell" id="focus-main" tabindex="-1">
     <header class="focus-topbar">
       <form method="post" action="{% url 'ims:tasker:focus_stop' task.slug %}" class="focus-exit-form">{% csrf_token %}<button type="submit" class="focus-exit" aria-label="Stop timer and exit focus mode"><i aria-hidden="true" class="bi bi-x-lg"></i><span>Stop &amp; exit</span></button></form>
       <div class="focus-brand"><i aria-hidden="true" class="bi bi-bullseye"></i> BOFORG FOCUS</div>
-      <span class="focus-save-state" id="focusSaveState" aria-live="polite">Notes saved</span>
+      <span class="focus-save-state" id="focusSaveState">Notes loaded</span>
     </header>
 
     {% for message in messages %}<div class="alert alert-{{ message.tags }} mx-auto focus-alert">{{ message }}</div>{% endfor %}
@@ -28,11 +32,18 @@
           <span class="priority priority-{{ task.priority|lower }}"><i aria-hidden="true" class="bi bi-flag-fill"></i>{{ task.get_priority_display }}</span>
           <span><i aria-hidden="true" class="bi bi-hourglass-split"></i>{{ task.estimated_duration|task_duration|default:"No estimate" }}</span>
         </div>
+        {% if next_step %}<div class="focus-next-step"><span class="focus-kicker">Next clear step</span><p>{{ next_step.title }}</p></div>{% endif %}
+        {% if primary_contribution or source_capture %}<div class="focus-context-links">
+          {% if primary_contribution %}<a href="{{ primary_contribution.initiative.goal.get_absolute_url }}"><i class="bi bi-compass" aria-hidden="true"></i> {{ primary_contribution.initiative.goal.title }} · {{ primary_contribution.initiative.title }}</a>{% endif %}
+          {% if source_capture %}<a href="{{ source_capture.get_absolute_url }}"><i class="bi bi-inbox" aria-hidden="true"></i> Open source capture</a>{% endif %}
+        </div>{% endif %}
 
         <div class="focus-timer-card">
           <div class="focus-kicker">Elapsed time</div>
           <div class="focus-timer" id="focusTimer" data-running="{% if running_entry %}1{% else %}0{% endif %}" data-base-seconds="{{ elapsed_seconds }}" data-started="{% if running_entry %}{{ running_entry.started_at|date:'c' }}{% endif %}">00:00:00</div>
           <div class="focus-timer-status"><span class="status-dot {% if running_entry %}is-running{% endif %}"></span>{% if running_entry %}Timer running{% else %}Timer paused{% endif %}</div>
+          {% if focus_interval.minutes %}<div class="focus-interval" id="focusIntervalTimer" data-minutes="{{ focus_interval.minutes }}" data-base-seconds="{{ focus_interval.base_seconds }}" data-started="{% if focus_interval.started_at %}{{ focus_interval.started_at|date:'c' }}{% endif %}" data-running="{% if focus_interval.running %}1{% else %}0{% endif %}">{{ focus_interval.minutes }} minute interval target</div>{% endif %}
+          <details class="focus-interval-options"><summary>{% if focus_interval.minutes %}Change interval{% else %}Set an optional focus interval{% endif %}</summary><form method="post" action="{% url 'ims:tasker:focus_start' task.slug %}" class="d-flex flex-wrap align-items-end gap-2 mt-3">{% csrf_token %}<div><label for="focusIntervalMinutes" class="form-label small">Minutes from now</label><input type="number" id="focusIntervalMinutes" name="interval_minutes" min="1" max="240" step="1" value="25" required class="form-control"></div><button class="btn btn-outline-light" type="submit">Set target{% if not running_entry %} &amp; resume{% endif %}</button></form><p class="small mt-2 mb-0">Pause pauses the interval. Reaching the target leaves the timer running and the task open.</p></details>
         </div>
 
         <div class="focus-actions">
@@ -43,9 +54,10 @@
           {% endif %}
           <form method="post" action="{% url 'ims:tasker:focus_stop' task.slug %}">{% csrf_token %}<button class="btn-focus btn-stop" type="submit"><i aria-hidden="true" class="bi bi-stop-fill"></i>Stop</button></form>
           <button class="btn-focus btn-blocked" type="button" data-bs-toggle="modal" data-bs-target="#blockedModal"><i aria-hidden="true" class="bi bi-slash-circle"></i>Blocked</button>
-          <form method="post" action="{% url 'ims:tasker:focus_complete' task.slug %}" data-confirm-complete>{% csrf_token %}<button class="btn-focus btn-complete" type="submit"><i aria-hidden="true" class="bi bi-check2"></i>Complete</button></form>
+          {% if not task.definition_of_done %}<form method="post" action="{% url 'ims:tasker:focus_complete' task.slug %}" data-confirm-complete>{% csrf_token %}<button class="btn-focus btn-complete" type="submit"><i aria-hidden="true" class="bi bi-check2"></i>Complete</button></form>{% else %}<a class="btn-focus btn-complete" href="#focusAcceptance"><i aria-hidden="true" class="bi bi-check2"></i>Review &amp; complete</a>{% endif %}
         </div>
-        <div class="focus-shortcuts d-none d-lg-flex"><span><kbd>Space</kbd> pause / resume</span><span><kbd>B</kbd> blocked</span><span><kbd>C</kbd> complete</span><span><kbd>Esc</kbd> exit</span></div>
+        {% if task.definition_of_done %}<section class="focus-card focus-acceptance" id="focusAcceptance" aria-labelledby="focusAcceptanceTitle"><div class="focus-kicker">Finish with confidence</div><h2 id="focusAcceptanceTitle">Definition of done</h2><p class="mt-3">{{ task.definition_of_done|linebreaksbr }}</p><form method="post" action="{% url 'ims:tasker:focus_complete' task.slug %}" data-confirm-complete data-definition-review>{% csrf_token %}<input type="hidden" name="definition_version" value="{{ definition_version }}"><label class="focus-accept-check"><input type="checkbox" name="accept_definition" required> <span>I reviewed this outcome and confirm the definition of done is met.</span></label><button class="btn-focus btn-complete mt-3" type="submit"><i aria-hidden="true" class="bi bi-check2"></i>Complete task</button></form></section>{% endif %}
+        <div class="focus-shortcuts d-none d-lg-flex"><span><kbd data-shortcut-label="focus_pause">Space</kbd> pause / resume</span><span><kbd data-shortcut-label="focus_block">B</kbd> blocked</span><span><kbd data-shortcut-label="focus_complete">C</kbd> complete</span><span><kbd data-shortcut-label="focus_exit">Esc</kbd> exit</span></div>
       </section>
 
       <aside class="focus-side">
@@ -53,22 +65,29 @@
           <div class="focus-section-head"><div><div class="focus-kicker">Next actions</div><h2>Checklist</h2></div><strong>{{ task.progress }}%</strong></div>
           <div class="progress mb-4"><div class="progress-bar" style="width: {{ task.progress }}%"></div></div>
           <div class="focus-checklist">
-            {% for item in task.checklist_items.all %}
+            {% for item in checklist_items %}
             <form method="post" action="{% url 'ims:tasker:focus_checklist_toggle' task.slug item.pk %}" class="focus-check {% if item.is_completed %}is-complete{% endif %}">{% csrf_token %}<button type="submit" aria-label="Toggle {{ item.title }}"><i aria-hidden="true" class="bi {% if item.is_completed %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i><span>{{ item.title }}</span></button></form>
             {% empty %}<div class="focus-empty"><i aria-hidden="true" class="bi bi-check2-square"></i>No checklist items. Keep attention on the task outcome.</div>{% endfor %}
           </div>
+          {% if checklist_total > 50 %}<p class="small mt-3 mb-0">Showing the first 50 steps. <a href="{{ task.get_absolute_url }}">View all {{ checklist_total }} on the task.</a></p>{% endif %}
         </section>
 
+        <section class="focus-card focus-parking" aria-labelledby="focusParkingTitle"><div class="focus-kicker">Clear your mind</div><h2 id="focusParkingTitle">Park a private idea</h2><p class="small mt-2" id="focusParkingHelp">Save distractions to your private Inbox and keep working. This text stays separate from shared task notes. Unsaved ideas remain only on this page.</p><form id="focusParkingForm" method="post" action="{% url 'ims:tasker:focus_park' task.slug %}" data-parking-url="{% url 'ims:tasker:focus_park' task.slug %}">{% csrf_token %}<input type="hidden" name="client_key" value="{{ parking_client_key }}"><label for="focusParkingText" class="visually-hidden">Private idea</label><textarea id="focusParkingText" name="content" rows="3" maxlength="10000" aria-describedby="focusParkingHelp focusParkingStatus" placeholder="An idea for later…"></textarea><div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-outline-light" id="focusParkingSave" type="submit">Save idea</button><button class="btn btn-outline-warning" id="focusParkingRetry" type="button" hidden>Retry save</button></div></form><p id="focusParkingStatus" role="status" aria-live="polite" class="small mt-3 mb-0">Ideas are saved privately to your Inbox.</p><p id="focusParkingError" role="alert" class="text-warning small mt-2 mb-0" hidden></p><p class="small mt-3 mb-0"><a href="{% url 'ims:tasker:capture_list' %}" target="_blank" rel="noopener">Open your Inbox in another tab</a></p><noscript><p class="small mt-3">Inline idea parking requires JavaScript. <a href="{% url 'ims:tasker:capture_list' %}" target="_blank" rel="noopener">Open Inbox in another tab to capture an idea.</a></p></noscript></section>
+
         <section class="focus-card">
-          <div class="focus-kicker">Working notes</div><h2>Notes</h2>
-          <form id="focusNotesForm" action="{% url 'ims:tasker:focus_notes' task.slug %}" method="post">{% csrf_token %}<textarea name="notes" id="focusNotes" rows="8" maxlength="10000" placeholder="Capture decisions, links, and thoughts without leaving focus mode…">{{ task.notes }}</textarea></form>
+          <div class="focus-kicker">Working context</div><h2>Shared task notes</h2>
+          <p class="text-secondary small mt-2" id="focusNotesHelp">Visible to people authorized to view this task. Unsaved recovery drafts stay in this browser tab until saved, discarded or signed out.</p>
+          <form id="focusNotesForm" action="{% url 'ims:tasker:focus_notes' task.slug %}" method="post" data-notes-version="{{ notes_version }}" data-draft-user="{{ user.pk }}" data-draft-task="{{ task.pk }}">{% csrf_token %}<input type="hidden" name="base_version" value="{{ notes_version }}"><label for="focusNotes" class="visually-hidden">Shared task notes</label><textarea name="notes" id="focusNotes" rows="8" maxlength="10000" aria-describedby="focusNotesHelp focusNotesStatus" placeholder="Capture decisions, links, and thoughts without leaving focus mode…">{{ task.notes }}</textarea><div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-outline-light" type="submit">Save notes</button><button class="btn btn-outline-warning" type="button" id="focusRetrySave" hidden>Retry save</button></div></form>
+          <p id="focusNotesStatus" role="status" aria-live="polite" class="small mt-3 mb-0">Saved notes loaded.</p>
+          <div id="focusNotesConflict" class="alert alert-warning mt-3" role="alert" hidden><p>Your draft is still above. Compare it with the saved version below. Edit your draft to merge changes, then choose which version to keep.</p><label class="form-label" for="focusConflictNotes">Saved notes at the time of the conflict</label><textarea class="form-control" id="focusConflictNotes" rows="5" readonly></textarea><div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-warning" type="button" id="focusOverwriteNotes">Save my edited version</button><button class="btn btn-outline-secondary" type="button" id="focusUseSavedNotes">Discard my draft and use saved notes</button></div></div>
         </section>
       </aside>
     </div>
   </main>
 
-  <div class="modal fade" id="blockedModal" tabindex="-1" aria-labelledby="blockedTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content focus-modal"><form method="post" action="{% url 'ims:tasker:focus_block' task.slug %}">{% csrf_token %}<div class="modal-header border-0"><h2 class="modal-title h4" id="blockedTitle">What is blocking this task?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p class="text-secondary">Record a clear reason so the blocker can be resolved.</p><textarea class="form-control" name="reason" rows="4" maxlength="5000" required autofocus></textarea></div><div class="modal-footer border-0"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-warning">Mark blocked and exit</button></div></form></div></div></div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{% static 'tasker/js/focus.js' %}"></script>
+  <div class="modal fade" id="blockedModal" tabindex="-1" aria-labelledby="blockedTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content focus-modal"><form method="post" action="{% url 'ims:tasker:focus_block' task.slug %}">{% csrf_token %}<div class="modal-header border-0"><h2 class="modal-title h4" id="blockedTitle">What is blocking this task?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><label class="form-label" for="focusBlockedReason">Record a clear reason so the blocker can be resolved.</label><textarea class="form-control" id="focusBlockedReason" name="reason" rows="4" maxlength="5000" required autofocus></textarea></div><div class="modal-footer border-0"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-warning">Mark blocked and exit</button></div></form></div></div></div>
+  <script src="{% static 'tasker/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'tasker/js/focus.js' %}?v=stage5-20261027-final2"></script>
+  <script src="{% static 'tasker/js/focus_workflow.js' %}?v=stage5-20261027-final2"></script>
 </body>
 </html>

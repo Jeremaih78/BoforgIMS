@@ -1,0 +1,11 @@
+<header class="topbar tasker-topbar">
+  <div class="tasker-topbar-location"><button class="btn btn-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#imsNavigation" aria-controls="imsNavigation" aria-label="Open navigation"><i class="bi bi-list" aria-hidden="true"></i></button><div><span class="tasker-topbar-breadcrumb">Your workspace</span><span class="tasker-page-label">{{ tasker_page_label }}</span></div></div>
+  <div class="tasker-topbar-actions">
+    {% if tasker_coordination_enabled and perms.tasker.view_task %}<a class="btn btn-secondary" href="{% url 'ims:tasker:notification_home' %}" aria-label="Notifications" title="Notifications"><i class="bi bi-bell" aria-hidden="true"></i></a>{% endif %}
+    {% if perms.tasker.view_task %}<a class="btn btn-secondary d-none d-md-inline-flex" href="{% url 'ims:tasker:arrival_home' %}">Arrival</a>{% endif %}
+    {% if perms.tasker.view_task %}<button class="tasker-capture" type="button" data-bs-toggle="modal" data-bs-target="#captureModal" aria-label="Quick capture" title="Quick capture"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Capture</span><kbd data-shortcut-label="capture">N</kbd></button>{% endif %}
+    <button class="btn btn-secondary tasker-theme-toggle" type="button" data-tasker-toggle-theme aria-label="Switch color theme" title="Switch color theme"><i class="bi bi-circle-half" aria-hidden="true"></i></button>
+    <span class="tasker-identity" title="{{ user.get_full_name|default:user.username }}">{{ user.get_full_name|default:user.username }}</span>
+    <form method="post" action="{% url 'logout' %}" data-clear-tasker-drafts>{% csrf_token %}<button type="submit" class="btn btn-secondary tasker-logout" aria-label="Log out"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Log out</span></button></form>
+  </div>
+</header>

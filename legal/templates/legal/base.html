@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block page_title %}Legal information{% endblock %} | Boforg Technologies Private Limited</title>
+  <meta name="description" content="{% block description %}Legal information for Boforg's digital services.{% endblock %}">
+  <link rel="canonical" href="https://boforg.co.zw{% block canonical_path %}/legal/{% endblock %}">
+  <style>
+    :root { color-scheme: light; --ink: #172b42; --muted: #53657a; --link: #175a96; --line: #dce4ed; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: #f3f6fa; color: var(--ink); font: 16px/1.7 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    a { color: var(--link); text-underline-offset: .17em; overflow-wrap: anywhere; }
+    a:hover { color: #103d68; }
+    a:focus-visible { outline: 3px solid #e9a12c; outline-offset: 4px; border-radius: 2px; }
+    .skip-link { position: absolute; left: 1rem; top: -5rem; padding: .6rem 1rem; background: white; z-index: 2; }
+    .skip-link:focus { top: .5rem; }
+    .site-header { background: #fff; border-bottom: 1px solid var(--line); }
+    .header-inner, .legal-shell { max-width: 1060px; margin: 0 auto; padding: 1.4rem clamp(1.1rem, 4vw, 2.8rem); }
+    .brand { color: var(--ink); font-size: 1.05rem; font-weight: 750; text-decoration: none; }
+    .legal-nav, .footer-links { display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; margin-top: .7rem; font-size: .92rem; }
+    .legal-shell { padding-top: 2rem; padding-bottom: 3rem; }
+    .document { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: clamp(1.25rem, 4vw, 3rem); box-shadow: 0 3px 18px #1a355208; }
+    h1, h2, h3 { line-height: 1.25; letter-spacing: -.025em; }
+    h1 { font-size: clamp(2rem, 5vw, 2.7rem); margin: .35rem 0 .7rem; }
+    h2 { font-size: 1.32rem; margin: 2rem 0 .75rem; scroll-margin-top: 1rem; }
+    h3 { font-size: 1.05rem; margin: 1.35rem 0 .5rem; }
+    p, ul, ol { margin: .8rem 0; }
+    ul, ol { padding-left: 1.35rem; }
+    li + li { margin-top: .45rem; }
+    .updated { color: var(--muted); font-size: .9rem; }
+    .lede { font-size: 1.07rem; color: #344d68; }
+    .notice { background: #eef5fc; border-left: 4px solid #2372b4; padding: .8rem 1rem; margin: 1.3rem 0; border-radius: 0 6px 6px 0; }
+    .notice p:first-child { margin-top: 0; }
+    .notice p:last-child { margin-bottom: 0; }
+    .contents { background: #f7f9fc; border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+    .contents ul { margin-bottom: 0; }
+    .contact { border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1.25rem; color: var(--muted); font-size: .94rem; }
+    .contact address { font-style: normal; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media (max-width: 480px) {
+      .header-inner { padding-top: 1rem; padding-bottom: 1rem; }
+      .legal-shell { padding-top: 1.1rem; }
+      .document { border-radius: 8px; }
+      .brand { font-size: .96rem; }
+      .legal-nav { gap: .35rem 1rem; }
+    }
+    @media print {
+      body { background: #fff; }
+      .site-header, .skip-link, .contents { display: none; }
+      .legal-shell, .document { padding: 0; border: 0; box-shadow: none; }
+      h2, h3 { break-after: avoid; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="https://boforg.co.zw/">Boforg Technologies Private Limited</a>
+      <nav class="legal-nav" aria-label="Legal documents">
+        <a href="/legal/privacy/" {% block privacy_current %}{% endblock %}>Privacy policy</a>
+        <a href="/legal/data-deletion/" {% block deletion_current %}{% endblock %}>Data deletion</a>
+        <a href="/legal/terms/" {% block terms_current %}{% endblock %}>Terms of service</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main-content" class="legal-shell">
+    <article class="document">
+      <p class="updated">Last updated: <time datetime="2026-10-28">28 October 2026</time></p>
+      <h1>{% block heading %}Legal information{% endblock %}</h1>
+      {% block content %}{% endblock %}
+      <footer class="contact">
+        <address>
+          <strong>Boforg Technologies Private Limited</strong><br>
+          76 Kaguvi Street, Harare, Zimbabwe<br>
+          Privacy, support and deletion requests: <a href="mailto:info@boforg.co.zw">info@boforg.co.zw</a><br>
+          Telephone: <a href="tel:+263786264994">+263 786 264 994</a>
+        </address>
+        <nav class="footer-links" aria-label="Related legal information">
+          <a href="/legal/privacy/">Privacy policy</a>
+          <a href="/legal/data-deletion/">Data deletion instructions</a>
+          <a href="/legal/terms/">Terms of service</a>
+          <a href="/return-policy/">Returns policy</a>
+        </nav>
+      </footer>
+    </article>
+  </main>
+</body>
+</html>

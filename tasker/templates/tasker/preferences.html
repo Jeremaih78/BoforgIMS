@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Preferences · Boforg Tasker{% endblock %}
+{% block content %}<div class="tasker-preferences direction-workspace">
+<header class="tasker-section-header mb-4"><div><div class="tasker-eyebrow">Make it yours</div><h1 class="h2">Preferences</h1><p class="text-muted mb-0">Choose a comfortable appearance and the shortcuts that work for you.</p></div></header>
+<noscript><div class="alert alert-info">Enable JavaScript to save preferences in this browser. Tasks and planning remain available without it.</div></noscript>
+<form id="taskerPreferencesForm" method="post" action="{% url 'ims:tasker:ui_preferences' %}" novalidate>
+  <div id="taskerPreferenceErrors" class="tasker-error-summary alert alert-danger" role="alert" hidden></div>
+  <section class="tasker-panel p-4 mb-4" aria-labelledby="appearanceHeading"><h2 class="h5" id="appearanceHeading">Appearance</h2><p class="text-muted">Follow your device or choose a theme. Reduced motion follows your device setting.</p><label class="form-label" for="taskerTheme">Color theme</label><select class="form-select" id="taskerTheme" name="theme"><option value="system">Follow device</option><option value="light">Light</option><option value="dark">Dark</option></select></section>
+  <section class="tasker-panel p-4 mb-4" aria-labelledby="shortcutsHeading"><h2 class="h5" id="shortcutsHeading">Keyboard shortcuts</h2><div class="form-check form-switch my-3"><input class="form-check-input" type="checkbox" name="shortcuts_enabled" id="taskerShortcutsEnabled" checked><label class="form-check-label" for="taskerShortcutsEnabled">Enable keyboard shortcuts</label></div><p class="text-muted" id="shortcutHelp">Use a letter, number, / or ?, optionally with Shift or Alt. Focus also supports Space and Escape. Leave a shortcut blank to turn it off. Shortcuts pause while typing or using a dialog; Ctrl and Command combinations stay with your browser.</p>
+  <fieldset><legend class="h6">Workspace</legend><div class="tasker-preferences-grid">
+    <div><label class="form-label" for="shortcut_capture">Quick capture</label><input class="form-control" id="shortcut_capture" name="shortcut_capture" value="n" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_create">Full task form</label><input class="form-control" id="shortcut_create" name="shortcut_create" value="shift+n" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_now">Now</label><input class="form-control" id="shortcut_now" name="shortcut_now" value="t" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_plan">Plan</label><input class="form-control" id="shortcut_plan" name="shortcut_plan" value="p" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_work">Work</label><input class="form-control" id="shortcut_work" name="shortcut_work" value="w" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_goals">Goals</label><input class="form-control" id="shortcut_goals" name="shortcut_goals" value="g" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_search">Search work</label><input class="form-control" id="shortcut_search" name="shortcut_search" value="/" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_help">Shortcut help</label><input class="form-control" id="shortcut_help" name="shortcut_help" value="?" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+  </div></fieldset>
+  <fieldset class="mt-4"><legend class="h6">Focus mode</legend><div class="tasker-preferences-grid">
+    <div><label class="form-label" for="shortcut_focus_pause">Pause / resume</label><input class="form-control" id="shortcut_focus_pause" name="shortcut_focus_pause" value="space" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_focus_block">Mark blocked</label><input class="form-control" id="shortcut_focus_block" name="shortcut_focus_block" value="b" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_focus_complete">Complete task</label><input class="form-control" id="shortcut_focus_complete" name="shortcut_focus_complete" value="c" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+    <div><label class="form-label" for="shortcut_focus_exit">Stop and exit</label><input class="form-control" id="shortcut_focus_exit" name="shortcut_focus_exit" value="escape" aria-describedby="shortcutHelp" maxlength="40" autocomplete="off"></div>
+  </div></fieldset></section>
+  <div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit" disabled data-tasker-preferences-submit>Save preferences</button><button class="btn btn-secondary" type="button" disabled data-tasker-reset-preferences>Reset defaults</button></div><p class="text-muted small mt-3">Saved for your account in this browser. Clearing browser storage resets these preferences.</p><p id="taskerPreferenceStatus" role="status" aria-live="polite" class="mt-2"></p>
+</form></div>{% endblock %}

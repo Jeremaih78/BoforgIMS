@@ -108,8 +108,20 @@ class OpenAIProvider:
 
     @staticmethod
     def _result(response):
+        # Structured JSON is not evidence of a completed, non-refused response.
+        if getattr(response, "status", "completed") != "completed" or getattr(response, "error", None):
+            raise AIProviderError(provider_code="response_not_completed",
+                                  request_id=getattr(response, "_request_id", "") or "")
+        for item in getattr(response, "output", None) or ():
+            for content in getattr(item, "content", None) or ():
+                if getattr(content, "type", "") == "refusal":
+                    raise AIProviderError(provider_code="response_refused",
+                                          request_id=getattr(response, "_request_id", "") or "")
+        text = getattr(response, "output_text", "")
+        if not isinstance(text, str) or not text.strip():
+            raise AIProviderError(provider_code="response_empty")
         return ProviderResult(
-            text=getattr(response, "output_text", "") or "",
+            text=text,
             response_id=getattr(response, "id", "") or "",
             request_id=getattr(response, "_request_id", "") or "",
             usage=_usage(response),

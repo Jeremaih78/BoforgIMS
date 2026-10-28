@@ -1,23 +1,29 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Daily Planner · Boforg AI Tasker{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/planner.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/planner.css' %}"><link rel="stylesheet" href="{% static 'tasker/css/planning.css' %}?v=stage6-20261027">{% endblock %}
 {% block content %}
 <div class="planner-page">
+  {% include 'tasker/planning/nav.html' %}
+  <form method="get" class="planning-datebar" aria-label="Choose intentions date"><a class="btn btn-outline-secondary" href="?date={{ previous_date|date:'Y-m-d' }}" aria-label="Previous day">←</a><label for="intentionsDate">Date</label><input id="intentionsDate" class="form-control" type="date" name="date" value="{{ plan_date|date:'Y-m-d' }}"><button class="btn btn-outline-secondary" type="submit">Go</button><a class="btn btn-outline-secondary" href="?date={{ next_date|date:'Y-m-d' }}" aria-label="Next day">→</a></form>
+  {% if capacity %}{% include 'tasker/planning/capacity.html' %}{% endif %}
+  {% if capacity_error %}<p class="planning-warning" role="alert">Capacity is unavailable for this local date: {{ capacity_error }}</p>{% endif %}
+  <p class="small text-muted">Selections below record your intentions for this date. Review and accept time blocks separately to reserve feasible capacity.</p>
   <header class="planner-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
     <div><a href="{% url 'ims:tasker:index' %}" class="planner-back"><i class="bi bi-arrow-left me-1"></i>Today dashboard</a><div class="planner-kicker mt-3">{{ plan_date|date:"l, j F Y" }}</div><h1 class="display-6 fw-bold mb-1">Daily planning</h1><p class="text-muted mb-0">Decide what matters before the day decides for you.</p></div>
-    <div class="d-flex flex-wrap gap-2">{% if plan and perms.tasker.view_dailyreview %}<a href="{% url 'ims:tasker:daily_review' %}" class="btn btn-secondary"><i class="bi bi-moon-stars me-2"></i>{% if review %}View review{% else %}End day review{% endif %}</a>{% endif %}{% if perms.tasker.add_task %}<a href="{% url 'ims:tasker:task_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-2"></i>Create task</a>{% endif %}</div>
+    <div class="d-flex flex-wrap gap-2">{% if plan and perms.tasker.view_dailyreview %}<a href="{% url 'ims:tasker:daily_review' %}?date={{ plan_date|date:'Y-m-d' }}" class="btn btn-secondary"><i class="bi bi-moon-stars me-2"></i>{% if review %}View review{% else %}End day review{% endif %}</a>{% endif %}{% if perms.tasker.add_task %}<a href="{% url 'ims:tasker:task_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-2"></i>Create task</a>{% endif %}</div>
   </header>
 
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <form method="post" novalidate data-tasker-edit-form>
+    {% csrf_token %}{{ form.plan_version }}
+    {% include 'tasker/includes/form_errors.html' %}
+    <p class="small text-muted" role="status" data-tasker-form-status>{% if form.errors %}Changes not saved. Your draft is below.{% endif %}</p>
     <div class="row g-4">
       <div class="col-xl-8">
         <section class="planner-panel p-4 mb-4">
           <div class="planner-section-heading"><span class="planner-number">01</span><div><div class="planner-kicker">Direction</div><h2 class="h4 mb-0">Today’s focus area</h2></div></div>
           <p class="text-muted small mt-3">Describe the single theme that should guide your decisions today.</p>
-          {{ form.focus_area }}{% for error in form.focus_area.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          <label class="visually-hidden" for="{{ form.focus_area.id_for_label }}">Today's focus area</label>{{ form.focus_area }}{% for error in form.focus_area.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
         </section>
 
         <section class="planner-panel p-4 mb-4">
@@ -37,9 +43,9 @@
       </div>
 
       <div class="col-xl-4">
-        <section class="planner-panel planner-quote-panel p-4 mb-4"><i class="bi bi-quote planner-quote-icon"></i><div class="planner-kicker mb-2">Motivational quote</div>{{ form.motivational_quote }}<small class="text-muted d-block mt-2">Keep it grounded and useful—not decorative.</small></section>
-        <section class="planner-panel p-4 mb-4"><div class="planner-section-heading"><span class="planner-number">04</span><div><div class="planner-kicker">Capture</div><h2 class="h5 mb-0">Quick notes</h2></div></div><div class="mt-3">{{ form.quick_notes }}</div><small class="text-muted d-block mt-2">These notes also appear on your Today Dashboard.</small></section>
-        <section class="planner-summary p-4"><div class="d-flex align-items-center gap-3 mb-3"><span class="planner-summary-icon"><i class="bi bi-compass"></i></span><div><div class="planner-kicker">Ready?</div><h2 class="h5 mb-0">Commit to the plan</h2></div></div><p class="text-muted small">A useful plan is specific enough to guide action and small enough to finish.</p>{% if can_edit %}<button class="btn btn-primary w-100" type="submit"><i class="bi bi-check2-circle me-2"></i>Save daily plan</button>{% else %}<button class="btn btn-secondary w-100" disabled>Edit permission required</button>{% endif %}{% if plan %}<small class="text-muted d-block text-center mt-2">Last saved {{ plan.updated_at|timesince }} ago</small>{% endif %}</section>
+        <section class="planner-panel planner-quote-panel p-4 mb-4"><i class="bi bi-quote planner-quote-icon"></i><div class="planner-kicker mb-2">Motivational quote</div><label class="visually-hidden" for="{{ form.motivational_quote.id_for_label }}">Motivational quote</label>{{ form.motivational_quote }}<small class="text-muted d-block mt-2">Keep it grounded and useful—not decorative.</small></section>
+        <section class="planner-panel p-4 mb-4"><div class="planner-section-heading"><span class="planner-number">04</span><div><div class="planner-kicker">Capture</div><h2 class="h5 mb-0">Quick notes</h2></div></div><div class="mt-3"><label class="visually-hidden" for="{{ form.quick_notes.id_for_label }}">Quick notes</label>{{ form.quick_notes }}</div><small class="text-muted d-block mt-2">These notes also appear on your Today Dashboard.</small></section>
+        <section class="planner-summary p-4"><div class="d-flex align-items-center gap-3 mb-3"><span class="planner-summary-icon"><i class="bi bi-compass"></i></span><div><div class="planner-kicker">Ready?</div><h2 class="h5 mb-0">Save your intentions</h2></div></div><p class="text-muted small">These selections are intentions. Review and accept time blocks separately after checking capacity.</p>{% if can_edit %}<button class="btn btn-primary w-100" type="submit"><i class="bi bi-check2-circle me-2"></i>Save daily intentions</button>{% else %}<button class="btn btn-secondary w-100" disabled>Edit permission required</button>{% endif %}{% if plan %}<small class="text-muted d-block text-center mt-2">Last saved {{ plan.updated_at|timesince }} ago</small>{% endif %}</section>
       </div>
     </div>
   </form>

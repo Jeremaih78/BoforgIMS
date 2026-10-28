@@ -1,75 +1,71 @@
-.tasker-route-loader { height:3px;left:0;opacity:0;overflow:hidden;pointer-events:none;position:fixed;right:0;top:0;transition:opacity .15s ease;z-index:2000; }
-.tasker-route-loader span { animation:tasker-loader 1s ease-in-out infinite;background:linear-gradient(90deg,transparent,#4da3ff,#a86cff,transparent);display:block;height:100%;transform:translateX(-100%);width:55%; }
-.tasker-route-loader.is-active { opacity:1; }
-@keyframes tasker-loader { to { transform:translateX(280%); } }
-.tasker-global-modal { background:#0f2435;border:1px solid rgba(255,255,255,.1);border-radius:1.15rem;box-shadow:0 1.5rem 4rem rgba(0,0,0,.5); }.tasker-global-modal .form-label{color:var(--muted);font-size:.8rem;}.tasker-ui-kicker{color:#82baff;font-size:.68rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;}
-.tasker-shortcut-row { align-items:center;border-top:1px solid rgba(255,255,255,.07);display:flex;font-size:.82rem;justify-content:space-between;padding:.75rem 0; }.tasker-shortcut-row:first-child{border-top:0}.tasker-shortcut-row kbd{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:.3rem;color:var(--text);font-size:.67rem;min-width:1.6rem;text-align:center;}
-.tasker-submit-spinner { animation:tasker-spin .7s linear infinite;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;height:.85rem;margin-right:.45rem;vertical-align:-.1rem;width:.85rem; }
-@keyframes tasker-spin { to { transform:rotate(360deg); } }
-.tasker-quick-actions { align-items:center;display:flex;gap:.35rem;position:relative;z-index:2; }.tasker-icon-action{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:.55rem;color:var(--muted);display:inline-flex;height:2rem;justify-content:center;text-decoration:none;width:2rem;}.tasker-icon-action:hover{background:rgba(77,163,255,.12);border-color:rgba(77,163,255,.3);color:#82baff;}
-.tasker-circle-progress { align-items:center;background:conic-gradient(var(--primary) calc(var(--value) * 1%),rgba(255,255,255,.08) 0);border-radius:50%;display:flex;height:3.4rem;justify-content:center;position:relative;width:3.4rem;}.tasker-circle-progress::before{background:#162c41;border-radius:inherit;content:"";inset:.34rem;position:absolute}.tasker-circle-progress strong{font-size:.72rem;position:relative;}
-[data-tasker-animate] { animation:tasker-enter .3s ease both;animation-delay:calc(var(--stagger,0) * 45ms); }
-@keyframes tasker-enter { from { opacity:0;transform:translateY(.45rem); } }
-@media(prefers-reduced-motion:reduce){.tasker-route-loader span,.tasker-submit-spinner,[data-tasker-animate]{animation:none}.tasker-capture,.task-card{transition:none!important}}
-
-/* Bootstrap utilities and native controls must use the same dark palette. */
-.tasker-app {
-  --bs-body-color: var(--text);
-  --bs-body-color-rgb: 234, 243, 251;
-  --bs-body-bg: #13283c;
-  --bs-secondary-color: #b3c7d9;
-  --bs-secondary-color-rgb: 179, 199, 217;
-  --bs-tertiary-color: #a9c1d6;
-  --bs-emphasis-color: #f4f8fc;
-  --bs-primary: #82baff;
-  --bs-primary-rgb: 130, 186, 255;
-  --bs-success: #78e6b0;
-  --bs-border-color: #395166;
-  color-scheme: dark;
-  line-height: 1.6;
+/* Tasker interaction primitives. Theme and shell tokens live in shell.css. */
+.tasker-app .tasker-route-loader {
+  position: fixed; inset: 0 0 auto; height: 3px; overflow: hidden;
+  opacity: 0; pointer-events: none; z-index: 2000; transition: opacity .15s ease;
 }
-.tasker-app .text-muted, .tasker-app .text-secondary, .tasker-app .form-text { color: #b3c7d9 !important; }
-.tasker-app .content > .container-fluid { max-width: 1600px; padding: clamp(1rem, 2.4vw, 2rem); padding-bottom: 7rem; }
-.tasker-app .sidebar .nav-link { border: 0; border-radius: .6rem; margin-bottom: .2rem; font-size: .9rem; }
-.tasker-app .sidebar .nav-link.active { background: #4da3ff22 !important; box-shadow: inset 3px 0 #4da3ff; color: #eaf3fb; }
-.tasker-app .sidebar .nav-link:hover { background: #ffffff0d !important; }
-.tasker-app .form-control, .tasker-app .form-select { color: var(--text); border-color: #456077; }
-.tasker-app .form-control:focus, .tasker-app .form-select:focus { background-color: #0f2435; color: #f4f8fc; border-color: #82baff; }
-.tasker-app .form-select option { background: #0f2435; color: #eaf3fb; }
-.tasker-app form .input-group > input.form-control:not([type=checkbox]):not([type=radio]) { width: 1%; min-width: 0; }
-.tasker-app .tasker-card button[type="submit"] { flex-shrink: 0; }
-.tasker-app .form-control::placeholder { color: #a9c1d6; opacity: 1; }
-.tasker-app .btn { border-radius: .6rem; display: inline-flex; align-items: center; justify-content: center; }
-.tasker-app .btn-primary { color: #071827; font-weight: 650; }
-.tasker-app .btn-primary:hover { background: #82baff; border-color: #82baff; }
-.tasker-app .btn-primary > span { color: inherit; }
-.tasker-app .btn-outline-primary { --bs-btn-color: #82baff; --bs-btn-border-color: #619cda; --bs-btn-hover-bg: #234767; --bs-btn-hover-color: #fff; }
-.tasker-app .btn-outline-success { --bs-btn-color: #78e6b0; --bs-btn-border-color: #438c6c; }
-.tasker-app .btn-outline-danger { --bs-btn-color: #ff9c9c; --bs-btn-border-color: #bc6571; }
-.tasker-app .table { --bs-table-bg: transparent; --bs-table-color: var(--text); --bs-table-border-color: #395166; background: transparent; }
-.tasker-app .table th, .tasker-app .table td { color: var(--text); border-color: #395166; }
-.tasker-app .table thead th { color: #b3c7d9; }
-.tasker-app .tasker-icon-action { height: 2.75rem; width: 2.75rem; }
-.tasker-app .tasker-task-link { overflow-wrap: anywhere; }
-.tasker-app .tasker-ai-button { gap: .75rem; min-height: 48px; }
-.tasker-app .tasker-ai-button:not(:disabled):hover { background: #4da3ff1f; border-color: #619cda; }
-.tasker-app .tasker-ai-button:disabled { cursor: not-allowed; }
-.tasker-app .tasker-ai-button small { color: #c2c9f5; text-align: right; }
-.tasker-app .ai-action-card:disabled { opacity: 1; border-style: dashed; color: #b3c7d9; }
-.tasker-app .tasker-empty-state { border-radius: .85rem; background: #0f24354d; }
-.tasker-app .tasker-empty-state > i { color: #a9c1d6; }
-.tasker-app .tasker-timeline-item.is-complete { opacity: 1; }
-@media (min-width: 992px) {
-  .tasker-app .sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
+.tasker-app .tasker-route-loader span {
+  display: block; height: 100%; width: 55%; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--tk-accent), transparent);
+  animation: tasker-loader 1s ease-in-out infinite;
 }
+.tasker-app .tasker-route-loader.is-active { opacity: 1; }
+@keyframes tasker-loader { to { transform: translateX(280%); } }
+.tasker-app .tasker-global-modal {
+  background: var(--tk-surface); color: var(--tk-text); border: 1px solid var(--tk-line);
+  border-radius: var(--tk-radius-lg); box-shadow: var(--tk-shadow-float);
+}
+.tasker-app .tasker-ui-kicker {
+  color: var(--tk-accent); font-size: .7rem; font-weight: 750;
+  letter-spacing: .09em; text-transform: uppercase;
+}
+.tasker-app .tasker-shortcut-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .8rem 0; border-top: 1px solid var(--tk-line); font-size: .9rem;
+}
+.tasker-app .tasker-shortcut-row:first-child { border-top: 0; }
+.tasker-app kbd {
+  display: inline-block; min-width: 1.7rem; padding: .2rem .4rem;
+  border: 1px solid var(--tk-line-strong); border-radius: .35rem;
+  background: var(--tk-surface-raised); color: var(--tk-text);
+  font-size: .73rem; line-height: 1.35; text-align: center; box-shadow: 0 1px 0 var(--tk-line-strong);
+}
+.tasker-app .tasker-submit-spinner {
+  display: inline-block; width: .9rem; height: .9rem; margin-right: .45rem;
+  vertical-align: -.1rem; border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: tasker-spin .7s linear infinite;
+}
+@keyframes tasker-spin { to { transform: rotate(360deg); } }
+.tasker-app .tasker-quick-actions { display: flex; align-items: center; gap: .4rem; position: relative; z-index: 2; }
+.tasker-app .tasker-icon-action {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.75rem; height: 2.75rem; flex-shrink: 0;
+  border: 1px solid var(--tk-line); border-radius: var(--tk-radius-sm);
+  background: var(--tk-surface); color: var(--tk-muted); text-decoration: none;
+}
+.tasker-app .tasker-icon-action:hover { background: var(--tk-accent-soft); border-color: var(--tk-accent); color: var(--tk-accent); }
+.tasker-app .tasker-circle-progress {
+  display: flex; align-items: center; justify-content: center; position: relative;
+  width: 3.4rem; height: 3.4rem; border-radius: 50%;
+  background: conic-gradient(var(--tk-accent) calc(var(--value) * 1%), var(--tk-line) 0);
+}
+.tasker-app .tasker-circle-progress::before { position: absolute; inset: .34rem; border-radius: inherit; background: var(--tk-surface); content: ""; }
+.tasker-app .tasker-circle-progress strong { position: relative; font-size: .75rem; }
+.tasker-app [data-tasker-animate] { animation: tasker-enter .24s ease both; animation-delay: calc(var(--stagger, 0) * 35ms); }
+@keyframes tasker-enter { from { opacity: 0; transform: translateY(.3rem); } }
+.tasker-app .tasker-section-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.tasker-app .tasker-panel { padding: clamp(1rem, 2.2vw, 1.75rem); border: 1px solid var(--tk-line); border-radius: var(--tk-radius-lg); background: var(--tk-surface); box-shadow: var(--tk-shadow); }
+.tasker-app .tasker-empty-state { padding: 2rem 1rem; border: 1px dashed var(--tk-line-strong); border-radius: var(--tk-radius); background: var(--tk-surface-subtle); color: var(--tk-muted); text-align: center; }
+.tasker-app .tasker-empty-state > i { display: block; margin-bottom: .75rem; color: var(--tk-muted); font-size: 1.8rem; }
+.tasker-app .tasker-state { display: flex; align-items: center; gap: .5rem; min-height: 2rem; color: var(--tk-muted); font-size: .85rem; line-height: 1.5; }
+.tasker-app .tasker-state[data-state="saved"] { color: var(--tk-success); }
+.tasker-app .tasker-state[data-state="error"] { color: var(--tk-danger); }
+.tasker-app .tasker-state[data-state="unsaved"], .tasker-app .tasker-state[data-state="pending"] { color: var(--tk-warning); }
+.tasker-app .tasker-error-summary { padding: 1rem 1.2rem; border: 1px solid var(--tk-danger); border-inline-start-width: 4px; border-radius: var(--tk-radius-sm); background: var(--tk-danger-soft); color: var(--tk-danger); }
+.tasker-app .tasker-error-summary a { color: inherit; text-decoration: underline; }
+.tasker-app .tasker-preferences-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.tasker-app .tasker-preferences-grid > * { min-width: 0; }
+.tasker-app .tasker-preferences-grid .form-control { max-width: 16rem; }
 @media (max-width: 575.98px) {
-  .tasker-app .tasker-card { padding: 1.15rem !important; }
-  .tasker-app .tasker-hero .btn { flex: 1 1 auto; }
-  .tasker-app .tasker-progress-card { gap: 1rem !important; }
+  .tasker-app .tasker-preferences-grid { grid-template-columns: minmax(0, 1fr); }
+  .tasker-app .tasker-preferences-grid .form-control { max-width: 100%; }
 }
-
-/* Keep capture available without covering notes, cards or their actions. */
-.tasker-app .topbar { position: sticky; top: 0; z-index: 1020; background: #101f2c; }
-.tasker-capture { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: .55rem .8rem; border: 1px solid #849cff; border-radius: .65rem; background: linear-gradient(135deg,#2d88ff,#6f5cff); color: white; font-weight: 650; }
-.tasker-capture kbd { background: #182752; color: white; font-size: .7rem; }
-@media(max-width:575.98px) { .tasker-capture span, .tasker-capture kbd { display: none; } .tasker-capture { width: 44px; justify-content: center; } .tasker-app .topbar .text-secondary { max-width: 5rem; } }

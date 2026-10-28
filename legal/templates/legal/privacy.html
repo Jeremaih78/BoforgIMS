@@ -1,87 +1,95 @@
-﻿<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Privacy Policy – Boforg Technologies Private Limited (botintegration)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex">
-  <style>
-    body {font-family: system-ui, Arial, sans-serif; line-height: 1.6; margin: 2rem; max-width: 900px}
-    h1,h2 {line-height:1.25}
-    code, pre {background:#f6f8fa; padding:0.2rem 0.4rem; border-radius:6px}
-    .box {background:#fafafa; border:1px solid #eee; padding:1rem; border-radius:8px}
-    small {color:#666}
-  </style>
-</head>
-<body>
-  <h1>Privacy Policy</h1>
-  <p><small>Effective date: 26 September 2025</small></p>
+{% extends "legal/base.html" %}
+{% block page_title %}Privacy Policy{% endblock %}
+{% block description %}How Boforg handles information across its website, shop, IMS, Tasker AI and authorized Meta and WhatsApp services.{% endblock %}
+{% block canonical_path %}/legal/privacy/{% endblock %}
+{% block privacy_current %}aria-current="page"{% endblock %}
+{% block heading %}Privacy Policy{% endblock %}
+{% block content %}
+  <p class="lede">This policy explains how Boforg Technologies Private Limited ("Boforg", "we", "us") collects, uses, shares and retains information when you visit our websites, buy from us or use our business software and connected services.</p>
 
-  <p>This Privacy Policy explains how <strong>Boforg Technologies Private Limited</strong> (“we”, “us”) processes information when you use
-  <strong>botintegration</strong>, a system that connects to the Meta (Facebook/Instagram) Graph API to respond to page comments and inbox messages,
-  post content, and provide analytics.</p>
+  <nav class="contents" aria-label="Privacy policy contents">
+    <strong>In this policy</strong>
+    <ul>
+      <li><a href="#services">Services and responsibility</a></li>
+      <li><a href="#information">Information we handle</a></li>
+      <li><a href="#uses">How information is used</a></li>
+      <li><a href="#meta">WhatsApp, Facebook and Instagram</a></li>
+      <li><a href="#ai">Tasker AI</a></li>
+      <li><a href="#providers">Service providers</a></li>
+      <li><a href="#cookies">Cookies and analytics</a></li>
+      <li><a href="#retention">Retention, deletion and your choices</a></li>
+    </ul>
+  </nav>
 
-  <h2>1) Who we are</h2>
-  <p>Boforg Technologies Private Limited, Robert Mugabe Street, Harare, Zimbabwe.<br>
-     Contact: <a href="mailto:adriannzvimbo@gmail.com">adriannzvimbo@gmail.com</a>, Tel: +263786264994</p>
+  <h2 id="services">1. Services and responsibility</h2>
+  <p>This policy covers our company website at <a href="https://boforg.co.zw/">boforg.co.zw</a>, online shop, Inventory Management System (IMS), Tasker productivity and enabled AI features, related APIs, and authorized Meta integrations, including Boforg WABA and services previously described as botintegration.</p>
+  <p>Boforg is responsible for the information it uses to operate its own business and services. When a client business provides information or connects an account for a service we deliver on its instructions, that business remains responsible for its customer communications, notices and permissions. Our role for that processing depends on the service and our agreement with the business.</p>
+  <div class="notice">
+    <p><strong>WhatsApp service availability:</strong> Boforg WABA is currently in setup and review. Automated IMS invoice and quotation delivery, client account onboarding and Business App coexistence are planned features. The sections below cover testing and the authorized service where a feature is enabled; they do not mean every feature is already available.</p>
+  </div>
 
-  <h2>2) What we collect</h2>
+  <h2 id="information">2. Information we handle</h2>
   <ul>
-    <li><strong>Meta Page &amp; Account Data:</strong> page IDs, page names, page access tokens, connected account IDs, and permissions/scopes granted to botintegration.</li>
-    <li><strong>Content &amp; Engagement:</strong> public comments, replies, reactions, message metadata, and message content required to automate replies you configure.</li>
-    <li><strong>Operational Logs:</strong> request/response timestamps, server IPs, error logs, webhook deliveries.</li>
-    <li><strong>Configuration Data:</strong> automation rules, templates, settings you save in the app.</li>
-    <li><strong>Cookies:</strong> session and CSRF cookies for our dashboard; no third-party ad cookies.</li>
+    <li><strong>Contact and account details:</strong> names, business details, email addresses, phone numbers, account identifiers, user roles and information submitted in enquiries or support requests.</li>
+    <li><strong>Shop and transaction records:</strong> session-linked carts, selected products, order items, customer names and email addresses, order notes, prices, totals, currency, payment references, payment-provider responses and order or payment status.</li>
+    <li><strong>IMS business records:</strong> customer and supplier records, quotations, invoices, payments, stock and serial records, shipments, business attachments, finance records and administrative activity.</li>
+    <li><strong>Tasker work information:</strong> tasks, captures, notes, checklists, attachments, goals, plans and reviews, work or focus time, team memberships, coordination, notifications, reports, preferences and activity history.</li>
+    <li><strong>Meta account and messaging information:</strong> authorized business, Page and account identifiers; connected phone numbers and profiles; permissions and access credentials; message templates; recipient details; messages, attachments and delivery or interaction information relevant to an enabled integration. Facebook or Instagram information is handled where those accounts or services are actually connected.</li>
+    <li><strong>AI interaction information:</strong> requests, selected work context, relevant conversation history, generated responses, feedback and usage records when AI features are enabled and used.</li>
+    <li><strong>Technical and usage information:</strong> IP addresses and connection information, browser or device details, cookies or similar identifiers, timestamps, security and error logs, and website interaction events where analytics runs.</li>
   </ul>
+  <p>We receive information directly from you, from the business using our software, through use of the service, and from connected platforms or providers within the access you authorize.</p>
 
-  <h2>3) How we use the data</h2>
+  <h2 id="uses">3. How information is used</h2>
+  <p>We use information to answer enquiries, administer accounts and access, operate the shop, process orders and payments, maintain business records, support employee work, provide requested integrations, investigate problems, prevent misuse and meet applicable record-keeping or legal obligations.</p>
+  <p>Depending on the activity and applicable law, processing may be necessary to provide an agreed service, respond to a request, meet a legal obligation, support legitimate business or security needs, or act on consent. Where a feature relies on consent, you may withdraw it by contacting us or using the relevant platform controls. This does not undo processing already lawfully completed.</p>
+
+  <h2 id="meta">4. WhatsApp, Facebook and Instagram</h2>
+  <p>For authorized WhatsApp testing and enabled client services, account details identify the business and its sending number; recipient details allow delivery to the intended customer; templates and document content prepare the requested notification; and message identifiers, replies and status updates support communication and delivery tracking.</p>
+  <p>Where invoice or quotation delivery is enabled, the customer's name, phone number and document information are used to prepare and send the requested PDF. A business must have the right to provide that information and obtain the recipient's permission for WhatsApp communications. Customers can ask the sending business to stop messages or contact <a href="mailto:info@boforg.co.zw">info@boforg.co.zw</a>. We respect requests to stop communications we control.</p>
+  <p>Where an authorized Facebook or Instagram integration is enabled, Page or business account information, comments, messages and related activity may be used to provide the specific posting, response or reporting functions requested by the account owner.</p>
+  <p>We use Meta Platform Data for the authorized service and its necessary support. We do not sell it, use it to build unrelated advertising profiles, or share one customer's conversations with another customer. Connecting or testing a Meta account does not authorize unrestricted reuse of its data. Meta and WhatsApp also process information under their own terms and privacy policies.</p>
+
+  <h2 id="ai">5. Tasker AI</h2>
+  <p>Where enabled, Tasker AI uses OpenAI to help with activities such as planning, prioritizing, explaining work and drafting suggestions. An AI request can send the user's prompt, relevant conversation history and selected work information to OpenAI. Depending on the feature, that context can include a user's name or internal identifier, task titles and descriptions, deadlines, progress and work-time information.</p>
+  <p>The personal productivity assistant selects context associated with the requesting employee. It does not automatically include private scratchpad or reflection text in its selected work context, and the current Tasker integration does not automatically import WhatsApp conversations. Information you deliberately enter in an AI request may be transmitted as part of that request.</p>
+  <p>Boforg stores conversation content, generated responses, feedback and usage information in our application database for the feature and its administration. Authorized administrative access may be possible. Provider handling also depends on the configured service and the provider's terms; disabling provider response storage is not a promise of zero retention. Only submit information that you are entitled to provide for that purpose.</p>
+
+  <h2 id="providers">6. Sharing and service providers</h2>
+  <p>We share information as needed to provide the service, with the business or authorized people responsible for the relevant records, with providers supporting the applicable feature, and where disclosure is required by law or necessary to address fraud, security incidents or legal claims. We do not sell personal information.</p>
   <ul>
-    <li>Automate replies to comments and inbox messages you instruct us to send.</li>
-    <li>Publish posts you schedule or trigger.</li>
-    <li>Provide analytics (e.g., counts and summaries).</li>
-    <li>Operate, secure, troubleshoot, and improve botintegration.</li>
-    <li>Comply with Meta Platform Terms and applicable law.</li>
+    <li><strong>Hostinger:</strong> hosting and related infrastructure supporting our deployed applications and stored information.</li>
+    <li><strong>Cloudflare:</strong> DNS, network delivery, security and proxy services where used. Its processing depends on the traffic and service configuration.</li>
+    <li><strong>Meta and WhatsApp:</strong> account authorization, template management and message or media transmission for connected integrations.</li>
+    <li><strong>Paynow:</strong> payment initiation and processing for supported shop transactions. Order references, email, amounts and item information may be provided; Boforg receives payment references, responses and status information. Payment credentials should be entered through the payment provider's own process.</li>
+    <li><strong>OpenAI:</strong> prompts, selected work context and conversation information for enabled Tasker AI requests. This is separate from the current WhatsApp account setup and is not an automatic transfer of WhatsApp messages to AI.</li>
+    <li><strong>Google Analytics:</strong> public website usage and interaction information where its analytics scripts run.</li>
+    <li><strong>jsDelivr:</strong> delivery of interface resources, such as styles, icons and libraries, on pages that load them. Your browser connects to the relevant delivery service when requesting these resources.</li>
   </ul>
+  <p>If Amazon S3 storage is enabled for a particular deployment, uploaded media stored there is also processed through Amazon Web Services. Support for that option does not mean it is enabled for every service. Provider terms and privacy practices also apply to their own services. If a new provider or data use materially changes this policy, we will update the relevant information.</p>
 
-  <h2>4) Legal bases</h2>
-  <p>We process data to perform our contract with you, based on your consent where required, and for legitimate interests (security, preventing abuse, improving reliability).</p>
+  <h2 id="cookies">7. Cookies, browser storage and analytics</h2>
+  <p>Necessary cookies and similar identifiers support sign-in, session security, cart contents and checkout. Trusted Boforg subdomains may share session information. Tasker also uses browser storage for interface preferences and some unsaved work; clearing browser storage can remove that local information.</p>
+  <p>Public website pages can load Google Analytics to understand visits and events such as product views, cart or checkout activity and WhatsApp-link clicks. The application's analytics rules exclude internal IMS/Tasker areas and accounts marked as staff or superusers. The current website does not provide a dedicated analytics-consent banner, so this policy does not treat a page visit as an explicit analytics opt-in.</p>
+  <p>You can manage cookies and scripts through your browser or available privacy tools. Blocking necessary storage may affect login, carts or checkout. These standalone legal pages do not load our Google Analytics script.</p>
 
-  <h2>5) Sharing</h2>
-  <ul>
-    <li><strong>No sale of personal data.</strong></li>
-    <li>Service providers (cloud hosting, logging) under contract and only as necessary.</li>
-    <li>Compliance with law or to protect rights, safety, and security.</li>
-  </ul>
+  <h2 id="retention">8. Retention and deletion</h2>
+  <p>Retention depends on the information and why it is held. We retain information while it is needed for the requested service, an active business relationship, transaction support, security, dispute handling or an applicable record-keeping duty. Information that is no longer needed should be removed or de-identified, subject to those requirements.</p>
+  <p>Deleting or archiving an item in a business application may leave a recoverable record or audit history. It does not necessarily erase every stored copy. Financial, order and invoice records may need to be retained for accounting or legal reasons, and backups or provider copies may remain subject to their own storage and retention processes.</p>
+  <p>We do not promise one automatic deletion period across every service. For a deletion request, we will identify the relevant records, verify the request where necessary, remove information that can be erased, and explain any information retained and why. Follow our <a href="/legal/data-deletion/">data deletion instructions</a>. Disconnecting a Meta integration stops the applicable access when the disconnection takes effect; it does not itself erase existing business records or copies held by Meta or recipients.</p>
+  <p><strong>Information received from Meta:</strong> we delete Meta Platform Data as soon as reasonably possible following a valid deletion request, when the applicable service ends, or when the data is no longer needed for the authorized purpose, except where retention is required by applicable law or regulation. Any such retention is limited to the legally required information, and we retain evidence of that requirement. Separately collected invoice or accounting records do not justify retaining unnecessary Meta account or messaging data.</p>
 
-  <h2>6) Retention</h2>
-  <p>Operational logs up to <strong>180 days</strong>. Content/analytics data up to <strong>365 days</strong> (or less if you delete sooner), unless a longer period is required by law or requested for ongoing services.</p>
+  <h2 id="security">9. Security and international processing</h2>
+  <p>We use measures such as HTTPS, authentication and access permissions to protect information. Access depends on the service, user role and operational responsibilities. No internet service or storage system can be guaranteed completely secure.</p>
+  <p>Although Boforg is based in Zimbabwe, its hosting, platform and other providers may process information in other countries. The location and protections depend on the service and provider arrangements. Contact us for information relevant to your use of the service.</p>
 
-  <h2>7) Security</h2>
-  <p>Encryption in transit, access controls, and least-privilege keys. We continuously improve safeguards.</p>
+  <h2 id="choices">10. Your choices and requests</h2>
+  <p>Contact <a href="mailto:info@boforg.co.zw">info@boforg.co.zw</a> to ask about your information, request access or correction, request deletion, withdraw permission where applicable, or raise a privacy concern. We may need to verify your identity or authority. Available rights and restrictions depend on the circumstances and applicable law.</p>
+  <p>If your information is held for another business using our service, you can also contact that business. We may need its instructions or verification of your relationship before changing its records. You can use Meta's account settings to manage connected applications and WhatsApp's controls to block a business. Ask us to stop any optional communications we send to you.</p>
 
-  <h2>8) International transfers</h2>
-  <p>Data may be processed in regions where our infrastructure/providers operate; we take steps to protect it.</p>
+  <h2 id="children">11. Children</h2>
+  <p>Our business software and connected services are not directed to children. If you believe a child has supplied information inappropriately, contact us so we can assess the request and take appropriate action.</p>
 
-  <h2>9) Your choices &amp; rights</h2>
-  <ul>
-    <li>Disconnect our app from your Meta assets at any time.</li>
-    <li>Access/correction/deletion: <a href="mailto:adriannzvimbo@gmail.com">adriannzvimbo@gmail.com</a>.</li>
-    <li>Opt out of non-essential analytics by contacting us.</li>
-  </ul>
-
-  <h2>10) Children</h2>
-  <p>botintegration is not directed to children under 13.</p>
-
-  <h2>11) Meta platform data</h2>
-  <p>We request only permissions needed for the functions you enable and do not use platform data for ads or building independent profiles.</p>
-
-  <h2>12) Data deletion</h2>
-  <p>Request deletion by emailing <a href="mailto:adriannzvimbo@gmail.com">adriannzvimbo@gmail.com</a> or use Meta’s data deletion flow which will call our endpoint and return a confirmation code. See <a href="/legal/data-deletion/">/legal/data-deletion/</a>.</p>
-
-  <h2>13) Changes</h2>
-  <p>We may update this policy and will change the effective date above when we do.</p>
-
-  <p class="box"><strong>Contact:</strong> Boforg Technologies Private Limited, Robert Mugabe Street, Harare, Zimbabwe — <a href="mailto:adriannzvimbo@gmail.com">adriannzvimbo@gmail.com</a><br>
-  Domain: <a href="https://boforg.co.zw">https://boforg.co.zw</a></p>
-</body>
-</html>
+  <h2 id="changes">12. Policy updates</h2>
+  <p>We will revise the date on this page when the policy changes and provide additional notice where appropriate or required. Questions about this policy can be sent to the contact below.</p>
+{% endblock %}

@@ -1,0 +1,257 @@
+/* Loaded after page styles. Every selector is restricted to Tasker. */
+html[data-tasker-user] {
+  --tk-bg: #0c1625; --tk-surface: #142236; --tk-surface-raised: #1b2d44; --tk-surface-subtle: #101d2e;
+  --tk-text: #eaf0f8; --tk-muted: #adbed2; --tk-accent: #94bfff; --tk-accent-hover: #b4d2ff; --tk-accent-soft: #203954;
+  --tk-primary-fill: #94bfff; --tk-primary-text: #10243e; --tk-line: #30435b; --tk-line-strong: #61768f;
+  --tk-success: #88e2b7; --tk-success-soft: #183c33; --tk-warning: #f4ce83; --tk-warning-soft: #3c301c;
+  --tk-danger: #ffacb1; --tk-danger-soft: #48272f; --tk-focus: #ffd57d;
+  --tk-shadow: 0 5px 22px #00000018; --tk-shadow-float: 0 20px 65px #00000055;
+  --tk-radius-sm: .65rem; --tk-radius: .95rem; --tk-radius-lg: 1.2rem;
+  --tk-space-1: .25rem; --tk-space-2: .5rem; --tk-space-3: .75rem; --tk-space-4: 1rem; --tk-space-6: 1.5rem; --tk-space-8: 2rem;
+  color-scheme: dark;
+}
+html[data-tasker-user][data-bs-theme="light"] {
+  --tk-bg: #f4f7fb; --tk-surface: #ffffff; --tk-surface-raised: #edf2f9; --tk-surface-subtle: #f7f9fc;
+  --tk-text: #17283f; --tk-muted: #52657d; --tk-accent: #1a58ac; --tk-accent-hover: #12417f; --tk-accent-soft: #e5effe;
+  --tk-primary-fill: #1a58ac; --tk-primary-text: #ffffff; --tk-line: #dce4ef; --tk-line-strong: #7e90a8;
+  --tk-success: #14633e; --tk-success-soft: #e7f5ee; --tk-warning: #805100; --tk-warning-soft: #fff5de;
+  --tk-danger: #ab2738; --tk-danger-soft: #fff0f1; --tk-focus: #895900;
+  --tk-shadow: 0 5px 22px #223c6010; --tk-shadow-float: 0 20px 65px #223c602a;
+  color-scheme: light;
+}
+.tasker-app {
+  --bg: var(--tk-bg); --bg-2: var(--tk-surface); --card: var(--tk-surface); --text: var(--tk-text); --muted: var(--tk-muted);
+  --primary: var(--tk-accent); --primary-2: var(--tk-accent-hover); --danger: var(--tk-danger); --success: var(--tk-success);
+  --bs-body-color: var(--tk-text); --bs-body-bg: var(--tk-bg); --bs-emphasis-color: var(--tk-text); --bs-secondary-color: var(--tk-muted);
+  --bs-tertiary-color: var(--tk-muted); --bs-border-color: var(--tk-line); --bs-primary: var(--tk-accent); --bs-success: var(--tk-success); --bs-danger: var(--tk-danger);
+  --bs-primary-rgb: 148, 191, 255; --bs-success-rgb: 136, 226, 183; --bs-secondary-color-rgb: 173, 190, 210; --bs-body-color-rgb: 234, 240, 248;
+  --bs-danger-rgb: 255, 172, 177; --bs-warning-rgb: 244, 206, 131; --bs-info-rgb: 148, 191, 255;
+  --bs-link-color: var(--tk-accent); --bs-link-hover-color: var(--tk-accent-hover);
+  background: var(--tk-bg); color: var(--tk-text); line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased;
+}
+html[data-tasker-user][data-bs-theme="light"] .tasker-app { --bs-primary-rgb: 26, 88, 172; --bs-success-rgb: 20, 99, 62; --bs-secondary-color-rgb: 82, 101, 125; --bs-body-color-rgb: 23, 40, 63; --bs-danger-rgb: 171, 39, 56; --bs-warning-rgb: 128, 81, 0; --bs-info-rgb: 26, 88, 172; }
+.tasker-app *, .tasker-app *::before, .tasker-app *::after { box-sizing: border-box; }
+.tasker-app .app { min-height: 100dvh; }
+.tasker-app .content { min-width: 0; background: var(--tk-bg); }
+.tasker-app .content > .container-fluid { max-width: 1512px; margin-inline: auto; padding: clamp(1rem, 2.7vw, 2.5rem); padding-bottom: 3rem; }
+.tasker-app :is(h1, h2, h3, h4, h5, h6) { color: var(--tk-text); line-height: 1.25; letter-spacing: -.025em; }
+.tasker-app h1 { font-weight: 750; font-size: clamp(1.7rem, 2.8vw, 2.25rem); overflow-wrap: anywhere; }
+.tasker-app :is(h2.h4, h2.h5) { font-weight: 700; }
+.tasker-app :is(p, dd, li, a) { overflow-wrap: anywhere; }
+.tasker-app a { color: var(--tk-accent); text-underline-offset: .2em; }
+.tasker-app a:hover { color: var(--tk-accent-hover); }
+.tasker-app .text-muted, .tasker-app .text-secondary, .tasker-app .form-text { color: var(--tk-muted) !important; }
+.tasker-app :is(.tasker-label, .tasker-eyebrow, .task-eyebrow, .planner-kicker, .ai-kicker, .task-results-count) { color: var(--tk-muted); font-size: .72rem; font-weight: 700; letter-spacing: .085em; }
+.tasker-app :is(.tasker-eyebrow, .planner-kicker, .ai-kicker) { color: var(--tk-accent); }
+.tasker-app :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--tk-focus); outline-offset: 3px; }
+.tasker-app :is(input, select, textarea) { scroll-margin-block: 7rem; }
+.tasker-app .skip-link { background: var(--tk-surface); color: var(--tk-text); border: 2px solid var(--tk-focus); border-radius: var(--tk-radius-sm); }
+.tasker-app .tasker-skip-link { position: fixed; top: -100px; left: 1rem; z-index: 2000; padding: .75rem; border: 2px solid var(--tk-focus); border-radius: var(--tk-radius-sm); background: var(--tk-surface); color: var(--tk-text); }
+.tasker-app .tasker-skip-link:focus { top: .5rem; }
+
+/* Navigation and location. */
+.tasker-app .tasker-sidebar { width: 246px; padding: 1.5rem 1rem !important; background: var(--tk-surface); color: var(--tk-text); border-inline-end: 1px solid var(--tk-line); }
+.tasker-app .tasker-brand { display: flex; align-items: center; gap: .8rem; padding: .3rem .65rem 1.25rem; color: var(--tk-text) !important; text-decoration: none; font-size: 1.05rem; font-weight: 750; }
+.tasker-app .tasker-brand i { display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid var(--tk-line); border-radius: .75rem; background: var(--tk-accent-soft); color: var(--tk-accent); }
+.tasker-app .tasker-brand small { display: block; color: var(--tk-muted); font-size: .64rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.tasker-app .tasker-nav-heading { padding: 1.25rem .8rem .6rem; color: var(--tk-muted); font-size: .64rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+.tasker-app .tasker-primary-nav { display: grid; gap: .3rem; }
+.tasker-app .tasker-nav-link { display: flex; align-items: center; gap: .8rem; width: 100%; min-height: 48px; padding: .7rem .85rem; border: 1px solid transparent; border-radius: .8rem; background: transparent; color: var(--tk-muted); font-family: inherit; font-size: .91rem; font-weight: 550; text-align: left; text-decoration: none; line-height: 1.3; }
+.tasker-app .tasker-nav-link:hover { background: var(--tk-surface-raised); color: var(--tk-text); }
+.tasker-app .tasker-nav-link[aria-current="page"], .tasker-app .tasker-nav-link.active { background: var(--tk-accent-soft); color: var(--tk-accent); border-color: transparent; font-weight: 700; box-shadow: inset 3px 0 var(--tk-accent); }
+.tasker-app .tasker-nav-icon { display: inline-flex; justify-content: center; width: 1.35rem; font-size: 1.05rem; flex-shrink: 0; color: inherit; }
+.tasker-app .tasker-nav-label { color: inherit; }
+.tasker-app .tasker-nav-link > span { color: inherit; }
+.tasker-app .tasker-nav-dot { width: .35rem; height: .35rem; margin-inline-start: auto; border-radius: 50%; background: var(--tk-accent); }
+.tasker-app .tasker-nav-secondary { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--tk-line); }
+.tasker-app .tasker-nav-secondary .tasker-nav-link { min-height: 44px; font-size: .84rem; }
+.tasker-app .tasker-module-switch { margin: 1.5rem .35rem .25rem; border: 1px solid var(--tk-line); border-radius: .8rem; background: var(--tk-surface-subtle); }
+.tasker-app .tasker-module-switch summary { display: flex; align-items: center; gap: .55rem; min-height: 44px; padding: .8rem; cursor: pointer; color: var(--tk-muted); font-size: .81rem; font-weight: 650; }
+.tasker-app .tasker-module-switch summary > i { color: inherit; }
+.tasker-app .tasker-module-switch summary > i:last-child { margin-inline-start: auto; }
+.tasker-app .tasker-module-switch[open] summary > i:last-child { transform: rotate(180deg); }
+.tasker-app .tasker-module-switch[open] summary { border-bottom: 1px solid var(--tk-line); }
+.tasker-app .tasker-module-switch a { display: flex; align-items: center; min-height: 44px; padding: .6rem .85rem; color: var(--tk-muted); font-size: .82rem; text-decoration: none; }
+.tasker-app .tasker-module-switch a:hover { color: var(--tk-accent); background: var(--tk-accent-soft); }
+.tasker-app .tasker-sidebar-footer { display: flex; align-items: center; gap: .5rem; padding: 1.3rem .6rem .4rem; color: var(--tk-muted); font-size: .68rem; }
+.tasker-app .tasker-status-dot { width: .4rem; height: .4rem; flex-shrink: 0; border-radius: 50%; background: var(--tk-success); }
+.tasker-app .tasker-topbar { position: sticky; top: 0; z-index: 1020; min-height: 76px; padding: .75rem clamp(1rem, 2.7vw, 2.5rem) !important; display: flex; align-items: center; flex-wrap: nowrap; gap: 1rem; background: var(--tk-bg); border-bottom: 1px solid var(--tk-line); }
+.tasker-app .tasker-topbar-location { min-width: 0; flex: 1; display: flex; align-items: center; gap: .7rem; }
+.tasker-app .tasker-topbar-location small, .tasker-app .tasker-topbar-breadcrumb { display: block; color: var(--tk-muted); font-size: .68rem; letter-spacing: .04em; }
+.tasker-app .tasker-page-label { display: block; color: var(--tk-text); font-size: .93rem; font-weight: 650; }
+.tasker-app .tasker-topbar-actions { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.tasker-app .tasker-identity { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tk-muted); font-size: .8rem; }
+.tasker-app .tasker-topbar .btn { flex-shrink: 0; }
+.tasker-app .tasker-capture { display: inline-flex; align-items: center; justify-content: center; gap: .55rem; min-height: 44px; padding: .6rem .9rem; border: 1px solid var(--tk-primary-fill); border-radius: .75rem; background: var(--tk-primary-fill); color: var(--tk-primary-text); font-weight: 700; font-size: .85rem; }
+.tasker-app .tasker-capture :is(span, i) { color: inherit; }
+.tasker-app .tasker-capture:hover { filter: brightness(.96); }
+.tasker-app .tasker-capture kbd { background: transparent; color: inherit; border-color: currentColor; box-shadow: none; font-size: .65rem; opacity: .85; }
+.tasker-app .tasker-mobile-nav { display: none; }
+.tasker-app .input-group { flex-wrap: nowrap; min-width: 0; }
+.tasker-app form .input-group > input.form-control:not([type=checkbox]):not([type=radio]) { width: 1%; min-width: 0; flex: 1 1 0; }
+.tasker-app .input-group > .input-group-text { flex: 0 0 auto; }
+.tasker-app .tasker-filter-options summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; color: var(--tk-muted); font-size: .85rem; font-weight: 650; cursor: pointer; list-style: none; }
+.tasker-app .tasker-filter-options summary::-webkit-details-marker { display: none; }
+.tasker-app .tasker-filter-options[open] summary i { transform: rotate(180deg); }
+.tasker-app .tasker-workspace-nav { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--tk-line); }
+
+/* Fields and actions. */
+.tasker-app .form-label { color: var(--tk-text); font-size: .86rem; font-weight: 600; }
+.tasker-app .form-text { font-size: .8rem; line-height: 1.55; }
+.tasker-app :is(.form-control, .form-select, .input-group-text) { min-height: 44px; color: var(--tk-text); background-color: var(--tk-surface); border: 1px solid var(--tk-line-strong); border-radius: var(--tk-radius-sm); font-size: .95rem; }
+.tasker-app :is(.form-control, .form-select):focus { color: var(--tk-text); background-color: var(--tk-surface); border-color: var(--tk-accent); box-shadow: 0 0 0 .2rem var(--tk-accent-soft); }
+.tasker-app .form-control::placeholder { color: var(--tk-muted); opacity: 1; }
+.tasker-app .form-select option { background: var(--tk-surface); color: var(--tk-text); }
+.tasker-app :is(.form-control, .form-select):disabled { color: var(--tk-muted); background: var(--tk-surface-raised); cursor: not-allowed; }
+.tasker-app .form-check { min-height: 44px; padding-block: .4rem; }
+.tasker-app .form-check-input { border-color: var(--tk-line-strong); background-color: var(--tk-surface); accent-color: var(--tk-accent); }
+.tasker-app .form-check-input:checked { background-color: #1a58ac; border-color: var(--tk-accent); }
+.tasker-app .form-check-label { color: var(--tk-text); cursor: pointer; }
+.tasker-app :is(.form-control, .form-select)[aria-invalid="true"] { border-color: var(--tk-danger); }
+.tasker-app :is(.errorlist, .invalid-feedback), .tasker-app :is(.errorlist, .invalid-feedback) li { color: var(--tk-danger) !important; font-size: .82rem; }
+.tasker-app .btn { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; min-height: 44px; padding: .6rem .95rem; border-radius: var(--tk-radius-sm); font-size: .87rem; font-weight: 650; line-height: 1.4; white-space: normal; }
+.tasker-app .btn :is(span, i, small) { color: inherit; }
+.tasker-app .btn-primary { background: var(--tk-primary-fill); border-color: var(--tk-primary-fill); color: var(--tk-primary-text); }
+.tasker-app .btn-primary:hover, .tasker-app .btn-primary:focus-visible { background: var(--tk-accent-hover); border-color: var(--tk-accent-hover); color: var(--tk-primary-text); }
+.tasker-app :is(.btn-secondary, .btn-outline-light) { background: var(--tk-surface); border-color: var(--tk-line-strong); color: var(--tk-text); }
+.tasker-app :is(.btn-secondary, .btn-outline-light):hover { background: var(--tk-surface-raised); color: var(--tk-text); border-color: var(--tk-muted); }
+.tasker-app .btn-outline-primary { color: var(--tk-accent); border-color: var(--tk-accent); background: transparent; }
+.tasker-app .btn-outline-primary:hover { background: var(--tk-accent-soft); color: var(--tk-accent); }
+.tasker-app .btn-outline-danger { color: var(--tk-danger); border-color: var(--tk-danger); background: transparent; }
+.tasker-app .btn-outline-danger:hover { background: var(--tk-danger-soft); color: var(--tk-danger); }
+.tasker-app .btn-outline-success { color: var(--tk-success); border-color: var(--tk-success); background: transparent; }
+.tasker-app .btn-outline-success:hover { background: var(--tk-success-soft); color: var(--tk-success); }
+.tasker-app :is(.btn, button):disabled { cursor: not-allowed; }
+.tasker-app .btn[aria-busy="true"] { cursor: wait; }
+.tasker-app .btn-close { min-width: 44px; min-height: 44px; padding: .75rem; flex-shrink: 0; }
+html[data-tasker-user][data-bs-theme="light"] .tasker-app .btn-close-white { filter: none; }
+
+/* Adopt existing pages into the palette without changing their services. */
+.tasker-app :is(.task-management, .direction-workspace) { --task-panel: var(--tk-surface); --task-border: var(--tk-line); }
+.tasker-app .tasker-dashboard { --tasker-card: var(--tk-surface); --tasker-border: var(--tk-line); --tasker-subtle: var(--tk-surface-subtle); }
+.tasker-app .planner-page { --planner-panel: var(--tk-surface); --planner-border: var(--tk-line); }
+.tasker-app :is(.tasker-card, .task-panel, .task-filter-card, .task-card, .planner-panel, .planner-summary, .ai-stat, .ai-panel, .ai-hero, .ai-result-header, .ai-why, .ai-action-card, .card, .table-wrapper) { color: var(--tk-text); background: var(--tk-surface); border-color: var(--tk-line); border-radius: var(--tk-radius-lg); box-shadow: var(--tk-shadow); }
+.tasker-app :is(.task-card, .tasker-card, .planner-panel, .planner-summary) { animation: none; }
+.tasker-app .task-card:hover { transform: none; border-color: var(--tk-line-strong); box-shadow: var(--tk-shadow); }
+.tasker-app .task-card-link:focus-visible { inset: 3px; outline-offset: -3px; border-radius: var(--tk-radius); }
+.tasker-app .task-card-description { color: var(--tk-muted); }
+.tasker-app .tasker-task-link { color: var(--tk-text); text-decoration: none; }
+.tasker-app .tasker-task-link:hover { color: var(--tk-accent); text-decoration: underline; }
+.tasker-app :is(.tasker-review-card, .planner-quote-panel, .planner-summary) { background: var(--tk-surface); }
+.tasker-app :is(.tasker-compact-task, .task-inline-empty, .planner-empty, .planner-choice-grid label, .review-energy label, .tasker-notes-input, .tasker-ai-button) { background: var(--tk-surface-subtle); }
+.tasker-app :is(.planner-choice-grid label, .review-energy label):has(input:checked) { background: var(--tk-accent-soft); border-color: var(--tk-accent); }
+.tasker-app .planner-choice-grid label:has(input:disabled) { opacity: 1; color: var(--tk-muted); border-style: dashed; }
+.tasker-app :is(.tasker-status, .task-status, .task-count, .tasker-count) { background: var(--tk-surface-raised); border-color: var(--tk-line); color: var(--tk-muted); }
+.tasker-app :is(.priority-pill-critical, .priority-text-critical, .status-blocked, .ai-status-failed, .ai-status-interrupted) { color: var(--tk-danger); }
+.tasker-app :is(.priority-pill-critical, .status-blocked, .ai-status-failed, .ai-status-interrupted) { background: var(--tk-danger-soft); }
+.tasker-app :is(.priority-pill-high, .priority-text-high, .ai-status-rate_limited) { color: var(--tk-warning); }
+.tasker-app :is(.priority-pill-high, .ai-status-rate_limited) { background: var(--tk-warning-soft); }
+.tasker-app :is(.priority-pill-medium, .priority-text-medium, .status-in_progress) { color: var(--tk-accent); }
+.tasker-app :is(.priority-pill-medium, .status-in_progress) { background: var(--tk-accent-soft); }
+.tasker-app :is(.priority-pill-low, .priority-text-low, .status-cancelled, .ai-status-disabled) { color: var(--tk-muted); background: var(--tk-surface-raised); }
+.tasker-app :is(.status-completed, .ai-status-succeeded, .planner-selection-count, .review-complete-badge, .tasker-empty-compact, .ai-private-badge) { color: var(--tk-success); background: var(--tk-success-soft); border-color: var(--tk-success); }
+.tasker-app .tasker-icon-success { color: var(--tk-success); background: var(--tk-success-soft); }
+.tasker-app .tasker-icon-warning { color: var(--tk-warning); background: var(--tk-warning-soft); }
+.tasker-app :is(.tasker-icon-primary, .planner-number, .review-question > span, .activity-marker, .comment-avatar, .ai-rank) { color: var(--tk-accent); background: var(--tk-accent-soft); border-color: var(--tk-line); }
+.tasker-app :is(.tasker-circle-progress, .tasker-progress-ring) { background: conic-gradient(var(--tk-accent) calc(var(--value, var(--progress, 0)) * 1%), var(--tk-line) 0); }
+.tasker-app :is(.tasker-circle-progress, .tasker-progress-ring)::before { background: var(--tk-surface); }
+.tasker-app :is(.tasker-mini-progress, .task-card-progress, .task-detail-progress, .progress) { background: var(--tk-line); }
+.tasker-app :is(.check-toggle, .ai-panel-head > i) { color: var(--tk-accent); }
+.tasker-app .check-toggle { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; flex-shrink: 0; }
+.tasker-app .checklist-item { align-items: center; }
+.tasker-app .tasker-ai-button { color: var(--tk-text); border-color: var(--tk-line); gap: .75rem; min-height: 52px; }
+.tasker-app .tasker-ai-button small { color: var(--tk-muted); }
+.tasker-app .tasker-ai-button:not(:disabled):hover { background: var(--tk-accent-soft); border-color: var(--tk-accent); }
+.tasker-app .ai-action-card:disabled { opacity: 1; border-style: dashed; color: var(--tk-muted); }
+.tasker-app :is(.ai-stat span, .ai-breakdown small, .ai-empty) { color: var(--tk-muted); }
+.tasker-app .table { --bs-table-bg: transparent; --bs-table-color: var(--tk-text); --bs-table-border-color: var(--tk-line); background: transparent; }
+.tasker-app .table :is(th, td) { color: var(--tk-text); border-color: var(--tk-line); }
+.tasker-app .table thead th { color: var(--tk-muted); font-size: .76rem; font-weight: 650; }
+.tasker-app .table a { color: var(--tk-accent) !important; }
+.tasker-app .table-responsive { border: 1px solid var(--tk-line); border-radius: var(--tk-radius); }
+.tasker-app .pagination { --bs-pagination-bg: var(--tk-surface); --bs-pagination-color: var(--tk-text); --bs-pagination-border-color: var(--tk-line); --bs-pagination-hover-bg: var(--tk-accent-soft); --bs-pagination-hover-color: var(--tk-accent); --bs-pagination-active-bg: var(--tk-primary-fill); --bs-pagination-active-border-color: var(--tk-primary-fill); --bs-pagination-active-color: var(--tk-primary-text); }
+.tasker-app .alert { border-radius: var(--tk-radius-sm); }
+.tasker-app .alert-danger { color: var(--tk-danger); background: var(--tk-danger-soft); border-color: var(--tk-danger); }
+.tasker-app .alert-warning { color: var(--tk-warning); background: var(--tk-warning-soft); border-color: var(--tk-warning); }
+.tasker-app .alert-success { color: var(--tk-success); background: var(--tk-success-soft); border-color: var(--tk-success); }
+.tasker-app .alert-info { color: var(--tk-accent); background: var(--tk-accent-soft); border-color: var(--tk-accent); }
+.tasker-app .alert :is(p, span, strong, small, li, a, label) { color: inherit; }
+.tasker-app .modal-content { background: var(--tk-surface); color: var(--tk-text); border-color: var(--tk-line); }
+.tasker-app .modal-header, .tasker-app .modal-footer { border-color: var(--tk-line); }
+.tasker-app .border, .tasker-app .border-top, .tasker-app .border-bottom { border-color: var(--tk-line) !important; }
+
+/* Standalone Focus retains its distraction-free structure. */
+.tasker-app.tasker-focus-app { --focus-bg: var(--tk-bg); --focus-panel: var(--tk-surface); --focus-line: var(--tk-line); --focus-text: var(--tk-text); --focus-muted: var(--tk-muted); --focus-accent: var(--tk-accent); --focus-green: var(--tk-success); min-height: 100dvh; background: var(--tk-bg); color: var(--tk-text); }
+.tasker-app.tasker-focus-app :is(.focus-brand, .focus-description, .focus-exit, .focus-shortcuts, .focus-check button i, .focus-check.is-complete button) { color: var(--tk-muted); }
+.tasker-app.tasker-focus-app .focus-exit:hover { color: var(--tk-text); }
+.tasker-app.tasker-focus-app .focus-meta span { background: var(--tk-surface); color: var(--tk-muted); }
+.tasker-app.tasker-focus-app .focus-card { background: var(--tk-surface); box-shadow: var(--tk-shadow); backdrop-filter: none; }
+.tasker-app.tasker-focus-app .focus-check button { color: var(--tk-text); min-height: 48px; }
+.tasker-app.tasker-focus-app .focus-check.is-complete button { color: var(--tk-muted); }
+.tasker-app.tasker-focus-app #focusNotes { background: var(--tk-surface-subtle); color: var(--tk-text); border-color: var(--tk-line-strong); }
+.tasker-app.tasker-focus-app .btn-focus { min-height: 48px; background: var(--tk-surface-raised); color: var(--tk-text); border-color: var(--tk-line-strong); }
+.tasker-app.tasker-focus-app .btn-focus:hover { background: var(--tk-accent-soft); transform: none; }
+.tasker-app.tasker-focus-app .btn-resume { background: var(--tk-primary-fill); color: var(--tk-primary-text); border-color: var(--tk-primary-fill); }
+.tasker-app.tasker-focus-app .btn-complete { background: var(--tk-success-soft); color: var(--tk-success); border-color: var(--tk-success); }
+.tasker-app.tasker-focus-app .btn-blocked { color: var(--tk-warning); }
+.tasker-app.tasker-focus-app .focus-modal { background: var(--tk-surface); border-color: var(--tk-line); }
+.tasker-app.tasker-focus-app .priority-critical { color: var(--tk-danger) !important; }
+.tasker-app.tasker-focus-app .priority-high { color: var(--tk-warning) !important; }
+.tasker-app.tasker-focus-app .priority-medium { color: var(--tk-accent) !important; }
+.tasker-app.tasker-focus-app .priority-low { color: var(--tk-success) !important; }
+
+@media (min-width: 992px) {
+  .tasker-app .tasker-sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; flex-shrink: 0; }
+  .tasker-app .tasker-nav-secondary { margin-top: 2.5rem; }
+}
+@media (max-width: 991.98px) {
+  .tasker-app .tasker-sidebar { width: min(290px, 88vw); }
+  .tasker-app .tasker-topbar { min-height: 68px; gap: .5rem; }
+  .tasker-app .tasker-identity { max-width: 8rem; }
+  .tasker-app .content > .container-fluid { padding-bottom: calc(7rem + env(safe-area-inset-bottom)); }
+  .tasker-app .tasker-mobile-nav { display: flex; align-items: stretch; justify-content: space-evenly; gap: .25rem; position: fixed; z-index: 1030; inset: auto 0 0; padding: .45rem .35rem calc(.45rem + env(safe-area-inset-bottom)); background: var(--tk-surface); border-top: 1px solid var(--tk-line); box-shadow: 0 -4px 20px #0000000a; }
+  .tasker-app .tasker-mobile-nav :is(a, button) { display: flex; flex: 1 1 0; min-width: 0; min-height: 52px; padding: .35rem .1rem; align-items: center; justify-content: center; flex-direction: column; gap: .2rem; background: transparent; border: 0; border-radius: .65rem; color: var(--tk-muted); font-size: .65rem; font-weight: 650; text-decoration: none; }
+  .tasker-app .tasker-mobile-nav :is(a, button) i { font-size: 1.15rem; color: inherit; }
+  .tasker-app .tasker-mobile-nav :is(a, button) span { color: inherit; }
+  .tasker-app .tasker-mobile-nav [aria-current="page"] { color: var(--tk-accent); background: var(--tk-accent-soft); }
+  .tasker-app .tasker-mobile-nav .tasker-mobile-capture { color: var(--tk-primary-text); background: var(--tk-primary-fill); }
+  .tasker-app .planner-summary { position: static; }
+}
+@media (max-width: 575.98px) {
+  .tasker-app .tasker-topbar { min-height: 64px; padding-inline: .75rem !important; }
+  .tasker-app .tasker-topbar-location { gap: .35rem; }
+  .tasker-app .tasker-topbar-location small, .tasker-app .tasker-topbar-breadcrumb { display: none; }
+  .tasker-app .tasker-page-label { font-size: .82rem; }
+  .tasker-app .tasker-identity { display: none; }
+  .tasker-app .tasker-topbar-actions { gap: .3rem; }
+  .tasker-app .tasker-topbar .btn { padding-inline: .65rem; }
+  .tasker-app .tasker-logout span { display: none; }
+  .tasker-app .tasker-capture { width: 44px; padding: .5rem; flex-shrink: 0; }
+  .tasker-app .tasker-capture :is(span, kbd) { display: none; }
+  .tasker-app .content > .container-fluid { padding-inline: 1rem; }
+  .tasker-app .tasker-card { padding: 1.15rem !important; }
+  .tasker-app .tasker-hero .btn { flex: 1 1 auto; }
+  .tasker-app .tasker-hero h1 { font-size: 1.8rem; }
+  .tasker-app .tasker-progress-card { gap: 1rem !important; }
+  .tasker-app .tasker-section-header { align-items: start; }
+  .tasker-app .tasker-workspace-nav { gap: .4rem !important; }
+  .tasker-app .tasker-workspace-nav a { flex: 1 1 42%; }
+  .tasker-app .table :is(th, td) { white-space: normal; }
+  .tasker-app .form-control, .tasker-app .form-select { font-size: 1rem; }
+}
+@media (max-width: 359.98px) {
+  .tasker-app .tasker-topbar-location .tasker-page-label { max-width: 4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tasker-app .tasker-topbar-actions { gap: .15rem; }
+  .tasker-app .tasker-topbar .btn { padding-inline: .5rem; }
+  .tasker-app .content > .container-fluid { padding-inline: .75rem; }
+  .tasker-app .tasker-card, .tasker-app .task-panel { padding: 1rem !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tasker-app, .tasker-app *, .tasker-app *::before, .tasker-app *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+  .tasker-app .tasker-route-loader.is-active span { transform: none; width: 100%; background: var(--tk-accent); }
+}
+@media print {
+  .tasker-app .tasker-mobile-nav, .tasker-app .tasker-sidebar, .tasker-app .tasker-topbar { display: none !important; }
+  .tasker-app .tasker-shell-main { width: 100%; }
+}

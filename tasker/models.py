@@ -6,7 +6,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator, MaxLengthValidator
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
@@ -154,8 +154,17 @@ class Task(AuditedSoftDeleteModel):
 
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    definition_of_done = models.TextField(blank=True, default="", max_length=5000, validators=[MaxLengthValidator(5000)])
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="tasker_tasks"
+    )
+    company = models.ForeignKey(
+        "accounting.Company", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="tasker_tasks",
+    )
+    team = models.ForeignKey(
+        "tasker.Team", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="tasks",
     )
     assigned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -198,12 +207,14 @@ class Task(AuditedSoftDeleteModel):
             models.CheckConstraint(condition=Q(actual_duration__isnull=True) | Q(actual_duration__gte=timedelta(0)), name="tasker_task_actual_duration_nonneg"),
             models.CheckConstraint(condition=Q(due_time__isnull=True) | Q(due_date__isnull=False), name="tasker_task_time_requires_date"),
             models.UniqueConstraint(fields=["slug"], condition=Q(is_deleted=False), name="tasker_task_active_slug_uniq"),
+            models.CheckConstraint(condition=Q(team__isnull=True) | Q(company__isnull=False), name="tasker_team_requires_company"),
         ]
         indexes = [
             models.Index(fields=["owner", "status", "due_date"], name="tasker_owner_status_due_idx"),
             models.Index(fields=["priority", "status"], name="tasker_priority_status_idx"),
             models.Index(fields=["carry_forward", "archived"], name="tasker_carry_archive_idx"),
             models.Index(fields=["parent_task", "is_deleted"], name="tasker_parent_deleted_idx"),
+            models.Index(fields=["company", "team", "owner"], name="tasker_company_team_owner_idx"),
         ]
         permissions = [
             ("assign_task", "Can assign tasks to other users"),
@@ -221,6 +232,13 @@ class Task(AuditedSoftDeleteModel):
 
     def clean(self):
         super().clean()
+        if self.team_id and self.team.company_id != self.company_id:
+            raise ValidationError({"team": "Choose a team belonging to this company."})
+        if self.parent_task_id and (
+            self.parent_task.company_id != self.company_id or self.parent_task.team_id != self.team_id
+            or (not self.company_id and self.parent_task.owner_id != self.owner_id)
+        ):
+            raise ValidationError({"parent_task": "Parent and child must have the same company/team scope."})
         if self.parent_task_id and self.parent_task_id == self.pk:
             raise ValidationError({"parent_task": "A task cannot be its own parent."})
         ancestor = self.parent_task
@@ -659,6 +677,16 @@ class AIUsageLog(AuditedSoftDeleteModel):
     latency_ms = models.PositiveIntegerField(null=True, blank=True)
     attempts = models.PositiveSmallIntegerField(default=1)
     was_streamed = models.BooleanField(default=False)
+    # Durable admission/settlement, separate from measured provider usage.
+    # Unknown billed attempts retain a conservative charge; audit deletion
+    # must not refund quota. These fields never store prompt/response content.
+    quota_reserved_at = models.DateTimeField(null=True, blank=True)
+    quota_reserved_tokens = models.PositiveIntegerField(default=0)
+    quota_charged_tokens = models.PositiveIntegerField(default=0)
+    quota_attempt_token_budget = models.PositiveIntegerField(default=0)
+    quota_provider_attempts = models.PositiveSmallIntegerField(default=0)
+    quota_usage_estimated = models.BooleanField(default=False)
+    quota_settled_at = models.DateTimeField(null=True, blank=True)
     started_at = models.DateTimeField(default=timezone.now)
     completed_at = models.DateTimeField(null=True, blank=True)
     error_type = models.CharField(max_length=100, blank=True)
@@ -677,12 +705,17 @@ class AIUsageLog(AuditedSoftDeleteModel):
                 condition=Q(completed_at__isnull=True) | Q(completed_at__gte=models.F("started_at")),
                 name="tasker_ai_usage_time_order",
             ),
+            models.CheckConstraint(
+                condition=Q(quota_settled_at__isnull=True) | Q(quota_reserved_tokens=0),
+                name="tasker_ai_quota_settled_clear",
+            ),
         ]
         indexes = [
             models.Index(fields=["user", "started_at"], name="tasker_ai_usage_user_idx"),
             models.Index(fields=["status", "started_at"], name="tasker_ai_usage_status_idx"),
             models.Index(fields=["model", "started_at"], name="tasker_ai_usage_model_idx"),
             models.Index(fields=["operation", "started_at"], name="tasker_ai_usage_op_idx"),
+            models.Index(fields=["user", "quota_reserved_at"], name="tasker_ai_quota_user_idx"),
         ]
 
     def __str__(self):
@@ -729,3 +762,21 @@ def _available_slug(instance, value):
         candidate = f"{base[:230]}-{counter}"
         counter += 1
     return candidate
+
+
+# Keep the public model API stable while separating the organization domain
+# from personal planning and provider records. Relations use lazy model names.
+from .organization_models import OrganizationAccess, OrganizationEvent, Team, TeamMembership  # noqa: E402,F401
+from .goal_models import Goal, Initiative, KeyResult, OutcomeMeasurement, TaskContribution  # noqa: E402,F401
+from .baseline_models import BaselineObservation, BaselineStudy  # noqa: E402,F401
+from .capture_models import CaptureEvent, CaptureItem  # noqa: E402,F401
+
+from .workbench_models import SavedWorkView, WorkbenchPreference  # noqa: E402,F401
+from .planning_models import Availability, PlanningEvent, ScheduleBlock, TaskEffortEstimate, WorkPolicy  # noqa: E402,F401
+from .dependency_models import DependencyGraphState, TaskDependency  # noqa: E402,F401
+from .arrival_models import ArrivalCorrection, ArrivalDeclaration  # noqa: E402,F401
+from .operator_models import OperatorOverride, OperatorPolicy, OperatorSnapshot, OperatorState  # noqa: E402,F401
+from .job_models import JobWorkerHeartbeat, OutboxJob  # noqa: E402,F401
+from .coordination_models import CoordinationEvent, CoordinationRequest  # noqa: E402,F401
+from .notification_models import Notification, NotificationDelivery, NotificationPreference  # noqa: E402,F401
+from .report_models import EndDaySubmission, ManagerReportSnapshot, ReportPolicy  # noqa: E402,F401

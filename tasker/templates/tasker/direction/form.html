@@ -1,0 +1,8 @@
+{% extends "tasker/direction/workspace.html" %}
+{% block direction_content %}<section class="task-panel p-3 p-md-4 direction-form"><h1 class="h3 mb-4">{{ page_title }}</h1>
+<form method="post" novalidate data-tasker-edit-form>{% csrf_token %}
+<p class="small text-muted" role="status" data-tasker-form-status>{% if form.errors %}Changes not saved. Your draft is below.{% endif %}</p>
+{% if form.errors %}<div class="alert alert-danger" role="alert"><p class="mb-1">Changes have not been saved.</p>{{ form.non_field_errors }}<ul>{% for field in form %}{% for error in field.errors %}<li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>{% endfor %}{% endfor %}</ul></div>{% endif %}
+{% for field in form %}<div class="mb-3">{% if field.field.widget.input_type == 'checkbox' %}<div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>{% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% else %}<span class="text-muted small"> (optional)</span>{% endif %}</label>{{ field }}{% endif %}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endfor %}
+<div class="d-flex flex-wrap gap-2 mt-4"><button type="submit" class="btn btn-primary">Save</button>{% if task %}<a class="btn btn-secondary" href="{{ task.get_absolute_url }}">Cancel</a>{% else %}<a class="btn btn-secondary" href="{% url cancel_url %}">Cancel</a>{% endif %}</div>
+</form></section>{% endblock %}

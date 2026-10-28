@@ -1,31 +1,44 @@
-﻿<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Data Deletion – Boforg Technologies Private Limited (botintegration)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex">
-  <style>
-    body {font-family: system-ui, Arial, sans-serif; line-height: 1.6; margin: 2rem; max-width: 900px}
-    h1,h2 {line-height:1.25}
-    .box {background:#fafafa; border:1px solid #eee; padding:1rem; border-radius:8px}
-  </style>
-</head>
-<body>
-  <h1>Data Deletion Instructions</h1>
-  <p>If you connected a Facebook Page or Instagram account to <strong>botintegration</strong> and would like us to delete related data:</p>
+{% extends "legal/base.html" %}
+{% block page_title %}Data Deletion Instructions{% endblock %}
+{% block description %}How to request deletion of information held by Boforg, including WhatsApp, Meta integrations, shop, IMS and Tasker records.{% endblock %}
+{% block canonical_path %}/legal/data-deletion/{% endblock %}
+{% block deletion_current %}aria-current="page"{% endblock %}
+{% block heading %}Data Deletion Instructions{% endblock %}
+{% block content %}
+  <p class="lede">You can ask Boforg Technologies Private Limited to delete information associated with our website, shop, IMS, Tasker, Boforg WABA or an authorized Facebook/Instagram integration.</p>
+  <div class="notice">
+    <p><strong>Current request method:</strong> email <a href="mailto:info@boforg.co.zw?subject=Data%20Deletion%20Request">info@boforg.co.zw</a> with the subject <strong>Data Deletion Request</strong>. Requests are handled through this contact process. Receiving an acknowledgement or reference code does not mean deletion has already been completed.</p>
+  </div>
+
+  <h2 id="request">1. Send enough information to identify the records</h2>
+  <p>Include:</p>
+  <ul>
+    <li>Your name and a contact email address, plus your organization if you are making a business request.</li>
+    <li>The service involved, such as the shop, IMS, Tasker, Boforg WABA, Facebook or Instagram.</li>
+    <li>The account email address, order/document reference, connected business phone number, WhatsApp business/Messaging account ID, Facebook Page ID or Instagram business account ID, <strong>if known and relevant</strong>. You do not need every identifier to ask for help.</li>
+    <li>What you want deleted or disconnected and whether you are acting for yourself or an organization.</li>
+  </ul>
+  <p>Send only the information needed to locate the records. <strong>Do not send passwords, access tokens, app secrets, payment PINs or full payment-card details.</strong> We will contact you if proportionate additional verification is needed.</p>
+
+  <h2 id="process">2. How we handle the request</h2>
   <ol>
-    <li>Email <a href="mailto:adriannzvimbo@gmail.com">adriannzvimbo@gmail.com</a> with subject “Data Deletion Request” and include:
-      <ul>
-        <li>Your name and organization</li>
-        <li>Facebook Page ID or Instagram Business Account ID</li>
-        <li>Confirmation you want the data removed from botintegration</li>
-      </ul>
-    </li>
-    <li>Or use Meta’s data deletion flow in your Facebook/Instagram settings; Meta will call our endpoint and we’ll return a confirmation code.</li>
+    <li>Identify the relevant service and records, and verify your identity or authority where necessary.</li>
+    <li>If the records belong to a client business, confirm the request with that business or direct you to it as appropriate.</li>
+    <li>Remove information that can be erased and address applicable account access or disconnection. If accounting, legal, security or dispute-handling needs prevent deletion of particular records, explain the reason and the scope retained.</li>
+    <li>Confirm the outcome or explain what remains pending and any further steps needed.</li>
   </ol>
-  <p>We will confirm deletion once completed, typically within 7 business days.</p>
-  <p class="box"><strong>Contact:</strong> Boforg Technologies Private Limited, Robert Mugabe Street, Harare, Zimbabwe — <a href="mailto:adriannzvimbo@gmail.com">adriannzvimbo@gmail.com</a><br>
-  Domain: <a href="https://boforg.co.zw">https://boforg.co.zw</a></p>
-</body>
-</html>
+  <p>We aim to handle requests promptly and within applicable legal time limits. Timing depends on verification, the records involved, the instructions of the responsible business and provider dependencies. We will explain delays or restrictions rather than promise immediate or automatic erasure.</p>
+
+  <h2 id="meta">3. WhatsApp, Facebook and Instagram information</h2>
+  <p>For Boforg WABA or another connected Meta service, identify the business account or phone number where possible and tell us whether you want stored information deleted, the integration disconnected, communications stopped, or all applicable actions.</p>
+  <p>You can also manage authorized integrations through the relevant Meta account settings. Revoking access or blocking a business in WhatsApp is separate from deleting information already held. If Meta shows you a deletion notification or confirmation code, you can include it in your email so we can help investigate; the code alone is not confirmation that all data has been erased.</p>
+  <p>For information received from Meta, we delete the relevant Platform Data as soon as reasonably possible following a valid request, applicable service termination or the end of its authorized need. We retain such data only where applicable law or regulation requires it, limited to that requirement, and explain any legally retained scope. General operational or dispute-handling needs alone are not an exception to this Meta-data rule.</p>
+  <p>We can address information under Boforg's control. We cannot delete a message or PDF from a recipient's own device, another business's independent records or Meta's systems through this request process. Contact the relevant recipient, business or provider for those copies.</p>
+
+  <h2 id="business-records">4. Business records, AI history and backups</h2>
+  <p>Specify whether your request includes Tasker account content or AI conversation history, uploaded attachments, customer information or particular shop/IMS records. Deleting an item from an application interface may leave a recoverable record or audit history; ask for a deletion assessment if you need stored copies addressed.</p>
+  <p>Some invoice, payment, stock and accounting evidence may need to remain available for legitimate operational or applicable record-keeping duties. We will assess the relevant obligation, rather than treat every business record as permanently exempt from deletion. Backups and provider-held copies may follow separate retention processes.</p>
+
+  <h2 id="help">5. Questions or follow-up</h2>
+  <p>Email <a href="mailto:info@boforg.co.zw">info@boforg.co.zw</a> using the same subject and, if available, your earlier request reference. See our <a href="/legal/privacy/">privacy policy</a> for the services and information covered.</p>
+{% endblock %}

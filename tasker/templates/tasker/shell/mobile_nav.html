@@ -1,0 +1,8 @@
+<nav class="tasker-mobile-nav" aria-label="Quick navigation">
+  <a href="{% url 'ims:tasker:index' %}"{% if tasker_current_section == 'now' %} aria-current="page"{% endif %}><i class="bi bi-sun" aria-hidden="true"></i><span>Now</span></a>
+  <a href="{% url 'ims:tasker:capture_list' %}"{% if tasker_current_section == 'inbox' %} aria-current="page"{% endif %}><i class="bi bi-inbox" aria-hidden="true"></i><span>Inbox</span></a>
+  <a href="{% url 'ims:tasker:task_list' %}"{% if tasker_current_section == 'work' %} aria-current="page"{% endif %}><i class="bi bi-check2-square" aria-hidden="true"></i><span>Work</span></a>
+  {% if perms.tasker.view_task %}<button class="tasker-mobile-capture" type="button" data-bs-toggle="modal" data-bs-target="#captureModal" aria-label="Quick capture"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Capture</span></button>{% endif %}
+  {% if tasker_plan_available %}<a href="{% url 'ims:tasker:daily_plan' %}"{% if tasker_current_section == 'plan' %} aria-current="page"{% endif %}><i class="bi bi-calendar3" aria-hidden="true"></i><span>Plan</span></a>{% endif %}
+  {% if tasker_goals_available %}<a href="{% url 'ims:tasker:goal_list' %}"{% if tasker_current_section == 'goals' %} aria-current="page"{% endif %}><i class="bi bi-bullseye" aria-hidden="true"></i><span>Goals</span></a>{% endif %}
+</nav>

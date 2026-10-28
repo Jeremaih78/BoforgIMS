@@ -15,7 +15,12 @@ ROLE_PERMISSIONS = {
         "add_tasktimeentry", "view_tasktimeentry",
         "add_taskattachment", "change_taskattachment", "view_taskattachment",
         "view_taskactivity",
+        "view_captureitem", "add_captureitem", "change_captureitem", "delete_captureitem", "view_captureevent",
         "use_ai",
+        "view_team", "view_teammembership", "view_goal", "view_keyresult", "view_initiative",
+        "view_outcomemeasurement", "add_outcomemeasurement",
+        "view_baselinestudy", "view_baselineobservation", "add_baselineobservation", "change_baselineobservation",
+        "change_taskcontribution",
     },
     "Tasker Supervisor": {
         "add_task", "change_task", "delete_task", "view_task", "assign_task", "view_all_tasks",
@@ -27,7 +32,14 @@ ROLE_PERMISSIONS = {
         "add_tasktimeentry", "view_tasktimeentry",
         "add_taskattachment", "change_taskattachment", "view_taskattachment",
         "view_taskactivity",
+        "view_captureitem", "add_captureitem", "change_captureitem", "delete_captureitem", "view_captureevent",
         "use_ai",
+        "view_team", "view_teammembership", "view_goal", "view_keyresult", "view_initiative",
+        "view_outcomemeasurement", "add_outcomemeasurement", "change_outcomemeasurement",
+        "view_baselinestudy", "view_baselineobservation", "add_baselineobservation", "change_baselineobservation",
+        "add_goal", "change_goal", "add_keyresult", "change_keyresult", "add_initiative", "change_initiative",
+        "add_baselinestudy", "change_baselinestudy",
+        "change_taskcontribution",
     },
 }
 

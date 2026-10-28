@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from tasker.models import DailyPlan, Task
 from tasker.selectors import priority_rank_expression
+from tasker.services.work_dates import work_date
 
 
 ACTIVE_STATUSES = (Task.Status.PENDING, Task.Status.IN_PROGRESS, Task.Status.BLOCKED)
@@ -31,7 +32,7 @@ class TodayDashboardData:
 
 def build_today_dashboard(*, user, today=None) -> TodayDashboardData:
     """Return the current user's dashboard using a bounded set of optimized queries."""
-    today = today or timezone.localdate()
+    today = today or work_date(user)
     owned_tasks = Task.objects.filter(owner=user, archived=False).select_related("category")
     today_tasks = _today_tasks(owned_tasks, user=user, today=today)
 
@@ -46,11 +47,13 @@ def build_today_dashboard(*, user, today=None) -> TodayDashboardData:
     progress_percent = round((completed_count / total_count) * 100) if total_count else 0
 
     priority_rank = priority_rank_expression()
-    actionable = owned_tasks.filter(status__in=ACTIVE_STATUSES)
+    actionable = owned_tasks.filter(status__in=(Task.Status.PENDING, Task.Status.IN_PROGRESS))
     top_priorities = tuple(
         actionable.filter(
             Q(due_date__lte=today)
             | Q(carry_forward=True)
+            | Q(priority=Task.Priority.CRITICAL)
+            | Q(daily_plans__owner=user, daily_plans__plan_date=today, daily_plans__is_deleted=False)
             | Q(
                 priority_daily_plans__owner=user,
                 priority_daily_plans__plan_date=today,
@@ -99,7 +102,7 @@ def create_quick_task(*, user, title, priority, due_time=None, category=None, es
         owner=user,
         assigned_by=user,
         priority=priority,
-        due_date=timezone.localdate(),
+        due_date=work_date(user),
         due_time=due_time,
         category=category,
         estimated_duration=estimated_duration,
@@ -111,7 +114,9 @@ def create_quick_task(*, user, title, priority, due_time=None, category=None, es
 @transaction.atomic
 def save_quick_notes(*, user, notes):
     """Persist today's scratchpad without creating records during dashboard reads."""
-    today = timezone.localdate()
+    from django.contrib.auth import get_user_model
+    get_user_model().objects.select_for_update(no_key=True).get(pk=user.pk)
+    today = work_date(user)
     plan, _ = DailyPlan.objects.update_or_create(
         owner=user,
         plan_date=today,

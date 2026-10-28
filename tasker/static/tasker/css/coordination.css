@@ -1,0 +1,30 @@
+.tasker-app .coordination-workspace { max-width: 1180px; margin-inline: auto; }
+.tasker-app .coordination-narrow { max-width: 820px; }
+.tasker-app .coordination-head, .tasker-app .coordination-actions, .tasker-app .coordination-nav { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem; }
+.tasker-app .coordination-head { justify-content: space-between; margin-bottom: 1.5rem; }
+.tasker-app .coordination-nav { border-bottom: 1px solid var(--tk-line); padding-block: .25rem .85rem; margin-bottom: 1.5rem; }
+.tasker-app .coordination-nav a { padding: .5rem .7rem; min-height: 44px; }
+.tasker-app .coordination-panel { border: 1px solid var(--tk-line); background: var(--tk-surface); border-radius: var(--tk-radius); padding: clamp(1rem, 2vw, 1.5rem); margin-bottom: 1rem; min-width: 0; }
+.tasker-app .coordination-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.tasker-app .coordination-field { margin-bottom: 1.2rem; }
+.tasker-app .coordination-field label { display: block; font-weight: 600; margin-bottom: .45rem; }
+.tasker-app .coordination-field label:has(.form-check-input) { display: flex; gap: .5rem; align-items: baseline; }
+.tasker-app .coordination-field :is(input, select, textarea) { max-width: 100%; }
+.tasker-app .coordination-meta { display: flex; flex-wrap: wrap; gap: .4rem 1rem; color: var(--tk-muted); font-size: .85rem; }
+.tasker-app .coordination-label { color: var(--tk-accent); font-weight: 700; font-size: .73rem; letter-spacing: .07em; text-transform: uppercase; }
+.tasker-app .coordination-status { display: inline-block; border: 1px solid var(--tk-line); background: var(--tk-surface-raised); color: var(--tk-text); border-radius: 99px; padding: .25rem .7rem; font-size: .77rem; font-weight: 650; }
+.tasker-app .coordination-warning { border-inline-start: 3px solid var(--tk-warning); background: var(--tk-warning-soft); padding: 1rem; border-radius: var(--tk-radius-sm); }
+.tasker-app .coordination-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tasker-app .coordination-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.tasker-app .coordination-facts dt { color: var(--tk-muted); font-size: .82rem; font-weight: 550; margin-bottom: .3rem; }
+.tasker-app .coordination-facts dd { overflow-wrap: anywhere; margin: 0; }
+.tasker-app .coordination-checks { display: flex; flex-wrap: wrap; gap: .6rem 1rem; }
+.tasker-app .coordination-empty { text-align: center; padding: 2.5rem 1rem; color: var(--tk-muted); }
+.tasker-app .coordination-table { overflow-x: auto; max-width: 100%; }
+.tasker-app .coordination-table table { width: 100%; }
+.tasker-app .coordination-table :is(td, th) { padding: .8rem; border-bottom: 1px solid var(--tk-line); }
+.tasker-app .coordination-item { padding-block: 1rem; border-top: 1px solid var(--tk-line); }
+.tasker-app .coordination-item:first-child { border-top: none; padding-top: 0; }
+.tasker-app .coordination-item h3 { font-size: 1rem; margin-bottom: .5rem; }
+.tasker-app .coordination-panel summary { min-height: 44px; cursor: pointer; color: var(--tk-accent); padding-block: .5rem; }
+@media(max-width: 750px) { .tasker-app .coordination-grid, .tasker-app .coordination-facts { grid-template-columns: 1fr; } .tasker-app .coordination-head { align-items: flex-start; } }

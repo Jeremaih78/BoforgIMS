@@ -7,11 +7,20 @@
   <a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'ims:tasker:task_list' %}{% endif %}" class="task-breadcrumb"><i class="bi bi-arrow-left me-1"></i>Back</a>
   <div class="task-panel p-4 p-lg-5 mt-3">
     <div class="mb-4"><div class="task-eyebrow">Task management</div><h1 class="h2 mb-1">{{ page_title }}</h1><p class="text-muted mb-0">Give the task enough clarity that the next action is obvious.</p></div>
-    <form method="post" novalidate>
+    <form method="post" novalidate data-tasker-edit-form>
       {% csrf_token %}
-      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      {{ form.notes_version }}{{ form.notes_version.errors }}
+      {{ form.work_version }}{{ form.work_version.errors }}
+      {% include 'tasker/includes/form_errors.html' %}
+      <p class="small text-muted" role="status" data-tasker-form-status>{% if form.errors %}Changes not saved. Your draft is below.{% endif %}</p>
       <div class="mb-3"><label class="form-label" for="{{ form.title.id_for_label }}">Title</label>{{ form.title }}{% for error in form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
       <div class="mb-3"><label class="form-label" for="{{ form.description.id_for_label }}">Description</label>{{ form.description }}{{ form.description.errors }}</div>
+      <div class="mb-3"><label class="form-label" for="{{ form.definition_of_done.id_for_label }}">Definition of done</label>{{ form.definition_of_done }}{{ form.definition_of_done.errors }}<div class="form-text">Describe the result and checks required for acceptance. Leaving this blank means the outcome is unspecified.</div></div>
+      <div class="form-check mb-3">{{ form.accept_definition }}<label class="form-check-label" for="{{ form.accept_definition.id_for_label }}">I have reviewed the definition of done and confirm its outcome is ready for acceptance.</label>{{ form.accept_definition.errors }}<div class="form-text">Required when saving a defined task as Completed.</div></div>
+      <fieldset class="border rounded p-3 mb-3"><legend class="float-none w-auto px-2 h6">Work visibility</legend>
+        <div class="row g-3"><div class="col-md-6"><label class="form-label" for="{{ form.company.id_for_label }}">Company</label>{{ form.company }}{{ form.company.errors }}<div class="form-text">{{ form.company.help_text }}</div></div><div class="col-md-6"><label class="form-label" for="{{ form.team.id_for_label }}">Team</label>{{ form.team }}{{ form.team.errors }}<div class="form-text">{{ form.team.help_text }}</div></div></div>
+        <p class="small text-muted mt-2 mb-0">Leave both blank for personal work. To delegate, open a team and choose Delegate task.</p>
+      </fieldset>
       <div class="row g-3 mb-3">
         {% if form.owner %}<div class="col-md-6"><label class="form-label" for="{{ form.owner.id_for_label }}">Owner</label>{{ form.owner }}{{ form.owner.errors }}</div>{% endif %}
         <div class="col-md-3"><label class="form-label" for="{{ form.priority.id_for_label }}">Priority</label>{{ form.priority }}</div>
@@ -29,7 +38,7 @@
         <div class="col-md-2"><label class="form-label" for="{{ form.progress.id_for_label }}">Progress %</label>{{ form.progress }}{{ form.progress.errors }}</div>
         <div class="col-md-2"><label class="form-label" for="{{ form.colour.id_for_label }}">Colour</label>{{ form.colour }}{{ form.colour.errors }}</div>
       </div>
-      <div class="mb-4"><label class="form-label" for="{{ form.notes.id_for_label }}">Internal notes</label>{{ form.notes }}</div>
+      <div class="mb-4"><label class="form-label" for="{{ form.notes.id_for_label }}">Shared task notes</label>{{ form.notes }}{{ form.notes.errors }}{% if notes_conflict is not None %}<div class="alert alert-warning mt-3" role="alert"><p>These notes changed after this form was opened. Your draft is above. Review the saved version below and merge your changes before saving again.</p><label class="form-label" for="savedTaskNotes">Saved notes at the time of the conflict</label><textarea class="form-control" id="savedTaskNotes" rows="5" readonly>{{ notes_conflict }}</textarea></div>{% endif %}</div>
       <div class="mb-4"><label class="form-label" for="{{ form.blocked_reason.id_for_label }}">Blocker reason <span class="text-muted fw-normal">(required when status is Blocked)</span></label>{{ form.blocked_reason }}{{ form.blocked_reason.errors }}</div>
       <div class="d-flex flex-wrap gap-4 mb-4"><div class="form-check">{{ form.carry_forward }}<label class="form-check-label" for="{{ form.carry_forward.id_for_label }}">Carry forward</label></div><div class="form-check">{{ form.archived }}<label class="form-check-label" for="{{ form.archived.id_for_label }}">Archived</label></div></div>
       <div class="d-flex justify-content-end gap-2"><a href="{% if task %}{{ task.get_absolute_url }}{% else %}{% url 'ims:tasker:task_list' %}{% endif %}" class="btn btn-secondary">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Save task</button></div>

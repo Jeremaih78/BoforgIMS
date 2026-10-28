@@ -2,8 +2,10 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import never_cache
 
 from tasker.forms import QuickAddTaskForm, QuickNotesForm
 from tasker.services.dashboard import build_today_dashboard, create_quick_task, save_quick_notes
@@ -13,9 +15,15 @@ from tasker.ai.personal_assistant import personal_ai_availability
 @login_required
 @permission_required("tasker.view_task", raise_exception=True)
 @require_http_methods(["GET", "POST"])
+@never_cache
 def index(request):
     quick_add_form = QuickAddTaskForm()
     quick_notes_form = None
+    quick_add_next = request.POST.get("next", "")
+    if not quick_add_next or not url_has_allowed_host_and_scheme(
+        quick_add_next, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        quick_add_next = reverse("ims:tasker:index")
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -59,6 +67,8 @@ def index(request):
             raise PermissionDenied
 
     dashboard = build_today_dashboard(user=request.user)
+    from tasker.services.operator import build_operator
+    from tasker.services.operator_presentation import present_operator
     if quick_notes_form is None:
         quick_notes_form = QuickNotesForm(initial={"quick_notes": dashboard.quick_notes})
     return render(
@@ -66,7 +76,9 @@ def index(request):
         "tasker/index.html",
         {
             "dashboard": dashboard,
+            "operator": present_operator(build_operator(user=request.user)),
             "quick_add_form": quick_add_form,
+            "quick_add_next": quick_add_next,
             "quick_notes_form": quick_notes_form,
             "ai_availability": personal_ai_availability(request.user),
         },

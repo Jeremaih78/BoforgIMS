@@ -1,0 +1,19 @@
+{% load static hosts %}
+<aside class="sidebar tasker-sidebar offcanvas-lg offcanvas-start" id="imsNavigation" tabindex="-1" aria-labelledby="navigationTitle">
+  <div class="d-flex d-lg-none align-items-center justify-content-between p-3"><h2 class="h5 mb-0" id="navigationTitle">Tasker navigation</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#imsNavigation" aria-label="Close navigation"></button></div>
+  <a class="tasker-brand" href="{% url 'ims:tasker:index' %}"><span class="tasker-brand-mark" aria-hidden="true"><i class="bi bi-intersect"></i></span><span><strong>Boforg</strong><small>Tasker workspace</small></span></a>
+  <div class="tasker-nav-heading">Your workspace</div>
+  <nav class="tasker-primary-nav" aria-label="Tasker navigation">
+    {% for item in tasker_primary_navigation %}<a class="tasker-nav-link{% if item.active %} active{% endif %}" href="{{ item.url }}"{% if item.active %} aria-current="page"{% endif %}><i class="bi bi-{{ item.icon }} tasker-nav-icon" aria-hidden="true"></i><span class="tasker-nav-label">{{ item.label }}</span>{% if item.key == 'now' %}<span class="tasker-nav-dot" aria-hidden="true"></span>{% endif %}</a>{% endfor %}
+  </nav>
+  <nav class="tasker-nav-secondary" aria-label="Tasker tools"><div class="tasker-nav-heading">Tools</div>
+    {% if tasker_coordination_enabled %}<a class="tasker-nav-link" href="{% url 'ims:tasker:coordination_home' %}"><i class="bi bi-arrow-left-right tasker-nav-icon" aria-hidden="true"></i><span>Coordination</span></a>{% endif %}
+    {% if tasker_reports_available %}<a class="tasker-nav-link" href="{% url 'ims:tasker:report_home' %}"><i class="bi bi-journal-text tasker-nav-icon" aria-hidden="true"></i><span>Team reports</span></a>{% endif %}
+    {% if perms.tasker.use_ai %}<a class="tasker-nav-link" href="{% url 'ims:tasker:assistant_home' %}"{% if request.resolver_match.url_name == 'assistant_home' %} aria-current="page"{% endif %}><i class="bi bi-stars tasker-nav-icon" aria-hidden="true"></i><span>Personal assistant</span></a>{% endif %}
+    {% if perms.tasker.view_ai_usage %}<a class="tasker-nav-link" href="{% url 'ims:tasker:ai_usage_dashboard' %}"{% if request.resolver_match.url_name == 'ai_usage_dashboard' %} aria-current="page"{% endif %}><i class="bi bi-bar-chart tasker-nav-icon" aria-hidden="true"></i><span>AI usage</span></a>{% endif %}
+    <a class="tasker-nav-link" href="{% url 'ims:tasker:ui_preferences' %}"{% if request.resolver_match.url_name == 'ui_preferences' %} aria-current="page"{% endif %}><i class="bi bi-sliders tasker-nav-icon" aria-hidden="true"></i><span>Preferences</span></a>
+    <button class="tasker-nav-link" type="button" data-bs-toggle="modal" data-bs-target="#taskerShortcutsModal"><i class="bi bi-keyboard tasker-nav-icon" aria-hidden="true"></i><span>Keyboard shortcuts</span></button>
+  </nav>
+  <details class="tasker-module-switch"><summary><i class="bi bi-grid" aria-hidden="true"></i>Switch to IMS<i class="bi bi-chevron-down" aria-hidden="true"></i></summary><nav aria-label="IMS modules"><a href="{% host_url 'ims:dashboard' host 'ims' %}">IMS dashboard</a><a href="{% host_url 'ims:inventory:identity_home' host 'ims' %}">Scan / search</a><a href="{% host_url 'ims:inventory:product_list' host 'ims' %}">Inventory</a><a href="{% host_url 'ims:sales:sales_home' host 'ims' %}">Sales</a><a href="{% host_url 'ims:credit_control:dashboard' host 'ims' %}">Credit control</a>{% if ims_can_view_finance %}<a href="{% host_url 'ims:accounting:accounting_dashboard' host 'ims' %}">Accounting</a>{% endif %}</nav></details>
+  <div class="tasker-sidebar-footer"><span class="tasker-status-dot" aria-hidden="true"></span>A little clarity. More progress.</div>
+</aside>

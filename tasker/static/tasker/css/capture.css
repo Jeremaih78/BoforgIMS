@@ -1,0 +1,24 @@
+.tasker-app .capture-workspace{max-width:1440px;margin-inline:auto;overflow-wrap:anywhere}
+.tasker-app .capture-narrow{max-width:850px}
+.tasker-app .capture-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.tasker-app .capture-card{padding:1.4rem;min-width:0;display:flex;flex-direction:column}
+.tasker-app .capture-card h2 a{color:var(--tk-text);text-decoration:none}
+.tasker-app .capture-card h2 a:hover{text-decoration:underline}
+.tasker-app .capture-excerpt{color:var(--tk-muted);white-space:pre-wrap;flex:1}
+.tasker-app .capture-tag{display:inline-block;padding:.2rem .6rem;border-radius:2rem;background:var(--tk-surface-raised);color:var(--tk-muted);font-size:.78rem}
+.tasker-app .capture-filter-grid{display:grid;grid-template-columns:minmax(100px,1fr) minmax(100px,1fr) auto auto;align-items:end;gap:1rem}
+.tasker-app .capture-detail-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(250px,1.2fr);gap:1.3rem;align-items:start}
+.tasker-app .capture-side{min-width:0}
+.tasker-app .capture-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:inherit;color:var(--tk-text);max-height:32rem;overflow:auto}
+.tasker-app .capture-empty{grid-column:1/-1;padding:3rem 1.5rem}
+.tasker-app .capture-empty>i{font-size:2.4rem;color:var(--tk-accent)}
+.tasker-app .capture-workspace summary{padding:.6rem 0;min-height:44px;cursor:pointer;font-weight:650}
+.tasker-app #captureEditor textarea{min-height:20rem;line-height:1.7;resize:vertical}
+.tasker-app #captureModal .modal-dialog{max-width:620px}
+.tasker-app #captureModal .modal-body{max-height:65vh;overflow:auto}
+.tasker-app #captureModal textarea{min-height:7rem}
+@media(max-width:1100px){.tasker-app .capture-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tasker-app .capture-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tasker-app .capture-detail-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:575px){.tasker-app .capture-grid,.tasker-app .capture-filter-grid{grid-template-columns:minmax(0,1fr)}.tasker-app .capture-card{padding:1.2rem}.tasker-app .capture-workspace .p-4{padding:1.15rem!important}.tasker-app #captureEditor textarea{min-height:15rem}}
+
+.tasker-app .capture-search-row{display:flex;gap:.75rem;align-items:end}
+.tasker-app .capture-search-row>div{flex:1;min-width:0}

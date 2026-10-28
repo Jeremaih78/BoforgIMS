@@ -218,6 +218,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 TASKER_AI_OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 TASKER_AI_OPENAI_ORGANIZATION = os.environ.get('OPENAI_ORGANIZATION', '')
 TASKER_AI_OPENAI_PROJECT = os.environ.get('OPENAI_PROJECT', '')
+# Stage 8 is opt-in for a deployment. Delivery remains test-only in this slice.
+TASKER_COORDINATION_ENABLED = os.environ.get('TASKER_COORDINATION_ENABLED', 'false').lower() == 'true'
+TASKER_REPORTS_ENABLED = os.environ.get('TASKER_REPORTS_ENABLED', 'false').lower() == 'true'
+TASKER_OPERATOR_DISPATCH_ENABLED = os.environ.get('TASKER_OPERATOR_DISPATCH_ENABLED', 'false').lower() == 'true'
 TASKER_AI_MAX_PROMPT_CHARACTERS = int(os.environ.get('TASKER_AI_MAX_PROMPT_CHARACTERS', '50000'))
 
 LOGGING = {

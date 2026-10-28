@@ -1,4 +1,11 @@
 from django.contrib import admin, messages
+from django.db import transaction
+from django.utils import timezone
+from django.core.exceptions import PermissionDenied
+
+from tasker.services.focus import close_task_timers
+from tasker.services.lifecycle import prepare_task_state, requires_timer_cleanup
+from tasker.services.tasks import soft_delete_task, sync_checklist_progress
 
 from .models import (
     AIConfiguration,
@@ -49,6 +56,14 @@ class AuditedSoftDeleteAdmin(admin.ModelAdmin):
             if instance.created_by_id is None:
                 instance.created_by = request.user
             instance.updated_by = request.user
+            if isinstance(instance, TaskChecklistItem):
+                previous = TaskChecklistItem.all_objects.filter(pk=instance.pk).first() if instance.pk else None
+                if instance.is_completed:
+                    instance.completed_at = previous.completed_at if previous and previous.is_completed else timezone.now()
+                    instance.completed_by = previous.completed_by if previous and previous.is_completed else request.user
+                else:
+                    instance.completed_at = None
+                    instance.completed_by = None
             instance.save()
         formset.save_m2m()
 
@@ -67,6 +82,40 @@ class AuditedSoftDeleteAdmin(admin.ModelAdmin):
 
     def delete_queryset(self, request, queryset):
         queryset.delete(user=request.user)
+
+
+class ScopedWorkAdminMixin:
+    """Staff inspect authorized work; edits use the normal validated services.
+
+    A Django permission/group must never bypass the reporting-team boundary.
+    Superusers retain the existing explicit operational recovery workflow.
+    """
+    task_lookup = "task_id"
+
+    def get_queryset(self, request):
+        from tasker.policies import visible_tasks_for
+        queryset = super().get_queryset(request)
+        if request.user.is_superuser and request.user.is_active:
+            return queryset
+        lookup = "pk__in" if self.model is Task else f"{self.task_lookup}__in"
+        return queryset.filter(**{lookup: visible_tasks_for(request.user).values("pk")})
+
+    def has_add_permission(self, request):
+        return request.user.is_active and request.user.is_superuser and super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_superuser and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_superuser and super().has_delete_permission(request, obj)
+
+    def get_actions(self, request):
+        return super().get_actions(request) if request.user.is_superuser else {}
+
+    def get_readonly_fields(self, request, obj=None):
+        if not request.user.is_superuser:
+            return tuple(field.name for field in self.model._meta.fields)
+        return super().get_readonly_fields(request, obj)
 
 
 @admin.register(TaskCategory)
@@ -90,7 +139,8 @@ class CommentInline(admin.StackedInline):
 
 
 @admin.register(Task)
-class TaskAdmin(AuditedSoftDeleteAdmin):
+class TaskAdmin(ScopedWorkAdminMixin, AuditedSoftDeleteAdmin):
+    readonly_fields = AuditedSoftDeleteAdmin.readonly_fields + ("notes",)
     list_display = ("title", "owner", "priority", "status", "due_date", "progress", "is_deleted")
     list_filter = ("priority", "status", "category", "carry_forward", "archived", "is_deleted")
     search_fields = ("title", "description", "notes", "owner__username")
@@ -98,9 +148,88 @@ class TaskAdmin(AuditedSoftDeleteAdmin):
     prepopulated_fields = {"slug": ("title",)}
     inlines = (ChecklistInline, CommentInline)
 
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        from tasker.organization import validate_task_scope
+        if not request.user.is_active or not request.user.is_superuser:
+            raise PermissionDenied
+        previous = Task.all_objects.select_for_update().get(pk=obj.pk) if change else None
+        validate_task_scope(request.user, obj, previous=previous, lock=True)
+        if previous:
+            # Working notes have their own versioned editor; admin edits cannot
+            # overwrite a concurrent focus save with an old form snapshot.
+            obj.notes = previous.notes
+        prepare_task_state(obj, previous_status=previous.status if previous else None)
+        super().save_model(request, obj, form, change)
+        if requires_timer_cleanup(obj) or (previous and previous.owner_id != obj.owner_id):
+            close_task_timers(task=obj, actor=request.user)
+        if previous and (obj.archived or obj.status in (Task.Status.COMPLETED,Task.Status.CANCELLED) or any(getattr(previous,field)!=getattr(obj,field) for field in ("owner_id","company_id","team_id"))):
+            from tasker.services.scheduling import invalidate_task_schedule
+            invalidate_task_schedule(task=obj,actor=request.user)
+        if previous and any(getattr(previous, field) != getattr(obj, field) for field in ("owner_id", "company_id", "team_id")):
+            from .models import OrganizationEvent
+            OrganizationEvent.objects.create(
+                company=obj.company, team=obj.team, actor=request.user,
+                action="task.admin_scope_changed", object_type="task", object_id=str(obj.pk),
+                details={field: {"from": getattr(previous, field), "to": getattr(obj, field)} for field in ("owner_id", "company_id", "team_id")},
+            )
+
+    def delete_model(self, request, obj):
+        if not obj.is_deleted:
+            soft_delete_task(task=obj, user=request.user)
+
+    def delete_queryset(self, request, queryset):
+        for task in queryset.filter(is_deleted=False).iterator(chunk_size=200):
+            soft_delete_task(task=task, user=request.user)
+
+    @admin.action(description="Soft delete selected records")
+    def soft_delete_selected(self, request, queryset):
+        count = queryset.filter(is_deleted=False).count()
+        self.delete_queryset(request, queryset)
+        self.message_user(request, f"{count} task(s) soft deleted; active timers closed.", messages.SUCCESS)
+
+    @transaction.atomic
+    def save_formset(self, request, form, formset, change):
+        if formset.model is TaskChecklistItem:
+            Task.all_objects.select_for_update().get(pk=form.instance.pk)
+        super().save_formset(request, form, formset, change)
+        if formset.model is TaskChecklistItem and not form.instance.is_deleted:
+            sync_checklist_progress(task=form.instance, user=request.user)
+
+
+class PersonalContentAdmin(AuditedSoftDeleteAdmin):
+    """Staff capability grants no cross-employee private content access.
+
+    Superusers retain explicit operational access. Content is read-only here;
+    normal owner workflows preserve lifecycle and version checks.
+    """
+
+    owner_lookup = "owner_id"
+    actions = ()
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if request.user.is_superuser:
+            return queryset
+        return queryset.filter(**{self.owner_lookup: request.user.pk})
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields) + tuple(
+            field.name for field in self.model._meta.many_to_many
+        )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(DailyPlan)
-class DailyPlanAdmin(AuditedSoftDeleteAdmin):
+class DailyPlanAdmin(PersonalContentAdmin):
     list_display = ("plan_date", "owner", "focus_area", "is_deleted")
     list_filter = ("plan_date", "is_deleted")
     search_fields = ("owner__username", "focus_area", "quick_notes")
@@ -109,7 +238,8 @@ class DailyPlanAdmin(AuditedSoftDeleteAdmin):
 
 
 @admin.register(DailyReview)
-class DailyReviewAdmin(AuditedSoftDeleteAdmin):
+class DailyReviewAdmin(PersonalContentAdmin):
+    owner_lookup = "plan__owner_id"
     list_display = ("plan", "energy_level", "tomorrow_focus", "is_deleted")
     list_filter = ("energy_level", "is_deleted")
     autocomplete_fields = ("plan", "carry_over_tasks")
@@ -117,7 +247,7 @@ class DailyReviewAdmin(AuditedSoftDeleteAdmin):
 
 
 @admin.register(TaskComment)
-class TaskCommentAdmin(AuditedSoftDeleteAdmin):
+class TaskCommentAdmin(ScopedWorkAdminMixin, AuditedSoftDeleteAdmin):
     list_display = ("task", "created_by", "created_at", "is_deleted")
     list_filter = ("is_deleted", "created_at")
     search_fields = ("task__title", "body", "created_by__username")
@@ -125,15 +255,68 @@ class TaskCommentAdmin(AuditedSoftDeleteAdmin):
 
 
 @admin.register(TaskChecklistItem)
-class TaskChecklistItemAdmin(AuditedSoftDeleteAdmin):
+class TaskChecklistItemAdmin(ScopedWorkAdminMixin, AuditedSoftDeleteAdmin):
     list_display = ("title", "task", "is_completed", "position", "is_deleted")
     list_filter = ("is_completed", "is_deleted")
     search_fields = ("title", "task__title")
     autocomplete_fields = ("task", "completed_by")
 
+    def get_readonly_fields(self, request, obj=None):
+        return super().get_readonly_fields(request, obj) + (("task", "is_deleted") if obj else ("is_deleted",))
+
+    @staticmethod
+    def _lock_parents(queryset):
+        ids = list(queryset.values_list("task_id", flat=True).distinct())
+        return list(Task.all_objects.select_for_update().filter(pk__in=ids).order_by("pk"))
+
+    @staticmethod
+    def _sync(parents, user):
+        for task in parents:
+            if not task.is_deleted:
+                sync_checklist_progress(task=task, user=user)
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        parent = Task.all_objects.select_for_update().get(pk=obj.task_id)
+        previous = TaskChecklistItem.all_objects.get(pk=obj.pk) if change else None
+        if obj.is_completed:
+            obj.completed_at = previous.completed_at if previous and previous.is_completed else timezone.now()
+            obj.completed_by = previous.completed_by if previous and previous.is_completed else request.user
+        else:
+            obj.completed_at = None
+            obj.completed_by = None
+        super().save_model(request, obj, form, change)
+        self._sync([parent], request.user)
+
+    @transaction.atomic
+    def delete_model(self, request, obj):
+        parents = self._lock_parents(TaskChecklistItem.all_objects.filter(pk=obj.pk))
+        super().delete_model(request, obj)
+        self._sync(parents, request.user)
+
+    @transaction.atomic
+    def delete_queryset(self, request, queryset):
+        parents = self._lock_parents(queryset)
+        super().delete_queryset(request, queryset)
+        self._sync(parents, request.user)
+
+    @admin.action(description="Soft delete selected records")
+    def soft_delete_selected(self, request, queryset):
+        count = queryset.filter(is_deleted=False).count()
+        self.delete_queryset(request, queryset)
+        self.message_user(request, f"{count} checklist item(s) soft deleted.", messages.SUCCESS)
+
+    @admin.action(description="Restore selected records")
+    @transaction.atomic
+    def restore_selected(self, request, queryset):
+        parents = self._lock_parents(queryset)
+        count = queryset.filter(is_deleted=True).restore(user=request.user)
+        self._sync(parents, request.user)
+        self.message_user(request, f"{count} checklist item(s) restored.", messages.SUCCESS)
+
 
 @admin.register(TaskTimeEntry)
-class TaskTimeEntryAdmin(AuditedSoftDeleteAdmin):
+class TaskTimeEntryAdmin(ScopedWorkAdminMixin, AuditedSoftDeleteAdmin):
     list_display = ("task", "user", "entry_type", "started_at", "ended_at", "duration", "is_deleted")
     list_filter = ("entry_type", "is_deleted", "started_at")
     search_fields = ("task__title", "user__username", "notes")
@@ -141,7 +324,7 @@ class TaskTimeEntryAdmin(AuditedSoftDeleteAdmin):
 
 
 @admin.register(TaskAttachment)
-class TaskAttachmentAdmin(AuditedSoftDeleteAdmin):
+class TaskAttachmentAdmin(ScopedWorkAdminMixin, AuditedSoftDeleteAdmin):
     list_display = ("original_name", "task", "content_type", "file_size", "created_at", "is_deleted")
     list_filter = ("content_type", "is_deleted")
     search_fields = ("original_name", "description", "task__title")
@@ -149,7 +332,7 @@ class TaskAttachmentAdmin(AuditedSoftDeleteAdmin):
 
 
 @admin.register(TaskActivity)
-class TaskActivityAdmin(admin.ModelAdmin):
+class TaskActivityAdmin(ScopedWorkAdminMixin, admin.ModelAdmin):
     list_display = ("task", "event_type", "description", "created_by", "created_at")
     list_filter = ("event_type", "created_at")
     search_fields = ("task__title", "description", "created_by__username")
@@ -192,7 +375,7 @@ class PromptTemplateAdmin(AuditedSoftDeleteAdmin):
 
 
 @admin.register(AIConversation)
-class AIConversationAdmin(AuditedSoftDeleteAdmin):
+class AIConversationAdmin(PersonalContentAdmin):
     list_display = ("session_id", "owner", "title", "agent_type", "status", "last_message_at")
     list_filter = ("status", "agent_type", "is_deleted")
     search_fields = ("session_id", "owner__username", "title")
@@ -200,7 +383,8 @@ class AIConversationAdmin(AuditedSoftDeleteAdmin):
 
 
 @admin.register(AIMessage)
-class AIMessageAdmin(AuditedSoftDeleteAdmin):
+class AIMessageAdmin(PersonalContentAdmin):
+    owner_lookup = "conversation__owner_id"
     list_display = ("conversation", "sequence", "role", "status", "total_tokens", "created_at")
     list_filter = ("role", "status", "is_deleted")
     search_fields = ("conversation__session_id", "provider_response_id")
@@ -234,8 +418,18 @@ class AIUsageLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(AIFeedback)
-class AIFeedbackAdmin(AuditedSoftDeleteAdmin):
+class AIFeedbackAdmin(PersonalContentAdmin):
+    owner_lookup = "user_id"
     list_display = ("message", "user", "rating", "category", "created_at", "is_deleted")
     list_filter = ("rating", "category", "is_deleted")
     search_fields = ("user__username", "comment", "message__provider_response_id")
     autocomplete_fields = ("user", "message")
+
+
+from . import direction_admin  # noqa: E402,F401
+from . import capture_admin  # noqa: E402,F401
+
+from . import workbench_admin  # noqa: E402,F401
+from . import planning_admin, dependency_admin, arrival_admin  # noqa: E402,F401
+from . import operator_admin  # noqa: E402,F401
+from . import coordination_admin  # noqa: E402,F401

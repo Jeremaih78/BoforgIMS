@@ -41,16 +41,16 @@ class TaskerRoleTests(TestCase):
         self.assertEqual(self.client.get(detail).status_code, 404)
         self.assertEqual(self.client.get(edit).status_code, 404)
 
-    def test_supervisor_can_read_all_but_cannot_edit_unassigned_task(self):
+    def test_supervisor_capability_alone_does_not_expose_personal_task(self):
         self.client.force_login(self.supervisor)
         detail = reverse("ims:tasker:task_detail", kwargs={"slug": self.task.slug})
         edit = reverse("ims:tasker:task_edit", kwargs={"slug": self.task.slug})
-        self.assertEqual(self.client.get(detail).status_code, 200)
-        self.assertEqual(self.client.get(edit).status_code, 403)
+        self.assertEqual(self.client.get(detail).status_code, 404)
+        self.assertEqual(self.client.get(edit).status_code, 404)
 
-    def test_manager_can_read_and_manage_all_tasks(self):
+    def test_manager_capability_alone_does_not_expose_personal_task(self):
         self.client.force_login(self.manager)
         detail = reverse("ims:tasker:task_detail", kwargs={"slug": self.task.slug})
         edit = reverse("ims:tasker:task_edit", kwargs={"slug": self.task.slug})
-        self.assertEqual(self.client.get(detail).status_code, 200)
-        self.assertEqual(self.client.get(edit).status_code, 200)
+        self.assertEqual(self.client.get(detail).status_code, 404)
+        self.assertEqual(self.client.get(edit).status_code, 404)

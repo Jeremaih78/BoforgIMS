@@ -7,6 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from tasker.models import Task, TaskActivity, TaskCategory, TaskChecklistItem, TaskComment, TaskTimeEntry
+from tasker.models import Team, TeamMembership, OrganizationAccess
+from accounting.models import Company
 
 
 TEST_STORAGES = {
@@ -83,7 +85,9 @@ class TaskManagementTests(TestCase):
         self.assertNotContains(response, "Other private proposal")
 
     def test_view_all_permission_exposes_team_tasks(self):
-        team_task = Task.objects.create(title="Team-visible task", owner=self.other)
+        company = Company.objects.create(name="Scoped fixture company")
+        OrganizationAccess.objects.create(company=company, user=self.user, can_view_all=True)
+        team_task = Task.objects.create(title="Team-visible task", owner=self.other, company=company)
         self.user.user_permissions.add(
             Permission.objects.get(content_type__app_label="tasker", codename="view_all_tasks")
         )
@@ -95,12 +99,16 @@ class TaskManagementTests(TestCase):
         self.assertContains(response, team_task.title)
 
     def test_assigner_can_open_and_manage_task_they_delegated(self):
+        company = Company.objects.create(name="Delegation fixture company")
+        team = Team.objects.create(company=company, name="Sales")
+        TeamMembership.objects.create(team=team, user=self.user, role=TeamMembership.Role.MANAGER)
+        TeamMembership.objects.create(team=team, user=self.other)
         self.user.user_permissions.add(
             Permission.objects.get(content_type__app_label="tasker", codename="assign_task")
         )
         self.client.logout()
         self.client.force_login(get_user_model().objects.get(pk=self.user.pk))
-        payload = self.valid_task_payload(owner=str(self.other.pk), title="Delegated follow-up")
+        payload = self.valid_task_payload(owner=str(self.other.pk), company=str(company.pk), team=str(team.pk), title="Delegated follow-up")
 
         response = self.client.post(reverse("ims:tasker:task_create"), payload)
 

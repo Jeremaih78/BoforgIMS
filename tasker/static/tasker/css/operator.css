@@ -1,0 +1,35 @@
+.tasker-app .operator-workspace { max-width: 1180px; margin-inline: auto; }
+.tasker-app .operator { margin-bottom: 1.75rem; color: var(--tk-text); }
+.tasker-app .operator-head, .tasker-app .operator-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.tasker-app .operator-head { justify-content: space-between; margin-bottom: 1rem; }
+.tasker-app .operator-head h2 { margin: .2rem 0; }
+.tasker-app .operator-kicker { color: var(--tk-accent); font-size: .73rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.tasker-app .operator-now { border: 1px solid var(--tk-accent); border-radius: var(--tk-radius-lg); background: var(--tk-surface); padding: clamp(1.15rem, 3vw, 2rem); box-shadow: var(--tk-shadow); }
+.tasker-app .operator-now h3 { font-size: clamp(1.4rem, 2.3vw, 1.9rem); margin: .65rem 0; }
+.tasker-app .operator-now h3 a { color: var(--tk-text); text-decoration: none; }
+.tasker-app .operator-now h3 a:hover { text-decoration: underline; }
+.tasker-app .operator-reason { color: var(--tk-accent); margin-bottom: 1.25rem; }
+.tasker-app .operator-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-block: 1.25rem; }
+.tasker-app .operator-facts dt { font-size: .73rem; color: var(--tk-muted); font-weight: 650; margin-bottom: .35rem; }
+.tasker-app .operator-facts dd { margin-bottom: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tasker-app .operator-facts .operator-done { grid-column: 1 / -1; }
+.tasker-app .operator-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem; align-items: start; }
+.tasker-app .operator-queue, .tasker-app .operator-panel { min-width: 0; padding: 1.25rem; border: 1px solid var(--tk-line); border-radius: var(--tk-radius); background: var(--tk-surface); }
+.tasker-app .operator-queue h3 { font-size: 1.05rem; display: flex; justify-content: space-between; gap: .5rem; }
+.tasker-app .operator-count { color: var(--tk-muted); font-size: .85rem; }
+.tasker-app .operator-item { padding-block: 1rem; border-bottom: 1px solid var(--tk-line); }
+.tasker-app .operator-item:last-child { border-bottom: 0; padding-bottom: 0; }
+.tasker-app .operator-item h4 { font-size: .95rem; line-height: 1.5; margin-bottom: .4rem; }
+.tasker-app .operator-item p { font-size: .85rem; color: var(--tk-muted); margin-bottom: .65rem; }
+.tasker-app .operator-meta { display: flex; gap: .5rem 1rem; flex-wrap: wrap; color: var(--tk-muted); font-size: .85rem; }
+.tasker-app .operator-empty { color: var(--tk-muted); margin: .85rem 0 0; font-size: .9rem; }
+.tasker-app .operator details { margin-top: .9rem; }
+.tasker-app .operator summary { min-height: 44px; cursor: pointer; padding-block: .6rem; color: var(--tk-accent); }
+.tasker-app .operator label { display: block; margin: .7rem 0 .45rem; font-size: .88rem; }
+.tasker-app .operator :is(textarea, select, input) { max-width: 100%; }
+.tasker-app .operator-footer { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: 1rem; color: var(--tk-muted); font-size: .78rem; }
+.tasker-app .operator-warning { padding: .85rem 1rem; background: var(--tk-warning-soft); border-inline-start: 3px solid var(--tk-warning); border-radius: var(--tk-radius-sm); }
+.tasker-app .operator-weights { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.tasker-app .operator-weights .form-control { max-width: 9rem; }
+@media(max-width: 1050px) { .tasker-app .operator-grid { grid-template-columns: 1fr; } }
+@media(max-width: 550px) { .tasker-app .operator-facts, .tasker-app .operator-weights { grid-template-columns: 1fr; } .tasker-app .operator-head { align-items: flex-start; } .tasker-app .operator-actions > .btn { flex-grow: 1; } }

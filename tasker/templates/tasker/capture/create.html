@@ -1,0 +1,4 @@
+{% extends 'base.html' %}
+{% block title %}Capture · Boforg Tasker{% endblock %}
+{% block content %}<div class="capture-workspace capture-narrow"><a href="{% url 'ims:tasker:capture_list' %}" class="d-inline-block mb-3">← Inbox</a><header class="tasker-section-header"><div><div class="tasker-eyebrow">Make room for the thought</div><h1>Capture</h1><p class="text-muted">Save a task, idea, note or link privately. Nothing gets scheduled until you choose.</p></div></header>
+<form method="post" class="tasker-panel p-4" data-tasker-edit-form>{% csrf_token %}{% include 'tasker/includes/form_errors.html' %}<p class="small text-muted" role="status" data-tasker-form-status></p>{% include 'tasker/capture/fields.html' %}<div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit">Save to private Inbox</button><a class="btn btn-secondary" href="{% url 'ims:tasker:capture_list' %}">Cancel</a></div></form></div>{% endblock %}

@@ -1,7 +1,8 @@
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import F, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -27,7 +28,10 @@ from tasker.services.tasks import (
     toggle_checklist_item,
     update_progress,
 )
+from tasker.services.notes import NotesConflictError
+from tasker.services.workbench import work_version
 from tasker.ai.personal_assistant import personal_ai_availability
+from tasker.organization import company_read_ids, managed_teams_for, visible_companies_for, visible_teams_for
 
 
 SORT_OPTIONS = {
@@ -42,71 +46,8 @@ SORT_OPTIONS = {
 @login_required
 @permission_required("tasker.view_task", raise_exception=True)
 def task_list(request):
-    tasks = visible_tasks_for(request.user)
-    query = request.GET.get("q", "").strip()
-    priority = request.GET.get("priority", "")
-    status = request.GET.get("status", "")
-    category = request.GET.get("category", "")
-    owner = request.GET.get("owner", "")
-    sort = request.GET.get("sort", "due")
-
-    if query:
-        tasks = tasks.filter(
-            Q(title__icontains=query)
-            | Q(description__icontains=query)
-            | Q(notes__icontains=query)
-        )
-    if priority in Task.Priority.values:
-        tasks = tasks.filter(priority=priority)
-    if status in Task.Status.values:
-        tasks = tasks.filter(status=status)
-    if category.isdigit():
-        tasks = tasks.filter(category_id=int(category))
-    can_view_all = request.user.has_perm("tasker.view_all_tasks") or request.user.has_perm(
-        "tasker.manage_tasker"
-    )
-    if owner.isdigit() and can_view_all:
-        tasks = tasks.filter(owner_id=int(owner))
-    if request.GET.get("archived") != "1":
-        tasks = tasks.filter(archived=False)
-
-    if sort == "priority":
-        tasks = tasks.annotate(priority_rank=priority_rank_expression()).order_by(
-            "priority_rank", F("due_date").asc(nulls_last=True)
-        )
-    else:
-        tasks = tasks.order_by(*SORT_OPTIONS.get(sort, SORT_OPTIONS["due"]))
-
-    page_obj = Paginator(tasks, 12).get_page(request.GET.get("page"))
-    owners = (
-        get_user_model().objects.filter(is_active=True).order_by(
-            "first_name", "last_name", "username"
-        )
-        if can_view_all
-        else get_user_model().objects.none()
-    )
-    return render(
-        request,
-        "tasker/task_list.html",
-        {
-            "page_obj": page_obj,
-            "categories": TaskCategory.objects.filter(is_active=True),
-            "owners": owners,
-            "priority_choices": Task.Priority.choices,
-            "status_choices": Task.Status.choices,
-            "filters": {
-                "q": query,
-                "priority": priority,
-                "status": status,
-                "category": category,
-                "owner": owner,
-                "sort": sort,
-                "archived": request.GET.get("archived", ""),
-            },
-            "can_view_all": can_view_all,
-            "today": timezone.localdate(),
-        },
-    )
+    from tasker.views.workbench import work_list
+    return work_list(request)
 
 
 @login_required
@@ -122,19 +63,37 @@ def task_detail(request, slug):
         ),
         slug=slug,
     )
+    from tasker.services.captures import visible_captures_for
+    source_capture = visible_captures_for(request.user).filter(promoted_task=task).first()
     time_entries = task.time_entries.select_related("user")[:8]
     activities = TaskActivity.objects.filter(task=task).select_related("created_by")[:30]
+    from tasker.models import TaskContribution
+    from tasker.services.goals import visible_initiatives_for
+    primary_contribution = TaskContribution.objects.filter(
+        task=task, initiative__in=visible_initiatives_for(request.user),
+    ).select_related("initiative__goal").first()
+    from tasker.services.dependencies import readiness_for
+    from tasker.services.effort import effort_for_task
+    coordination_requests = []
+    if getattr(settings, "TASKER_COORDINATION_ENABLED", False):
+        from tasker.services.coordination import visible_requests_for
+        coordination_requests = visible_requests_for(request.user).filter(task=task).select_related("resolver").order_by("-raised_at", "-pk")[:10]
     return render(
         request,
         "tasker/task_detail.html",
         {
             "task": task,
+            "readiness":readiness_for(task=task,user=request.user),
+            "remaining_effort":effort_for_task(task=task),
+            "coordination_requests": coordination_requests,
+            "primary_contribution": primary_contribution,
+            "source_capture": source_capture,
             "time_entries": time_entries,
             "activities": activities,
             "comment_form": TaskCommentForm(),
             "checklist_form": ChecklistItemForm(),
             "time_form": TimeEntryForm(),
-            "progress_form": TaskProgressForm(initial={"progress": task.progress}),
+            "progress_form": TaskProgressForm(initial={"progress": task.progress, "work_version": work_version(task)}),
             "can_change": can_change_task(request.user, task),
             "can_delete": can_delete_task(request.user, task),
             "personal_ai_allowed": task.owner_id == request.user.pk,
@@ -146,11 +105,23 @@ def task_detail(request, slug):
 @login_required
 @permission_required("tasker.add_task", raise_exception=True)
 def task_create(request):
-    form = TaskForm(request.POST or None, user=request.user)
+    instance = Task()
+    if request.method == "GET":
+        if str(request.GET.get("team", "")).isdigit():
+            team = get_object_or_404(visible_teams_for(request.user), pk=request.GET["team"])
+            instance.team = team
+            instance.company = team.company
+        elif str(request.GET.get("company", "")).isdigit():
+            instance.company = get_object_or_404(visible_companies_for(request.user), pk=request.GET["company"])
+    form = TaskForm(request.POST or None, instance=instance, user=request.user)
     if request.method == "POST" and form.is_valid():
-        task = save_task(form=form, user=request.user)
-        messages.success(request, "Task created successfully.")
-        return redirect("ims:tasker:task_detail", slug=task.slug)
+        try:
+            task = save_task(form=form, user=request.user)
+        except ValidationError as exc:
+            form.add_error(None, "; ".join(exc.messages))
+        else:
+            messages.success(request, "Task created successfully.")
+            return redirect("ims:tasker:task_detail", slug=task.slug)
     return render(request, "tasker/task_form.html", {"form": form, "page_title": "Create task"})
 
 
@@ -160,14 +131,25 @@ def task_edit(request, slug):
     task = _task_for_user(request.user, slug)
     _require_change(request.user, task)
     form = TaskForm(request.POST or None, instance=task, user=request.user)
+    notes_conflict = None
     if request.method == "POST" and form.is_valid():
-        task = save_task(form=form, user=request.user)
-        messages.success(request, "Task updated successfully.")
-        return redirect("ims:tasker:task_detail", slug=task.slug)
+        try:
+            task = save_task(form=form, user=request.user)
+        except NotesConflictError as exc:
+            data = form.data.copy()
+            data["notes_version"] = exc.version
+            form.data = data
+            form.add_error("notes", "These notes changed in another tab. Review the latest saved text below, merge your edits, and save again.")
+            notes_conflict = exc.notes
+        except ValidationError as exc:
+            form.add_error(None, "; ".join(exc.messages))
+        else:
+            messages.success(request, "Task updated successfully.")
+            return redirect("ims:tasker:task_detail", slug=task.slug)
     return render(
         request,
         "tasker/task_form.html",
-        {"form": form, "task": task, "page_title": "Edit task"},
+        {"form": form, "task": task, "page_title": "Edit task", "notes_conflict": notes_conflict},
     )
 
 
@@ -256,8 +238,13 @@ def progress_update(request, slug):
     _require_change(request.user, task)
     form = TaskProgressForm(request.POST)
     if form.is_valid():
-        update_progress(task=task, user=request.user, progress=form.cleaned_data["progress"])
-        messages.success(request, "Progress updated.")
+        try:
+            update_progress(task=task, user=request.user, progress=form.cleaned_data["progress"],
+                            accept_definition=form.cleaned_data["accept_definition"], expected_version=form.cleaned_data.get("work_version"))
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Progress updated.")
     else:
         messages.error(request, "Progress must be between 0 and 100.")
     return redirect(task.get_absolute_url())

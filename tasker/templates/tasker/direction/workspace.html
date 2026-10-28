@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Goals & teams · Boforg Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/task_management.css' %}"><link rel="stylesheet" href="{% static 'tasker/css/direction.css' %}">{% endblock %}
+{% block content %}<div class="task-management direction-workspace">
+<nav class="tasker-workspace-nav d-flex flex-wrap gap-2 mb-4" aria-label="Company direction"><a class="btn btn-secondary" href="{% url 'ims:tasker:index' %}">Now</a><a class="btn btn-outline-primary" href="{% url 'ims:tasker:goal_list' %}">Goals</a><a class="btn btn-outline-primary" href="{% url 'ims:tasker:team_list' %}">Teams</a><a class="btn btn-outline-primary" href="{% url 'ims:tasker:baseline_list' %}">Productivity baseline</a></nav>
+{% block direction_content %}{% endblock %}</div>{% endblock %}

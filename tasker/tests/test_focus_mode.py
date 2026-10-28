@@ -50,7 +50,7 @@ class FocusModeTests(TestCase):
     def test_complete_closes_timer_and_updates_task(self):
         self.client.post(self.url("focus_start"))
         response = self.client.post(self.url("focus_complete"))
-        self.assertRedirects(response, reverse("ims:tasker:index"))
+        self.assertRedirects(response, self.url("focus_wrap_up"))
         self.task.refresh_from_db()
         self.assertEqual(self.task.status, Task.Status.COMPLETED)
         self.assertEqual(self.task.progress, 100)
@@ -65,14 +65,20 @@ class FocusModeTests(TestCase):
         self.assertEqual(self.task.status, Task.Status.IN_PROGRESS)
 
         response = self.client.post(self.url("focus_block"), {"reason": "Waiting for signed approval"})
-        self.assertRedirects(response, reverse("ims:tasker:index"))
+        self.assertRedirects(response, self.url("focus_wrap_up"))
         self.task.refresh_from_db()
         self.assertEqual(self.task.status, Task.Status.BLOCKED)
         self.assertEqual(self.task.blocked_reason, "Waiting for signed approval")
 
     def test_notes_autosave_and_checklist_progress(self):
-        response = self.client.post(self.url("focus_notes"), {"notes": "Decision captured"})
-        self.assertJSONEqual(response.content, {"saved": True})
+        from tasker.services.notes import notes_version
+
+        response = self.client.post(self.url("focus_notes"), {
+            "notes": "Decision captured", "base_version": notes_version(self.task.notes),
+        })
+        self.assertJSONEqual(response.content, {
+            "saved": True, "version": notes_version("Decision captured"),
+        })
         item = TaskChecklistItem.objects.create(task=self.task, title="First step", created_by=self.user)
         response = self.client.post(self.url("focus_checklist_toggle", item_pk=item.pk))
         self.assertRedirects(response, self.url("focus_mode"))

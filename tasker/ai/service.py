@@ -45,6 +45,7 @@ class _PreparedRequest:
     output_schema: dict
     safety_identifier: str
     started_monotonic: float
+    provider_attempts: int = 0
 
 
 class AIService:
@@ -103,15 +104,19 @@ class AIService:
                     output_schema=prepared.output_schema,
                 ),
                 prepared.configuration,
+                before_attempt=lambda: self._begin_attempt(prepared),
             )
             return self._succeed(prepared, provider_result, attempts)
         except AIServiceError as exc:
-            self._fail(prepared, exc, attempts=getattr(exc, "attempts", 1))
+            self._fail(prepared, exc, attempts=prepared.provider_attempts)
             raise
         except Exception as exc:
             safe_error = AIProviderError("The AI provider returned an unexpected error.")
-            self._fail(prepared, safe_error)
+            self._fail(prepared, safe_error, attempts=prepared.provider_attempts)
             raise safe_error from exc
+        except BaseException:
+            self._fail(prepared, AIStreamInterruptedError(provider_code="request_aborted"), attempts=prepared.provider_attempts)
+            raise
 
     def stream_text(self, **kwargs):
         return self._stream_text(**kwargs)
@@ -146,6 +151,7 @@ class AIService:
             while attempts <= prepared.configuration.max_retries:
                 attempts += 1
                 try:
+                    self._begin_attempt(prepared)
                     final_provider_result = None
                     for event in provider.stream(
                         instructions=prepared.instructions,
@@ -182,19 +188,24 @@ class AIService:
         except GeneratorExit:
             error = AIStreamInterruptedError(provider_code="consumer_disconnected")
             if not finalized:
-                self._fail(prepared, error, attempts=attempts, status=AIUsageLog.Status.INTERRUPTED)
+                self._fail(prepared, error, attempts=prepared.provider_attempts, status=AIUsageLog.Status.INTERRUPTED)
                 finalized = True
             raise
         except AIServiceError as exc:
             if not finalized:
-                self._fail(prepared, exc, attempts=attempts)
+                self._fail(prepared, exc, attempts=prepared.provider_attempts)
                 finalized = True
             raise
         except Exception as exc:
             safe_error = AIProviderError("The AI provider returned an unexpected error.")
             if not finalized:
-                self._fail(prepared, safe_error, attempts=attempts)
+                self._fail(prepared, safe_error, attempts=prepared.provider_attempts)
+                finalized = True
             raise safe_error from exc
+        except BaseException:
+            if not finalized:
+                self._fail(prepared, AIStreamInterruptedError(provider_code="request_aborted"), attempts=prepared.provider_attempts)
+            raise
 
     def _prepare(
         self,
@@ -247,7 +258,6 @@ class AIService:
                 raise AIDisabledError()
             if streaming and not configuration.allow_streaming:
                 raise AIConfigurationError("Streaming is disabled in the active AI configuration.")
-            self.rate_limiter.check(user=user, configuration=configuration)
             rendered = self.prompt_manager.render(
                 key=prompt_key, variables=variables, configuration=configuration
             )
@@ -255,15 +265,28 @@ class AIService:
             if len(rendered.system) + len(rendered.user) > environment.max_prompt_characters:
                 raise AIConfigurationError("The rendered prompt exceeds the configured size limit.")
             prompt_template = PromptTemplate.objects.get(pk=rendered.template_id)
-            conversation, assistant_message, input_items = self._prepare_conversation(
-                user=user,
-                conversation=conversation,
-                agent_type=agent_type,
-                metadata=metadata,
-                prompt_template=prompt_template,
-                rendered=rendered,
-                usage_log=usage_log,
-            )
+            # Conversation writes and admission are one local transaction:
+            # rejected work must not leave a pending assistant message. No
+            # provider factory, network call or retry sleep runs under it.
+            with transaction.atomic():
+                conversation, assistant_message, input_items = self._prepare_conversation(
+                    user=user,
+                    conversation=conversation,
+                    agent_type=agent_type,
+                    metadata=metadata,
+                    prompt_template=prompt_template,
+                    rendered=rendered,
+                    usage_log=usage_log,
+                )
+                token_budget = AIRateLimiter.estimate_token_budget(
+                    instructions=rendered.system,
+                    input_items=input_items,
+                    output_schema=rendered.output_schema,
+                    configuration=configuration,
+                )
+                self.rate_limiter.check(
+                    user=user, configuration=configuration, usage_log=usage_log, token_budget=token_budget
+                )
             return _PreparedRequest(
                 user=user,
                 configuration=configuration,
@@ -296,17 +319,34 @@ class AIService:
             )
             raise safe_error from exc
 
-    def _with_retry(self, callback, configuration):
+    def _with_retry(self, callback, configuration, before_attempt=None):
         attempts = 0
         while attempts <= configuration.max_retries:
             attempts += 1
             try:
+                if before_attempt is not None:
+                    before_attempt()
                 return callback(), attempts
             except AIProviderError as exc:
                 if not exc.transient or attempts > configuration.max_retries:
                     exc.attempts = attempts
                     raise
                 self._sleep_before_retry(configuration=configuration, attempts=attempts, error=exc)
+
+    def _begin_attempt(self, prepared):
+        begin_attempt = getattr(self.rate_limiter, "begin_attempt", None)
+        if begin_attempt is not None:
+            log = begin_attempt(user=prepared.user, configuration=prepared.configuration, usage_log=prepared.usage_log)
+            prepared.provider_attempts = log.quota_provider_attempts
+        else:
+            # Existing explicitly injected test limiters can still bypass
+            # admission without introducing a second production quota path.
+            prepared.provider_attempts += 1
+
+    def _settle_quota(self, prepared, *, usage=None):
+        settle = getattr(self.rate_limiter, "settle", None)
+        if settle is not None:
+            settle(user=prepared.user, usage_log=prepared.usage_log, usage=usage)
 
     @transaction.atomic
     def _prepare_conversation(
@@ -367,6 +407,7 @@ class AIService:
     def _succeed(self, prepared, provider_result, attempts):
         elapsed = self._elapsed_ms(prepared.started_monotonic)
         usage = provider_result.usage
+        self._settle_quota(prepared, usage=usage)
         message = AIMessage.objects.select_for_update().get(pk=prepared.assistant_message.pk)
         message.content = provider_result.text
         message.status = AIMessage.Status.COMPLETED
@@ -413,6 +454,7 @@ class AIService:
             if isinstance(error, AIRateLimitError) or getattr(error, "status_code", None) == 429
             else AIUsageLog.Status.FAILED
         )
+        self._settle_quota(prepared)
         message = AIMessage.objects.select_for_update().get(pk=prepared.assistant_message.pk)
         message.status = (
             AIMessage.Status.INTERRUPTED
@@ -439,7 +481,12 @@ class AIService:
         log.latency_ms = self._elapsed_ms(started_monotonic)
         log.attempts = max(1, attempts)
         log.completed_at = timezone.now()
-        log.save()
+        # A separately loaded quota row may already have settled; never write
+        # this potentially older object's reservation fields back over it.
+        log.save(update_fields=[
+            "status", "provider_request_id", "error_type", "error_code",
+            "error_message", "latency_ms", "attempts", "completed_at", "updated_at",
+        ])
         logger.warning(
             "AI request failed",
             extra={"ai_request_uuid": str(log.request_uuid), "operation": log.operation, "error_code": log.error_code},

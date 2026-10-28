@@ -35,7 +35,7 @@ class TaskerUIPolishTests(TestCase):
         self.assertContains(response, 'class="tasker-capture"')
         self.assertContains(response, "Keyboard shortcuts")
 
-    def test_toolbar_quick_add_is_hidden_without_add_permission(self):
+    def test_private_capture_remains_available_without_task_creation_permission(self):
         viewer = get_user_model().objects.create_user(username="ux-viewer", password="pass")
         viewer.user_permissions.add(
             Permission.objects.get(content_type__app_label="tasker", codename="view_task")
@@ -44,8 +44,10 @@ class TaskerUIPolishTests(TestCase):
 
         response = self.client.get(reverse("ims:tasker:index"))
 
-        self.assertNotContains(response, 'class="tasker-capture"')
+        self.assertContains(response, 'class="tasker-capture"')
+        self.assertContains(response, 'id="captureModal"', count=1)
         self.assertNotContains(response, 'id="quickAddModal"')
+        self.assertNotContains(response, 'data-create-url=')
 
     def test_global_quick_add_returns_to_safe_origin_page(self):
         task_list_url = reverse("ims:tasker:task_list")

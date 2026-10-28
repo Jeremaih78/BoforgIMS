@@ -9,7 +9,10 @@ from .models import Task, TaskActivity
 
 TRACKED_FIELDS = (
     "title",
+    "definition_of_done",
     "owner_id",
+    "company_id",
+    "team_id",
     "priority",
     "status",
     "estimated_duration",
@@ -88,3 +91,16 @@ def _json_value(value):
     if isinstance(value, Decimal):
         return str(value)
     return value
+
+
+@receiver(post_save, sender=Task)
+def reconcile_business_evidence(sender, instance, created, raw=False, **kwargs):
+    if raw or created:
+        return
+    # Reopening or rescoping work invalidates acceptance; finishing it again
+    # must never silently restore a previously accepted business outcome.
+    from .services.goals import reconcile_task_outcomes
+    reconcile_task_outcomes(task=instance, user=instance.updated_by or instance.created_by)
+
+
+from . import operator_events  # noqa: E402,F401

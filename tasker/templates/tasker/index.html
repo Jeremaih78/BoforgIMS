@@ -1,21 +1,23 @@
 {% extends "base.html" %}
 {% load static tasker_tags %}
 
-{% block title %}Today · Boforg AI Tasker{% endblock %}
+{% block title %}Now · Boforg AI Tasker{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'tasker/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'tasker/css/operator.css' %}?v=stage7-20261027">
 {% endblock %}
 
 {% block content %}
 <div class="tasker-dashboard">
   <header class="tasker-hero d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
     <div>
-      <div class="tasker-eyebrow mb-2"><i class="bi bi-sun me-2" aria-hidden="true"></i>{{ dashboard.date|date:"l, j F Y" }}</div>
+      <div class="tasker-eyebrow mb-2"><i class="bi bi-sun me-2" aria-hidden="true"></i>Now · {{ dashboard.date|date:"l, j F Y" }}</div>
       <h1 class="display-6 fw-bold mb-1">{{ dashboard.greeting }}, {{ user.first_name|default:user.username }}.</h1>
       <p class="text-muted mb-0">Let’s make today count. Start with the work that matters most.</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-secondary" href="{% url 'ims:tasker:arrival_home' %}"><i class="bi bi-door-open me-2" aria-hidden="true"></i>Arrival</a>
     {% if perms.tasker.view_dailyplan %}<a class="btn btn-secondary" href="{% url 'ims:tasker:daily_plan' %}"><i class="bi bi-journal-check me-2"></i>Plan today</a>{% endif %}
     <a class="btn btn-secondary" href="{% url 'ims:tasker:task_list' %}"><i class="bi bi-check2-square me-2"></i>All tasks</a>
     {% if perms.tasker.add_task %}<button class="btn btn-primary tasker-primary-action" type="button" data-bs-toggle="modal" data-bs-target="#quickAddModal">
@@ -24,14 +26,17 @@
     </div>
   </header>
 
-  <section class="row g-3 mb-4" aria-label="Today's progress">
+  {% include 'tasker/operator/panel.html' %}
+
+  <details class="mb-4"><summary class="py-2">Daily overview, deadlines and notes</summary>
+  <section class="row g-3 mb-4 mt-1" aria-label="Today's progress">
     <div class="col-lg-6">
       <div class="tasker-card tasker-progress-card h-100 d-flex align-items-center gap-4 p-4">
         <div class="tasker-progress-ring flex-shrink-0" style="--progress: {{ dashboard.progress_percent }}" role="progressbar" aria-valuenow="{{ dashboard.progress_percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="Today's progress">
           <span>{{ dashboard.progress_percent }}%</span>
         </div>
         <div>
-          <div class="tasker-label">Today’s progress</div>
+          <div class="tasker-label">Scheduled task completion</div>
           <h2 class="h4 mt-1 mb-1">{% if dashboard.total_count %}Keep your momentum going{% else %}Your day is ready to plan{% endif %}</h2>
           <p class="text-muted mb-0">{{ dashboard.completed_count }} of {{ dashboard.total_count }} scheduled task{{ dashboard.total_count|pluralize }} completed.</p>
         </div>
@@ -41,7 +46,7 @@
       <div class="tasker-card tasker-stat-card h-100 p-4">
         <span class="tasker-icon tasker-icon-success"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
         <div class="tasker-stat-value">{{ dashboard.completed_count }}</div>
-        <div class="tasker-label">Tasks completed</div>
+        <div class="tasker-label">Scheduled tasks completed</div>
       </div>
     </div>
     <div class="col-6 col-lg-3">
@@ -92,11 +97,12 @@
       <section class="tasker-card p-4" aria-labelledby="timeline-heading">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <div class="tasker-label">Your schedule</div>
+            <div class="tasker-label">Deadlines and daily intentions</div>
             <h2 class="h4 mb-0" id="timeline-heading">Today’s timeline</h2>
           </div>
           <i class="bi bi-calendar3 fs-5 text-muted" aria-hidden="true"></i>
         </div>
+        <p class="small text-muted">Dates below are deadlines and intentions. <a href="{% url 'ims:tasker:planning_home' %}">Accepted time blocks</a> reserve capacity separately.</p>
         {% if dashboard.timeline %}
         <div class="tasker-timeline">
           {% for task in dashboard.timeline %}
@@ -156,7 +162,7 @@
         <div class="d-flex align-items-center justify-content-between mb-3">
           <div>
             <div class="tasker-label">Scratchpad</div>
-            <h2 class="h5 mb-0" id="notes-heading">Quick notes</h2>
+            <h2 class="h5 mb-0" id="notes-heading">Daily scratchpad</h2>
           </div>
           <i class="bi bi-journal-text fs-5 text-info" aria-hidden="true"></i>
         </div>
@@ -176,6 +182,7 @@
         {% endif %}
       </section>
 
+      <p class="small"><a href="{% url 'ims:tasker:capture_list' %}">Open durable notes and ideas</a> · <a href="{% url 'ims:tasker:capture_legacy' %}">Older scratchpads</a></p>
       <section class="tasker-card tasker-review-card p-4 mb-4" aria-labelledby="review-heading">
         <span class="tasker-icon tasker-icon-primary mb-3"><i class="bi bi-moon-stars" aria-hidden="true"></i></span>
         <h2 class="h5" id="review-heading">End day review</h2>
@@ -209,6 +216,7 @@
       </section>
     </div>
   </div>
+  </details>
 </div>
 {% endblock %}
 

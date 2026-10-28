@@ -1,16 +1,24 @@
 from datetime import timedelta
+from copy import copy
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import F, Q
 from django.utils import timezone
 
 from .models import DailyPlan, DailyReview, Task, TaskCategory
 from .policies import visible_tasks_for
 from .selectors import owned_plannable_tasks
+from .services.notes import notes_version as version_for_notes
+from .services.workbench import work_version as version_for_work
+from .organization import assignable_users_for, validate_task_scope, visible_companies_for, visible_teams_for
 
 
 class TaskForm(forms.ModelForm):
+    notes_version = forms.CharField(required=False, widget=forms.HiddenInput)
+    work_version = forms.RegexField(regex=r"^[0-9a-f]{64}$", required=False, widget=forms.HiddenInput)
+    accept_definition = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
     owner = forms.ModelChoiceField(
         queryset=get_user_model().objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
@@ -33,7 +41,10 @@ class TaskForm(forms.ModelForm):
         fields = (
             "title",
             "owner",
+            "company",
+            "team",
             "description",
+            "definition_of_done",
             "priority",
             "status",
             "due_date",
@@ -47,11 +58,15 @@ class TaskForm(forms.ModelForm):
             "carry_forward",
             "archived",
             "notes",
+            "notes_version",
+            "work_version",
+            "accept_definition",
             "blocked_reason",
         )
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Task title"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            "definition_of_done": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "What must be true before this task can be accepted?"}),
             "priority": forms.Select(attrs={"class": "form-select"}),
             "status": forms.Select(attrs={"class": "form-select"}),
             "due_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
@@ -71,6 +86,29 @@ class TaskForm(forms.ModelForm):
     def __init__(self, *args, user, **kwargs):
         self.user = user
         super().__init__(*args, **kwargs)
+        self.definition_submitted = self.is_bound and "definition_of_done" in self.data
+        if not self.instance.owner_id:
+            # Owner is omitted for employees, but ModelForm's model validation
+            # still needs the effective owner for personal parent boundaries.
+            self.instance.owner = user
+        if self.is_bound and self.instance.pk:
+            # Clients predating Stage 2 cannot accidentally clear a mapping.
+            self.data = self.data.copy()
+            for name in ("company", "team"):
+                if name not in self.data:
+                    self.data[name] = getattr(self.instance, f"{name}_id") or ""
+            if not self.definition_submitted:
+                self.data["definition_of_done"] = self.instance.definition_of_done
+        self.fields["company"].queryset = visible_companies_for(user)
+        self.fields["team"].queryset = visible_teams_for(user)
+        for name in ("company", "team"):
+            self.fields[name].widget.attrs["class"] = "form-select"
+        self.fields["company"].help_text = "Leave company and team blank for personal or unmapped legacy work."
+        self.fields["team"].help_text = "Sharing with a team gives its manager access to this task and its working notes."
+        self.fields["notes"].strip = False
+        if self.instance.pk and not self.is_bound:
+            self.initial["notes_version"] = version_for_notes(self.instance.notes)
+            self.initial["work_version"] = version_for_work(self.instance)
         self.fields["category"].queryset = TaskCategory.objects.filter(is_active=True)
         parent_queryset = visible_tasks_for(user).exclude(status=Task.Status.CANCELLED)
         if self.instance.pk:
@@ -78,10 +116,16 @@ class TaskForm(forms.ModelForm):
         self.fields["parent_task"].queryset = parent_queryset.order_by("title")
 
         if user.has_perm("tasker.assign_task") or user.has_perm("tasker.manage_tasker"):
-            self.fields["owner"].queryset = get_user_model().objects.filter(is_active=True).order_by(
+            team_id = self.data.get("team") if self.is_bound else self.instance.team_id
+            company_id = self.data.get("company") if self.is_bound else self.instance.company_id
+            team_id = int(team_id) if str(team_id or "").isdigit() else None
+            company_id = int(company_id) if str(company_id or "").isdigit() else None
+            self.fields["owner"].queryset = assignable_users_for(user, team=team_id, company=company_id).order_by(
                 "first_name", "last_name", "username"
             )
             self.fields["owner"].initial = self.instance.owner_id or user.pk
+            if not self.is_bound and not self.initial.get("owner"):
+                self.initial["owner"] = self.instance.owner_id or user.pk
         else:
             self.fields.pop("owner")
 
@@ -99,6 +143,20 @@ class TaskForm(forms.ModelForm):
         cleaned = super().clean()
         if cleaned.get("due_time") and not cleaned.get("due_date"):
             self.add_error("due_date", "Choose a due date when setting a due time.")
+        if not self.errors:
+            candidate = copy(self.instance)
+            candidate.company = cleaned.get("company")
+            candidate.team = cleaned.get("team")
+            candidate.owner = cleaned.get("owner") or (self.instance.owner if self.instance.owner_id else self.user)
+            candidate.parent_task = cleaned.get("parent_task")
+            previous = Task.all_objects.filter(pk=self.instance.pk).first() if self.instance.pk else None
+            try:
+                validate_task_scope(self.user, candidate, previous)
+            except PermissionDenied:
+                self.add_error(None, "You cannot assign or share a task outside your authorized scope.")
+            except ValidationError as exc:
+                for name, errors in getattr(exc, "message_dict", {"__all__": exc.messages}).items():
+                    self.add_error(name if name in self.fields else None, errors)
         return cleaned
 
     def save(self, commit=True):
@@ -157,6 +215,8 @@ class TimeEntryForm(forms.Form):
 
 
 class TaskProgressForm(forms.Form):
+    work_version = forms.RegexField(regex=r"^[0-9a-f]{64}$", required=False, widget=forms.HiddenInput)
+    accept_definition = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
     progress = forms.IntegerField(
         min_value=0,
         max_value=100,
@@ -205,6 +265,14 @@ class QuickAddTaskForm(forms.Form):
         self.fields["category"].queryset = TaskCategory.objects.filter(is_active=True).order_by(
             "sort_order", "name"
         )
+        for name, suffix in (
+            ("title", "Title"), ("priority", "Priority"), ("due_time", "Time"),
+            ("estimated_minutes", "Estimate"), ("category", "Category"),
+        ):
+            field_id = f"globalTask{suffix}"
+            self.fields[name].widget.attrs.update({
+                "id": field_id, "aria-describedby": f"{field_id}Errors",
+            })
 
     def estimated_duration(self):
         minutes = self.cleaned_data.get("estimated_minutes")
@@ -227,6 +295,7 @@ class QuickNotesForm(forms.Form):
 
 
 class DailyPlanForm(forms.ModelForm):
+    plan_version = forms.CharField(required=False,max_length=64,widget=forms.HiddenInput)
     top_priorities = forms.ModelMultipleChoiceField(
         queryset=Task.objects.none(),
         required=False,
@@ -259,6 +328,9 @@ class DailyPlanForm(forms.ModelForm):
 
     def __init__(self, *args, user, plan_date=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            from .services.planner import plan_version
+            self.initial["plan_version"] = plan_version(self.instance)
         plan_date = plan_date or timezone.localdate()
         tasks = owned_plannable_tasks(user=user, plan=self.instance)
         self.fields["top_priorities"].queryset = tasks

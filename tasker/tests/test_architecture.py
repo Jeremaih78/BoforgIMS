@@ -25,7 +25,7 @@ class TaskerArchitectureTests(TestCase):
         )
         self.other = get_user_model().objects.create_user(username="outside-user")
 
-    def test_today_dashboard_uses_five_bounded_queries(self):
+    def test_today_dashboard_uses_six_bounded_queries_with_local_work_date(self):
         Task.objects.create(title="Today", owner=self.user, due_date=timezone.localdate())
         Task.objects.create(
             title="Carry",
@@ -34,7 +34,8 @@ class TaskerArchitectureTests(TestCase):
             carry_forward=True,
         )
 
-        with self.assertNumQueries(5):
+        # One fixed WorkPolicy lookup supplies the employee's local date.
+        with self.assertNumQueries(6):
             dashboard = build_today_dashboard(user=self.user)
 
         self.assertEqual(dashboard.total_count, 1)
