@@ -218,6 +218,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 TASKER_AI_OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 TASKER_AI_OPENAI_ORGANIZATION = os.environ.get('OPENAI_ORGANIZATION', '')
 TASKER_AI_OPENAI_PROJECT = os.environ.get('OPENAI_PROJECT', '')
+# Goals, teams and Strategy are explicitly enabled for a configured rollout.
+TASKER_DIRECTION_ENABLED = os.environ.get('TASKER_DIRECTION_ENABLED', 'false').lower() == 'true'
 # Stage 8 is opt-in for a deployment. Delivery remains test-only in this slice.
 TASKER_COORDINATION_ENABLED = os.environ.get('TASKER_COORDINATION_ENABLED', 'false').lower() == 'true'
 TASKER_REPORTS_ENABLED = os.environ.get('TASKER_REPORTS_ENABLED', 'false').lower() == 'true'
