@@ -1,0 +1,62 @@
+python-dotenv could not parse statement starting at line 9
+Creating test database for alias 'default'...
+
+..AI request failed
+................................AI request failed
+....................................................................................................................................AI request failed
+AI request failed
+.AI request succeeded
+.AI request failed
+.AI request failed
+..AI request succeeded
+.AI request failed
+.AI request succeeded
+.AI request succeeded
+...........AI request failed
+.AI request succeeded
+AI request failed
+.AI request failed
+AI request succeeded
+.AI request succeeded
+AI request failed
+.AI request succeeded
+.AI request failed
+..AI request failed
+.AI request succeeded
+.AI request succeeded
+AI request failed
+.AI request failed
+.AI request failed
+.AI request succeeded
+.AI request succeeded
+.AI request failed
+..........AI request failed
+....AI request failed
+.......AI request failed
+.AI request failed
+.AI request succeeded
+.....AI request failed
+AI request failed
+.AI request succeeded
+.AI request succeeded
+..AI request succeeded
+.....................................................................AI request failed
+AI request succeeded
+..AI request succeeded
+.AI request failed
+.AI request succeeded
+.AI request failed
+..AI request failed
+...................
+----------------------------------------------------------------------
+Ran 326 tests in 424.379s
+
+OK
+Destroying test database for alias 'default'...
+
+Found 326 test(s).
+System check identified no issues (0 silenced).
+Created Tasker Employee (59 permissions)
+Created Tasker Supervisor (70 permissions)
+Created Tasker Manager (368 permissions)
+Created Tasker Administrator (368 permissions)

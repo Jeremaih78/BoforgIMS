@@ -35,6 +35,9 @@ class Quotation(models.Model):
     date = models.DateField(default=timezone.localdate)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=DRAFT)
     notes = models.TextField(blank=True, null=True)
+    reference = models.CharField(max_length=120, blank=True)
+    terms = models.TextField(blank=True)
+    custom_fields = models.JSONField(default=dict, blank=True)
 
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -117,6 +120,9 @@ class Invoice(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
     quotation = models.ForeignKey(Quotation, null=True, blank=True, on_delete=models.SET_NULL)
     notes = models.TextField(blank=True, null=True)
+    reference = models.CharField(max_length=120, blank=True)
+    terms = models.TextField(blank=True)
+    custom_fields = models.JSONField(default=dict, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
     @transaction.atomic

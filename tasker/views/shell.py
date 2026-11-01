@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.http import Http404
 from django.views.decorators.http import require_GET
 
@@ -25,6 +26,9 @@ def ui_preferences(request):
 @permission_required("tasker.view_task", raise_exception=True)
 @require_GET
 def strategy_home(request):
+    if getattr(settings, "TASKER_STRATEGY_ENABLED", False):
+        query = request.GET.urlencode()
+        return redirect(reverse("ims:tasker:strategy_board") + ("?" + query if query else ""))
     if not getattr(settings, "TASKER_DIRECTION_ENABLED", False):
         raise Http404
     if not has_strategy_access(request.user):

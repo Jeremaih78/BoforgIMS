@@ -66,6 +66,10 @@ def _source_queryset(actor):
     queryset = queryset.filter(~Q(kind="REQUEST") | (active_source & Q(request__resolver=actor)))
     queryset = queryset.filter(~Q(kind="ESCALATION") | (active_source & Q(request__escalated_to=actor)))
     queryset = queryset.filter(Q(report_snapshot__isnull=True) | Q(report_snapshot__in=visible_reports_for(actor)))
+    from tasker.services.business_links import business_notification_links_for
+    queryset = queryset.filter(Q(business_link__isnull=True) | Q(
+        business_link__in=business_notification_links_for(actor),
+        source_revision=Cast("business_link__revision", CharField())))
     return queryset
 
 
@@ -75,7 +79,7 @@ def visible_notifications_for(user, include_held=False):
     queryset = _source_queryset(actor).filter(grouped_into__isnull=True).annotate(_has_current_items=Exists(children)).exclude(kind="DIGEST", _has_current_items=False)
     if not include_held:
         queryset = queryset.filter(published_at__isnull=False)
-    return queryset.select_related("task", "request", "report_snapshot")
+    return queryset.select_related("task", "request", "report_snapshot", "business_link")
 
 
 def _source_authorized(notification):
@@ -84,6 +88,11 @@ def _source_authorized(notification):
         return False
     if notification.kind == "DIGEST":
         return _source_queryset(actor).filter(grouped_into=notification).exclude(kind="DIGEST").exists()
+    if notification.business_link_id:
+        from tasker.services.business_links import business_notification_available
+        if not business_notification_available(user=actor, link=notification.business_link,
+                source_revision=notification.source_revision):
+            return False
     if notification.report_snapshot_id:
         # Reports own their explicit executive audience boundary.
         from tasker.services.reporting import snapshot_can_view
@@ -95,7 +104,8 @@ def _source_authorized(notification):
 def _context(notification, actor):
     titles = {"REQUEST": "Action requested", "ACKNOWLEDGED": "Request acknowledged",
         "RESOLVED": "Requested action resolved", "CANCELLED": "Request cancelled",
-        "ESCALATION": "Unacknowledged request needs attention", "DIGEST": "Your coordination digest"}
+        "ESCALATION": "Unacknowledged request needs attention", "DIGEST": "Your coordination digest",
+        "WORK_ALLOCATION_CHANGED": "Work allocation updated"}
     result = {"title": titles.get(notification.kind, "Work update"), "action_label": "Review Work",
         "url": reverse("ims:tasker:task_list"), "details": "", "items": []}
     if notification.kind == "DIGEST":
@@ -103,6 +113,13 @@ def _context(notification, actor):
         for child in children:
             result["items"].append(_context(child, actor))
         result["details"] = f"{len(result['items'])} current updates."
+    elif notification.business_link_id:
+        from tasker.services.business_links import present_business_link
+        link = present_business_link(user=actor, link=notification.business_link)
+        source_name = ('Operations' if link.source_app == 'operations' else
+            "Inventory" if link.source_type == "replenishment_plan" else "Credit Control")
+        result.update(title=link.title, details=f"Review this assigned action in {source_name}.",
+            action_label="Review business action", url=link.get_absolute_url())
     elif notification.request_id:
         result.update(title=f"{result['title']}: {notification.task.title}", details=notification.request.requested_action,
             action_label="Review request", url=reverse("ims:tasker:coordination_detail", args=(notification.request_id,)))
@@ -114,7 +131,7 @@ def _context(notification, actor):
 def notification_context(notification, user):
     actor = _actor(user)
     # Callers may retain model instances across a source edit or reassignment.
-    notification = Notification.objects.select_related("task", "request", "report_snapshot").filter(pk=notification.pk, owner=actor).first()
+    notification = Notification.objects.select_related("task", "request", "report_snapshot", "business_link").filter(pk=notification.pk, owner=actor).first()
     if notification is None or not _source_authorized(notification):
         raise PermissionDenied
     return _context(notification, actor)
@@ -145,19 +162,80 @@ def mark_notification(*, user, notification_id, acknowledge=False):
 
 @transaction.atomic
 def create_notification(*, owner, kind, dedupe_key, task=None, request=None, report_snapshot=None,
-                        source_revision="", expires_at=None):
+                        business_link=None, source_revision="", expires_at=None):
+    if kind == "BUSINESS_ACTION" and business_link is None:
+        raise ValidationError("A business action notification requires its canonical business reference.")
+    if business_link is not None and (task is not None or request is not None or report_snapshot is not None
+            or kind != "BUSINESS_ACTION"):
+        raise ValidationError("A business action notification retains only its canonical business reference.")
     if request is not None and (task is None or task.pk != request.task_id):
         raise ValidationError("A request notification must retain its original task source.")
     notification, created = Notification.objects.get_or_create(dedupe_key=dedupe_key,
         defaults={"owner": owner, "kind": kind, "task": task, "request": request,
-                  "report_snapshot": report_snapshot, "source_revision": source_revision,
+                  "report_snapshot": report_snapshot, "business_link": business_link, "source_revision": source_revision,
                   "expires_at": expires_at, "created_at": timezone.now()})
-    if (notification.owner_id, notification.kind, notification.task_id, notification.request_id, notification.report_snapshot_id, notification.source_revision) != (
-            owner.pk, kind, getattr(task, "pk", None), getattr(request, "pk", None), getattr(report_snapshot, "pk", None), source_revision):
+    if (notification.owner_id, notification.kind, notification.task_id, notification.request_id, notification.report_snapshot_id, notification.business_link_id, notification.source_revision) != (
+            owner.pk, kind, getattr(task, "pk", None), getattr(request, "pk", None), getattr(report_snapshot, "pk", None), getattr(business_link, "pk", None), source_revision):
         raise ValueError("The attention deduplication key belongs to another source.")
     if created or (not notification.cancelled_at and not notification.published_at):
         enqueue_delivery(recipient=owner, channel="IN_APP", dedupe_key=f"notify:{notification.pk}:in-app", notification=notification)
     return notification
+
+
+@transaction.atomic
+def queue_business_link_update(link, event):
+    """One current, targeted in-app reminder per observed source transition.
+
+    Reconciliation already holds Source -> BusinessRecordLink. Keep that order
+    before attention rows; this path never locks the recipient's user row.
+    """
+    from tasker.services.business_links import business_notification_available
+    from tasker.business_models import BusinessRecordLink
+    if event.link_id != link.pk or str(event.revision) != str(link.revision):
+        raise ValidationError("The business transition belongs to another source revision.")
+    stored = BusinessRecordLink.objects.select_for_update().get(pk=link.pk)
+    if str(stored.revision) != str(event.revision) or stored.source_digest != link.source_digest:
+        return None  # A delayed callback must not cancel a newer reminder.
+    link = stored
+    key = f"business:{link.pk}:event:{event.pk}:owner:{link.owner_id}"
+    current = Notification.objects.filter(business_link=link, cancelled_at__isnull=True).exclude(dedupe_key=key)
+    ids = list(current.select_for_update().order_by("pk").values_list("pk", flat=True))
+    current.update(cancelled_at=timezone.now())
+    NotificationDelivery.objects.filter(notification_id__in=ids,
+        state__in=("QUEUED", "HELD", "FAILED")).update(state="CANCELLED",
+            error_code="business_source_changed", next_attempt_at=None)
+    owner = link.owner
+    if owner is None or not business_notification_available(user=owner, link=link,
+            source_revision=str(link.revision)):
+        return None
+    return create_notification(owner=owner, kind="BUSINESS_ACTION", business_link=link,
+        source_revision=str(link.revision),
+        dedupe_key=key)
+
+
+@transaction.atomic
+def queue_business_due_update(link_id):
+    """Repair scans also surface due work once per company calendar day."""
+    from tasker.business_models import BusinessRecordLink
+    from tasker.services.business_links import business_notification_available
+    link=BusinessRecordLink.objects.select_for_update(of=('self',)).select_related('owner').filter(pk=link_id).first()
+    day=timezone.localdate()
+    if not link or not link.owner_id or not link.due_date or link.due_date>day or link.status not in ('OPEN','IN_PROGRESS'):
+        return None
+    if not business_notification_available(user=link.owner,link=link,source_revision=link.revision):
+        return None
+    # An assignment/source-change notification already delivered today's cue.
+    if Notification.objects.filter(business_link=link,owner=link.owner,source_revision=str(link.revision),
+            cancelled_at__isnull=True,created_at__date=day).exists():
+        return None
+    key=f'business:{link.pk}:due:{day}:revision:{link.revision}'
+    current=Notification.objects.filter(business_link=link,cancelled_at__isnull=True).exclude(dedupe_key=key)
+    ids=list(current.select_for_update().order_by('pk').values_list('pk',flat=True))
+    current.update(cancelled_at=timezone.now())
+    NotificationDelivery.objects.filter(notification_id__in=ids,state__in=('QUEUED','HELD','FAILED')).update(
+        state='CANCELLED',error_code='business_due_refresh',next_attempt_at=None)
+    return create_notification(owner=link.owner,kind='BUSINESS_ACTION',business_link=link,
+        source_revision=str(link.revision),dedupe_key=key)
 
 
 @transaction.atomic
@@ -166,6 +244,10 @@ def enqueue_delivery(*, recipient, channel, dedupe_key, notification=None, repor
         raise ValidationError("Choose one supported delivery source and channel.")
     if channel == "IN_APP" and (notification is None or notification.owner_id != recipient.pk):
         raise ValidationError("An in-app delivery belongs to the notification's authorized owner.")
+    if notification is not None and notification.business_link_id and channel != "IN_APP":
+        raise ValidationError("Business action attention currently supports only in-app delivery.")
+    if channel=='EMAIL' and report_snapshot is None:
+        raise ValueError('Email delivery currently supports only team report snapshots.')
     delivery, created = NotificationDelivery.objects.get_or_create(dedupe_key=dedupe_key,
         defaults={"recipient": recipient, "channel": channel, "notification": notification,
                   "report_snapshot": report_snapshot, "next_attempt_at": run_after or timezone.now(),
@@ -175,7 +257,8 @@ def enqueue_delivery(*, recipient, channel, dedupe_key, notification=None, repor
         raise ValueError("The delivery deduplication key belongs to another source.")
     if delivery.state not in TERMINAL_DELIVERIES:
         from tasker.services.jobs import enqueue_job
-        enqueue_job(kind="notification.deliver" if channel == "IN_APP" else "reports.deliver",
+        from .report_email import job_kind
+        enqueue_job(kind="notification.deliver" if channel == "IN_APP" else job_kind(report_snapshot),
             dedupe_key=f"delivery:{delivery.pk}", payload={"delivery_id": delivery.pk}, run_after=run_after, owner=recipient)
     return delivery
 
@@ -248,6 +331,29 @@ def _lock_notification_sources(notification_ids):
     tasks = list(Task.all_objects.select_for_update().filter(pk__in=task_ids).order_by("pk"))
     list(Company.objects.select_for_update().filter(pk__in={task.company_id for task in tasks if task.company_id}).order_by("pk"))
     list(Team.all_objects.select_for_update().filter(pk__in={task.team_id for task in tasks if task.team_id}).order_by("pk"))
+    from credit_control.models import CollectionTask, PromiseToPay
+    from inventory.models import Product, ReplenishmentPlan
+    from tasker.business_models import BusinessRecordLink
+    links = list(BusinessRecordLink.objects.filter(notifications__pk__in=notification_ids).distinct())
+    promise_ids = [link.source_record_id for link in links if link.source_type == "promise_to_pay"]
+    collection_ids = [link.source_record_id for link in links if link.source_type == "collection_task"]
+    promises = list(PromiseToPay.objects.select_for_update().filter(pk__in=promise_ids).order_by("pk"))
+    collections = list(CollectionTask.objects.select_for_update().filter(pk__in=collection_ids).order_by("pk"))
+    plan_ids = [link.source_record_id for link in links if link.source_type == "replenishment_plan"]
+    product_ids = ReplenishmentPlan.objects.filter(pk__in=plan_ids).values_list("product_id",flat=True)
+    list(Product.objects.select_for_update().filter(pk__in=product_ids).order_by("pk"))
+    plans = list(ReplenishmentPlan.objects.select_for_update().filter(pk__in=plan_ids).order_by("pk"))
+    from operations.registry import SOURCES
+    from tasker.business_adapters.operations import load_source
+    operations = []
+    for link in sorted(links,key=lambda value:(value.source_type,value.source_record_id)):
+        if link.source_type in SOURCES:
+            source = load_source(link.source_type,link.source_record_id,lock=True)
+            if source:
+                operations.append(source)
+    list(Company.objects.select_for_update().filter(pk__in={source.company_id
+        for source in promises + collections + plans + operations if source.company_id}).order_by("pk"))
+    list(BusinessRecordLink.objects.select_for_update().filter(pk__in=[link.pk for link in links]).order_by("pk"))
 
 
 @transaction.atomic

@@ -263,6 +263,7 @@ def report_policy(request, pk):
     record = ReportPolicy.objects.filter(company=company).first() or ReportPolicy(company=company)
     names = ("timezone_name", "cutoff_time", "consolidation", "correction_policy", "missing_policy", "weekdays", "email_mode", "retention_days")
     initial = {name: getattr(record, name) for name in names}
+    if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):initial['email_enabled']=record.email_enabled
     initial["expected_revision"] = str(record.revision) if record.pk else "unconfigured-v1"
     form = ReportPolicyForm(request.POST if request.method == "POST" else None, initial=initial)
     status = 200
@@ -275,7 +276,7 @@ def report_policy(request, pk):
                 form.add_error(None, _error(exc))
                 status = 409
             else:
-                messages.success(request, "Test report policy saved. Live email delivery is not activated.")
+                messages.success(request, "Report policy saved. Delivery status is tracked separately.")
                 return redirect("ims:tasker:report_home")
     return render(request, "tasker/coordination/report_policy.html", {"company": company, "form": form}, status=status)
 

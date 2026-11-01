@@ -1,0 +1,4 @@
+{% extends 'inventory/replenishment/base.html' %}{% load static %}
+{% block title %}Operations · Boforg IMS{% endblock %}
+{% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'operations/css/workbench.css' %}?v=stage11-20261030-final">{% endblock %}
+{% block replenishment_content %}{% block operations_content %}{% endblock %}{% endblock %}

@@ -8,3 +8,5 @@ class TaskerConfig(AppConfig):
 
     def ready(self):
         from . import signals  # noqa: F401
+        from . import business_signals  # noqa: F401
+        from . import pilot_signals  # noqa: F401

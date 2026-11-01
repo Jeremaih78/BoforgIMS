@@ -48,6 +48,7 @@ class Notification(models.Model):
     task = models.ForeignKey("tasker.Task", on_delete=models.PROTECT, null=True, blank=True, related_name="notifications")
     request = models.ForeignKey("tasker.CoordinationRequest", on_delete=models.PROTECT, null=True, blank=True, related_name="notifications")
     report_snapshot = models.ForeignKey("tasker.ManagerReportSnapshot", on_delete=models.PROTECT, null=True, blank=True, related_name="notifications")
+    business_link = models.ForeignKey("tasker.BusinessRecordLink", on_delete=models.PROTECT, null=True, blank=True, related_name="notifications")
     dedupe_key = models.CharField(max_length=200, unique=True)
     source_revision = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(default=timezone.now, editable=False)

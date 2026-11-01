@@ -1,0 +1,13 @@
+<div class="document-line border-bottom py-3" data-document-line>
+  {{ line_form.id }}
+  <div hidden>{{ line_form.DELETE }}</div>
+  {{ line_form.non_field_errors }}
+  <div class="row g-3 align-items-start">
+    <div class="col-lg-5">{% include 'sales/includes/product_picker.html' with item_form=line_form %}</div>
+    <div class="col-4 col-lg-2"><label class="form-label" for="{{ line_form.quantity.id_for_label }}">Quantity</label>{{ line_form.quantity }}{{ line_form.quantity.errors }}</div>
+    <div class="col-4 col-lg-2"><label class="form-label" for="{{ line_form.unit_price.id_for_label }}">Unit price</label>{{ line_form.unit_price }}{{ line_form.unit_price.errors }}</div>
+    <div class="col-4 col-lg-1"><label class="form-label" for="{{ line_form.tax_rate_percent.id_for_label }}">Tax %</label>{{ line_form.tax_rate_percent }}{{ line_form.tax_rate_percent.errors }}</div>
+    <div class="col-lg-2 d-flex justify-content-between align-items-center gap-2 pt-lg-4"><output class="fw-bold text-nowrap" data-line-total>0.00</output><button class="btn btn-outline-danger btn-sm" type="button" data-remove-document-line aria-label="Remove product line">Remove</button></div>
+    <div class="col-12"><details {% if line_form.description.errors %}open{% endif %}><summary class="small">Edit printed description</summary><label class="visually-hidden" for="{{ line_form.description.id_for_label }}">Printed description</label>{{ line_form.description }}{{ line_form.description.errors }}</details></div>
+  </div>
+</div>

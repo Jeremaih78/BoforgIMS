@@ -148,7 +148,14 @@ def _ensure_task(**kwargs):
         "status": CollectionTask.Status.PENDING,
         "notes": kwargs.pop("notes", ""),
         "company": kwargs.pop("company", None),
+        "assigned_to": kwargs.pop("assigned_to", None),
     }
+    if kwargs.get("promise_to_pay") is not None:
+        # Promise identity is canonical; multiple promises on the same invoice
+        # and date must not collapse into one unrelated follow-up task.
+        defaults.update({key: kwargs.get(key) for key in ("customer", "supplier", "invoice", "bill", "due_date")})
+        return CollectionTask.objects.get_or_create(task_type=kwargs["task_type"],
+            promise_to_pay=kwargs["promise_to_pay"], defaults=defaults)
     task, created = CollectionTask.objects.get_or_create(
         task_type=kwargs["task_type"],
         customer=kwargs.get("customer"),
@@ -241,6 +248,12 @@ def auto_create_collection_tasks(as_of_date: date | None = None):
                     created_ids.append(task.id)
 
     for promise in PromiseToPay.objects.filter(status=PromiseToPay.Status.OPEN, promised_date=today):
+        if promise.assigned_to_id:
+            from credit_control.source_policies import eligible_collection_owner
+            # A new source follow-up must remain readable to its owner. Leaving
+            # it uncreated preserves the standalone Promise review action.
+            if not eligible_collection_owner(promise.assigned_to,promise.company_id):
+                continue
         task, created = _ensure_task(
             task_type=CollectionTask.TaskType.CHECK_PROMISE,
             customer=promise.customer,
@@ -248,6 +261,9 @@ def auto_create_collection_tasks(as_of_date: date | None = None):
             due_date=today,
             priority=CollectionTask.Priority.HIGH,
             notes=f"Promise due today: {promise.promised_amount}",
+            promise_to_pay=promise,
+            company=promise.company,
+            assigned_to=promise.assigned_to,
         )
         if created:
             created_ids.append(task.id)

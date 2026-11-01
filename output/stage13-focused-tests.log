@@ -1,0 +1,14 @@
+python-dotenv could not parse statement starting at line 9
+Using existing test database for alias 'default'...
+
+..AI request failed
+...........................AI request failed
+....
+----------------------------------------------------------------------
+Ran 33 tests in 37.447s
+
+OK
+Preserving test database for alias 'default'...
+
+Found 33 test(s).
+System check identified no issues (0 silenced).

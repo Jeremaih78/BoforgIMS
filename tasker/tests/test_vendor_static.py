@@ -32,6 +32,12 @@ class ProductionVendorStaticTests(SimpleTestCase):
                     "tasker/vendor/bootstrap/js/bootstrap.bundle.min.js.map",
                     "tasker/vendor/bootstrap/css/bootstrap.min.css",
                     "tasker/vendor/bootstrap/css/bootstrap.min.css.map",
+                    "tasker/css/ai-workflow.css",
+                    "tasker/js/ai-workflow.js",
+                    "tasker/css/strategy.css",
+                    "tasker/css/business.css",
+                    "inventory/css/replenishment.css",
+                    "tasker/js/strategy.js",
                 ):
                     with self.subTest(asset=source):
                         hashed = manifest["paths"][source]

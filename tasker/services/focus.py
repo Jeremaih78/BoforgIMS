@@ -40,6 +40,8 @@ def start_focus(*, task, user, interval_minutes=None, resume_interval=False):
     user = get_user_model().objects.select_for_update(no_key=True).filter(pk=user.pk, is_active=True).first()
     if user is None:
         raise PermissionDenied
+    from .day_closure import require_open_focus
+    require_open_focus(user)
     task = Task.objects.select_for_update().get(pk=task.pk)
     require_task_access(user, task, capability="tasker.view_task")
     if task.status in (Task.Status.COMPLETED, Task.Status.CANCELLED) or task.archived:
@@ -86,6 +88,8 @@ def start_focus(*, task, user, interval_minutes=None, resume_interval=False):
 
 @transaction.atomic
 def pause_focus(*, task, user):
+    from .day_closure import require_open_focus
+    require_open_focus(user)
     task = Task.objects.select_for_update().get(pk=task.pk)
     require_task_access(user, task, capability="tasker.view_task")
     entry = _close_running_entry(task=task, user=user, end_interval=False)
@@ -96,6 +100,8 @@ def pause_focus(*, task, user):
 
 @transaction.atomic
 def stop_focus(*, task, user):
+    from .day_closure import require_open_focus
+    require_open_focus(user)
     task = Task.objects.select_for_update().get(pk=task.pk)
     require_task_access(user, task, capability="tasker.view_task")
     entry = _close_running_entry(task=task, user=user)
@@ -128,6 +134,8 @@ def block_task(*, task, user, reason):
     reason = reason.strip()
     if not reason:
         raise ValueError("A blocked reason is required.")
+    from .day_closure import require_open_focus
+    require_open_focus(user)
     task = Task.objects.select_for_update().get(pk=task.pk)
     require_task_access(user, task, capability="tasker.view_task")
     if task.archived or task.status in (Task.Status.COMPLETED, Task.Status.CANCELLED):
@@ -143,6 +151,8 @@ def block_task(*, task, user, reason):
 
 @transaction.atomic
 def complete_focus(*, task, user, accept_definition=False, definition_version=None):
+    from .day_closure import require_open_focus
+    require_open_focus(user)
     task = Task.objects.select_for_update().get(pk=task.pk)
     require_task_access(user, task, capability="tasker.view_task")
     if task.archived or task.status == Task.Status.CANCELLED:
@@ -174,6 +184,8 @@ def complete_focus(*, task, user, accept_definition=False, definition_version=No
 
 @transaction.atomic
 def save_focus_notes(*, task, user, notes):
+    from .day_closure import require_open_focus
+    require_open_focus(user)
     task = Task.objects.select_for_update().get(pk=task.pk)
     require_task_access(user, task, capability="tasker.view_task")
     task.notes = notes[:10000]

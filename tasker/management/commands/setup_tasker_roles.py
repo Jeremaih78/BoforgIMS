@@ -44,6 +44,15 @@ ROLE_PERMISSIONS = {
 }
 
 
+# Scope is enforced by improvement selectors/services; these grants do not
+# expose another employee's private SOP, review, idea or day-correction reason.
+IMPROVEMENT_PERMISSIONS={f'{action}_{model}' for model in (
+    'soptemplate','recurringworkflow','experiment','experimentresult','weeklyreview')
+    for action in ('view','add','change')}
+for role in ROLE_PERMISSIONS.values():
+    role.update(IMPROVEMENT_PERMISSIONS)
+    role.update({'view_pilot','view_pilotobservation','add_pilotobservation','change_pilotobservation'})
+
 class Command(BaseCommand):
     help = "Create or refresh Employee, Supervisor, Manager, and Administrator Tasker roles."
 

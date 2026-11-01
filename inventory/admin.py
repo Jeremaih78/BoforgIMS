@@ -1,4 +1,5 @@
 from django.contrib import admin
+from . import replenishment_admin  # Register read-only source-scoped procurement views.
 from django.utils.html import format_html
 
 from .models import (

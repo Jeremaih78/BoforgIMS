@@ -433,3 +433,7 @@ from . import workbench_admin  # noqa: E402,F401
 from . import planning_admin, dependency_admin, arrival_admin  # noqa: E402,F401
 from . import operator_admin  # noqa: E402,F401
 from . import coordination_admin  # noqa: E402,F401
+from . import ai_workflow_admin  # noqa: E402,F401
+from . import strategy_admin  # noqa: E402,F401
+from . import improvement_admin  # noqa: E402,F401
+from . import pilot_admin  # noqa: E402,F401

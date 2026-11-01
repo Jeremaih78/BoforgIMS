@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from core.permissions import ims_permission
+from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
@@ -272,7 +273,8 @@ def add_creditor_followup(request, supplier_id: int | None = None):
 @login_required
 @ims_permission('credit_control.view_promisetopay', staff=False)
 def promises(request):
-    qs = PromiseToPay.objects.select_related("customer", "invoice").order_by("promised_date")
+    from .source_policies import visible_promises_for
+    qs = visible_promises_for(request.user).select_related("customer", "invoice").order_by("promised_date")
     if request.GET.get("status"):
         qs = qs.filter(status=request.GET.get("status"))
     return render(request, "credit_control/promises.html", {"promises": qs})
@@ -281,7 +283,7 @@ def promises(request):
 @login_required
 @ims_permission('credit_control.add_promisetopay', staff=False)
 def promise_create(request):
-    form = PromiseToPayForm(request.POST or None)
+    form = PromiseToPayForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         obj = form.save(commit=False)
         obj.created_by = request.user
@@ -319,25 +321,28 @@ def dispute_create(request):
 @login_required
 @ims_permission('credit_control.view_collectiontask', staff=False, write_permission='credit_control.change_collectiontask')
 def tasks(request):
-    if request.GET.get("run_auto") == "1":
+    from .source_policies import operational_admin, visible_collection_tasks_for
+    if request.method == "POST" and request.POST.get("run_auto") == "1":
+        if not operational_admin(request.user):
+            raise PermissionDenied
         created = auto_create_collection_tasks()
         messages.success(request, f"Auto-task generation complete ({len(created)} created).")
         return redirect("ims:credit_control:tasks")
 
-    qs = CollectionTask.objects.select_related("customer", "supplier", "invoice", "bill", "assigned_to")
+    qs = visible_collection_tasks_for(request.user).select_related("customer", "supplier", "invoice", "bill", "assigned_to")
     if request.GET.get("today") == "1":
         qs = qs.filter(due_date=timezone.now().date())
     if request.GET.get("status"):
         qs = qs.filter(status=request.GET.get("status"))
 
     pg = Paginator(qs.order_by("due_date", "-priority"), 50).get_page(request.GET.get("page"))
-    return render(request, "credit_control/tasks.html", {"tasks": pg})
+    return render(request, "credit_control/tasks.html", {"tasks": pg, "can_auto_create": operational_admin(request.user)})
 
 
 @login_required
 @ims_permission('credit_control.add_collectiontask', staff=False)
 def task_create(request):
-    form = CollectionTaskForm(request.POST or None)
+    form = CollectionTaskForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         obj = form.save(commit=False)
         obj.created_by = request.user

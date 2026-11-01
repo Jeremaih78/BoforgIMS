@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-31T03:57:09.951680+00:00",
+  "source_digest": "68b7a129ff772eec0ab1ae7e96d15664185a5b3fb441079aea1889ed7baaebc7",
+  "source_files": 820,
+  "checks": {
+    "regressions": "VERIFIED",
+    "postgres_concurrency": "VERIFIED",
+    "migration_restore": "VERIFIED",
+    "static_manifest": "VERIFIED",
+    "desktop_mobile_keyboard": "VERIFIED",
+    "end_to_end_roles": "VERIFIED",
+    "degraded_recovery": "VERIFIED"
+  },
+  "evidence": {
+    "broad_checkpoint": {
+      "reference": "output/stage13-regressions.log",
+      "tests": 1489,
+      "seconds": 1122.981
+    },
+    "final_targeted": {
+      "reference": "output/stage13-final-focused-tests.log",
+      "tests": 326,
+      "seconds": 424.379
+    },
+    "initial_pilot_checkpoint": {
+      "reference": "output/stage13-focused-tests.log",
+      "tests": 33,
+      "seconds": 37.447
+    },
+    "javascript_tests": 77,
+    "restore": "output/stage13-restore-verification.json",
+    "strict_static": "output/stage13-strict-static.log",
+    "current_source_access": "output/stage13-final-smoke.json",
+    "browser": "output/stage13-ui-verification.json"
+  },
+  "scope": "Full-suite checkpoint plus targeted regression and current-source smoke/browser verification after cohort UI/dispatch refinements. Local synthetic data only.",
+  "real_release": "NO_GO_PENDING_OPERATING_EVIDENCE",
+  "real_productivity": "PENDING_REAL_COHORT_AND_REVIEW",
+  "external_sends": 0,
+  "paid_provider_requests": 0,
+  "production_deployment": false
+}

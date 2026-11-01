@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Strategy · Boforg Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/strategy.css' %}">{% endblock %}
+{% block content %}<div class="strategy-workspace container-xl py-4">{% block strategy_content %}{% endblock %}</div>{% endblock %}
+{% block extra_js %}<script src="{% static 'tasker/js/strategy.js' %}" defer></script>{% endblock %}

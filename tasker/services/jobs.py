@@ -32,7 +32,12 @@ HANDLERS = {
     "reports.build": ("tasker.services.reporting", "handle_build_report"),
     "reports.deliver": ("tasker.services.reporting", "handle_report_delivery"),
     "operator.refresh": (None, "_operator_refresh"),
+    "ai.generate": ("tasker.services.ai_workflow", "handle_ai_work"),
+    "business.reconcile": ("tasker.services.business_links", "handle_business_source"),
+    "routine.generate": ("tasker.services.routines", "handle_generate"),
+    "reports.smtp": ("tasker.services.report_email", "handle_smtp_delivery"),
 }
+EXTERNAL_HANDLERS = frozenset({"ai.generate", "reports.smtp"})
 TERMINAL = (OutboxJob.State.SUCCEEDED, OutboxJob.State.FAILED, OutboxJob.State.CANCELLED)
 _current_lease = ContextVar("tasker_job_lease", default=None)
 SAFE_CODE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
@@ -200,6 +205,17 @@ def assert_current_job_lease():
     return lease
 
 
+def fence_current_job_effects():
+    """Late conditional write: commit external-handler DB effects with its lease."""
+    lease = current_lease()
+    if lease is None or not OutboxJob.objects.filter(pk=lease.job_id,
+            state=OutboxJob.State.RUNNING, lease_token=lease.token,
+            lease_expires_at__gt=timezone.now(), payload_digest=lease.payload_digest
+            ).update(updated_at=timezone.now()):
+        assert_current_job_lease()
+        raise LostJobLease("The external job no longer owns its publication lease.")
+
+
 def heartbeat(*, worker_id="local", role="worker", last_job_id=None, completed=0):
     if not isinstance(worker_id, str) or not SAFE_WORKER.fullmatch(worker_id):
         raise ValidationError("Use a short worker name containing letters, digits, dots, colons or hyphens.")
@@ -320,11 +336,21 @@ def run_claimed_job(job):
     outcome = "lost_lease"
     try:
         try:
+            external_result = None
+            if job.kind in EXTERNAL_HANDLERS:
+                # Provider billing/reservations must survive worker lease loss;
+                # no outbox/domain transaction can span the network request.
+                if connection.in_atomic_block:
+                    raise JobPermanentError("external_job_requires_autocommit")
+                assert_current_job_lease()
+                if _payload(job.payload)[1] != job.payload_digest:
+                    raise JobPermanentError("payload_integrity_changed")
+                external_result = _handler_for(job.kind)(payload=job.payload, job=job)
             with transaction.atomic():
                 assert_current_job_lease()
                 if _payload(job.payload)[1] != job.payload_digest:
                     raise JobPermanentError("payload_integrity_changed")
-                result = _handler_for(job.kind)(payload=job.payload, job=job)
+                result = external_result if job.kind in EXTERNAL_HANDLERS else _handler_for(job.kind)(payload=job.payload, job=job)
                 if isinstance(result, JobDeferred):
                     _fence(job, _deferred_values(job, result))
                     outcome = "deferred"
@@ -406,7 +432,11 @@ def scheduler_tick(*, scheduler_id="local-scheduler", limit=100, prune=False, re
         ("tasker.services.coordination", "reconcile_coordination", "coordination"),
         ("tasker.services.notifications", "reconcile_notifications", "notifications"),
         ("tasker.services.reporting", "reconcile_reports", "reports"),
+        ("tasker.services.business_links", "reconcile_business_links", "business"),
+        ("tasker.services.routines", "reconcile_routines", "routines"),
     ):
+        if label=='routines' and not (getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) and getattr(settings,'TASKER_RECURRENCE_ENABLED',False)):
+            continue
         function = getattr(importlib.import_module(module_name), function_name)
         result[label] = function(limit=limit)
     # Existing owner states only. The same constant-key operator job is reused.

@@ -87,7 +87,10 @@ class OpenAIProvider:
             "instructions": instructions,
             "input": input_items,
             "max_output_tokens": self.configuration.max_output_tokens,
-            "store": self.configuration.store_provider_responses,
+            # Application-side history/retention is explicit. This is not a
+            # claim about abuse monitoring or zero provider retention.
+            "store": False,
+            "service_tier": "default",
             "safety_identifier": safety_identifier,
             "stream": stream,
         }
@@ -120,12 +123,23 @@ class OpenAIProvider:
         text = getattr(response, "output_text", "")
         if not isinstance(text, str) or not text.strip():
             raise AIProviderError(provider_code="response_empty")
+        usage = _usage(response)
+        available = getattr(response, "usage", None) is not None
+        raw_usage = getattr(response, "usage", None)
+        verified = bool(available and type(getattr(raw_usage, "total_tokens", None)) is int
+                        and type(getattr(getattr(raw_usage, "input_tokens_details", None), "cached_tokens", None)) is int)
         return ProviderResult(
             text=text,
             response_id=getattr(response, "id", "") or "",
             request_id=getattr(response, "_request_id", "") or "",
-            usage=_usage(response),
-            metadata={"service_tier": getattr(response, "service_tier", None)},
+            usage=usage,
+            metadata={
+                "model": getattr(response, "model", "") or "",
+                "service_tier": getattr(response, "service_tier", None),
+                "usage_available": available,
+                "usage_validated": verified,
+                "usage_verified": verified,
+            },
         )
 
     @staticmethod
@@ -173,12 +187,23 @@ def _usage(response):
         return TokenUsage()
     input_details = getattr(usage, "input_tokens_details", None)
     output_details = getattr(usage, "output_tokens_details", None)
-    return TokenUsage(
-        input_tokens=getattr(usage, "input_tokens", 0) or 0,
-        output_tokens=getattr(usage, "output_tokens", 0) or 0,
-        cached_input_tokens=getattr(input_details, "cached_tokens", 0) or 0,
-        reasoning_tokens=getattr(output_details, "reasoning_tokens", 0) or 0,
-    )
+    def number(record, key, *, default=None):
+        value = getattr(record, key, default)
+        if type(value) is not int or value < 0:
+            raise AIProviderError(provider_code="invalid_usage")
+        return value
+
+    incoming = number(usage, "input_tokens")
+    outgoing = number(usage, "output_tokens")
+    cached = number(input_details, "cached_tokens", default=0)
+    written = number(input_details, "cache_write_tokens", default=0)
+    reasoning = number(output_details, "reasoning_tokens", default=0)
+    total = number(usage, "total_tokens", default=incoming + outgoing)
+    if total != incoming + outgoing or cached + written > incoming or reasoning > outgoing:
+        raise AIProviderError(provider_code="invalid_usage")
+    return TokenUsage(input_tokens=incoming, output_tokens=outgoing,
+                      cached_input_tokens=cached, reasoning_tokens=reasoning,
+                      cache_write_tokens=written)
 
 
 def _retry_after_seconds(exc):

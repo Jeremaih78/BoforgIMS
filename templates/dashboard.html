@@ -1,93 +1,71 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block title %}Overview | Boforg IMS{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261030">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/dashboard.js' %}" defer></script>{% endblock %}
 {% block content %}
-<div class="row g-3">
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:inventory:product_list' %}" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Products</div>
-          <i class="bi bi-box-seam fs-4 text-info"></i>
-        </div>
-        <div class="display-6">{{ stats.products }}</div>
+<div class="ims-overview">
+  <header class="dashboard-header">
+    <div><div class="dashboard-eyebrow">Boforg workspace</div><h1>Business overview</h1><p>{{ today|date:"l, j F Y" }} <span aria-hidden="true">·</span> Updated {{ updated_at|date:"H:i" }}</p></div>
+    <div class="dashboard-actions"><a href="?period={{ period }}&currency={{ currency|urlencode }}" class="btn btn-outline-light" aria-label="Refresh dashboard"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh</a>{% if dashboard_permissions.new_invoice %}<a class="btn btn-primary" href="{% url 'ims:sales:invoice_create' %}"><i class="bi bi-plus-lg" aria-hidden="true"></i> New invoice</a>{% endif %}</div>
+  </header>
+  <section class="dashboard-panel dashboard-find" aria-label="Workspace search">
+    <form method="get" autocomplete="off" data-dashboard-search data-search-url="{% url 'ims:dashboard_lookup' %}">
+      <input type="hidden" name="period" value="{{ period }}"><input type="hidden" name="currency" value="{{ currency }}">
+      <label for="dashboard-query">Find it and keep moving</label>
+      <div class="dashboard-searchbar"><i class="bi bi-search" aria-hidden="true"></i><input id="dashboard-query" name="q" type="search" class="form-control" placeholder="Search products, customers, invoice numbers or quotations…" value="{{ search_query }}" autocomplete="off" aria-controls="dashboard-search-results"><button type="submit" class="btn btn-primary">Search</button></div>
+      <p class="dashboard-search-hint">Press <kbd>/</kbd> to search. Use ↑ ↓ and Enter to open a result.</p>
+      <div id="dashboard-search-status" role="status" class="dashboard-muted small"></div>
+      <div id="dashboard-search-results" class="dashboard-search-results" {% if not search_query %}hidden{% endif %}>
+        {% for result in search_results %}<a class="dashboard-search-result" href="{{ result.url }}"><span class="dashboard-type">{{ result.kind }}</span><span><strong>{{ result.label }}</strong><small>{{ result.detail }}</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>{% empty %}{% if search_query %}<p class="dashboard-muted mb-0">No matches. Try a name, phone, SKU or document number.</p>{% endif %}{% endfor %}
       </div>
-    </a>
+    </form>
+    <nav class="dashboard-shortcuts" aria-label="Quick actions">
+      {% if dashboard_permissions.new_quote %}<a href="{% url 'ims:sales:quotation_create' %}"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> New quotation</a>{% endif %}
+      {% if dashboard_permissions.scan %}<a href="{% url 'ims:inventory:identity_home' %}"><i class="bi bi-upc-scan" aria-hidden="true"></i> Scan / search stock</a>{% endif %}
+      {% if dashboard_permissions.new_customer %}<a href="{% url 'ims:customers:customer_create' %}"><i class="bi bi-person-plus" aria-hidden="true"></i> Add customer</a>{% endif %}
+      {% if dashboard_permissions.stock_movement %}<a href="{% url 'ims:inventory:movement_create' %}"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Stock in / out</a>{% endif %}
+      {% if dashboard_permissions.products %}<a href="{% url 'ims:inventory:product_price_list' %}"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Price list PDF</a>{% endif %}
+      {% if dashboard_permissions.accounting %}<a href="{% url 'ims:accounting:accounting_dashboard' %}"><i class="bi bi-bank" aria-hidden="true"></i> Accounting</a>{% endif %}
+      {% if dashboard_permissions.collections %}<a href="{% url 'ims:credit_control:dashboard' %}"><i class="bi bi-wallet2" aria-hidden="true"></i> Credit control</a>{% endif %}
+    </nav>
+  </section>
+  <div class="dashboard-filterbar">
+    <nav class="dashboard-periods" aria-label="Reporting period">
+      <a href="?period=today&currency={{ currency|urlencode }}" {% if period == 'today' %}aria-current="page"{% endif %}>Today</a>
+      <a href="?period=week&currency={{ currency|urlencode }}" {% if period == 'week' %}aria-current="page"{% endif %}>Last 7 days</a>
+      <a href="?period=month&currency={{ currency|urlencode }}" {% if period == 'month' %}aria-current="page"{% endif %}>This month</a>
+    </nav>
+    {% if currencies|length > 1 %}<form method="get" class="dashboard-currency" data-dashboard-currency><input type="hidden" name="period" value="{{ period }}"><label for="dashboard-currency">Currency</label><select name="currency" id="dashboard-currency" class="form-select">{% for code in currencies %}<option value="{{ code }}" {% if code == currency %}selected{% endif %}>{{ code }}</option>{% endfor %}</select><button type="submit" class="btn btn-outline-light">Apply</button></form>{% else %}<span class="dashboard-muted small">Amounts in {{ currency }} · {{ period_start|date:"j M" }}–{{ today|date:"j M" }}</span>{% endif %}
   </div>
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:inventory:product_list' %}?low=1" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Low Stock (<=5)</div>
-          <i class="bi bi-exclamation-triangle fs-4 text-warning"></i>
-        </div>
-        <div class="display-6">{{ stats.low_stock }}</div>
-      </div>
-    </a>
+  {% if mixed_currency_count %}<p class="dashboard-notice" role="status"><i class="bi bi-info-circle" aria-hidden="true"></i> {{ mixed_currency_count }} invoice{{ mixed_currency_count|pluralize }} contain multiple currencies and are excluded from monetary totals. <a href="{% url 'ims:sales:sales_home' %}?currency=MIXED">Review invoices</a></p>{% endif %}
+  <section class="dashboard-metrics" aria-label="Business snapshot">
+    <a class="dashboard-metric" href="{{ invoiced_url }}"><span class="dashboard-metric-label"><i class="bi bi-receipt" aria-hidden="true"></i> Invoiced · {{ period_label|lower }}</span><strong>{{ currency }} {{ invoiced_amount|floatformat:2 }}</strong><span>{{ invoice_count }} invoice{{ invoice_count|pluralize }} · before tax <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
+    {% if dashboard_permissions.payments %}<a class="dashboard-metric" href="{{ received_url }}"><span class="dashboard-metric-label"><i class="bi bi-cash-coin" aria-hidden="true"></i> Payments received</span><strong>{{ currency }} {{ received_amount|floatformat:2 }}</strong><span>{{ period_label }} · recorded invoice payments <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>{% else %}<a class="dashboard-metric" href="{{ invoiced_url }}"><span class="dashboard-metric-label"><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Invoices issued</span><strong>{{ invoice_count }}</strong><span>{{ period_label }} <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>{% endif %}
+    <a class="dashboard-metric" href="{{ unpaid_url }}"><span class="dashboard-metric-label"><i class="bi bi-clock-history" aria-hidden="true"></i> Still to collect</span><strong>{{ currency }} {{ open_amount|floatformat:2 }}</strong><span>{{ open_count }} unpaid invoice{{ open_count|pluralize }} · all dates <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
+    <a class="dashboard-metric dashboard-metric-attention" href="#dashboard-attention"><span class="dashboard-metric-label"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Needs attention</span><strong>{{ attention_count }}</strong><span>Overdue invoices{% if dashboard_permissions.products %}, stock{% endif %}{% if dashboard_permissions.shipments %} & shipments{% endif %} <i class="bi bi-arrow-down" aria-hidden="true"></i></span></a>
+  </section>
+  <div class="dashboard-section-heading" id="dashboard-attention"><div><h2>What needs your attention</h2><p>Current priorities across your workspace, regardless of the reporting period.</p></div>{% if due_today_count %}<a href="{{ due_today_url }}" class="dashboard-due-link">{{ due_today_count }} invoice{{ due_today_count|pluralize }} due today <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}</div>
+  <div class="dashboard-priority-grid{% if not dashboard_permissions.products %} dashboard-one-column{% endif %}">
+    <section class="dashboard-panel" aria-labelledby="dashboard-overdue-heading">
+      <div class="dashboard-panel-heading"><div><h3 id="dashboard-overdue-heading">Overdue invoices <span class="dashboard-count">{{ overdue_count }}</span></h3><p class="dashboard-muted">{{ currency }} {{ overdue_amount|floatformat:2 }} remaining to collect</p></div><a href="{{ overdue_url }}">View all <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+      {% for invoice in overdue_rows %}<a class="dashboard-record" href="{% url 'ims:sales:invoice_edit' invoice.pk %}"><div class="dashboard-record-main"><strong>{{ invoice.customer.name }}</strong><span>{{ invoice.number }}{% if invoice.due_date %} · Due {{ invoice.due_date|date:"j M Y" }}{% else %} · Marked overdue{% endif %}</span></div><div class="dashboard-record-value"><strong>{{ currency }} {{ invoice.workspace_balance|floatformat:2 }}</strong><span>Open invoice <i class="bi bi-arrow-right" aria-hidden="true"></i></span></div></a>{% empty %}<div class="dashboard-empty"><i class="bi bi-check-circle" aria-hidden="true"></i><strong>No overdue invoices</strong><p>Unpaid invoices with a due date before today appear here.</p><a href="{{ unpaid_url }}">Review unpaid invoices</a></div>{% endfor %}
+    </section>
+    {% if dashboard_permissions.products %}<section class="dashboard-panel" aria-labelledby="dashboard-stock-heading">
+      <div class="dashboard-panel-heading"><div><h3 id="dashboard-stock-heading">Stock to replenish <span class="dashboard-count">{{ low_stock_count }}</span></h3><p class="dashboard-muted">{{ stockout_count }} out of stock · available units after reservations</p></div><a href="{% url 'ims:inventory:product_list' %}?low=1">View all <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+      {% for product in low_products %}<a class="dashboard-record" href="{% url 'ims:inventory:product_identity' product.pk %}"><div class="dashboard-record-main"><strong>{{ product.name }}</strong><span>{{ product.sku }} · Reorder at {{ product.reorder_level }}</span></div><div class="dashboard-stock-level{% if product.available_for_reorder == 0 %} dashboard-stock-empty{% endif %}">{{ product.available_for_reorder }} left</div></a>{% empty %}<div class="dashboard-empty"><i class="bi bi-box-seam" aria-hidden="true"></i><strong>No stock alerts</strong><p>Active, tracked products appear here when available stock reaches their reorder level.</p><a href="{% url 'ims:inventory:product_list' %}">Open inventory</a></div>{% endfor %}
+    </section>{% endif %}
   </div>
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:sales:sales_home' %}?q=Pending#invoices" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Pending Invoices</div>
-          <i class="bi bi-clock-history fs-4 text-primary"></i>
-        </div>
-        <div class="display-6">{{ stats.pending_invoices }}</div>
-      </div>
-    </a>
+  <div class="dashboard-work-grid">
+    <section class="dashboard-panel" aria-labelledby="dashboard-recent-heading">
+      <div class="dashboard-panel-heading"><div><h3 id="dashboard-recent-heading">Recent invoices</h3><p class="dashboard-muted">{{ period_label }} · {{ currency }}</p></div><a href="{{ invoiced_url }}">View all <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+      {% for invoice in recent_invoices %}<a class="dashboard-record" href="{% url 'ims:sales:invoice_edit' invoice.pk %}"><div class="dashboard-record-main"><strong>{{ invoice.number }} <span class="dashboard-status{% if invoice.dashboard_status == 'Paid' %} dashboard-status-paid{% elif invoice.dashboard_status == 'Overdue' %} dashboard-status-late{% endif %}">{{ invoice.dashboard_status }}</span></strong><span>{{ invoice.customer.name }} · {{ invoice.date|date:"j M" }}</span></div><div class="dashboard-record-value"><strong>{{ currency }} {{ invoice.workspace_total|floatformat:2 }}</strong><span>Open <i class="bi bi-arrow-right" aria-hidden="true"></i></span></div></a>{% empty %}<div class="dashboard-empty"><i class="bi bi-receipt" aria-hidden="true"></i><strong>No invoices in this period</strong><p>Choose another period or start your next sale.</p>{% if dashboard_permissions.new_invoice %}<a href="{% url 'ims:sales:invoice_create' %}">Create an invoice</a>{% endif %}</div>{% endfor %}
+    </section>
+    <div class="dashboard-work-stack">
+      {% if dashboard_permissions.quotes %}<section class="dashboard-panel" aria-labelledby="dashboard-quotes-heading"><div class="dashboard-panel-heading"><div><h3 id="dashboard-quotes-heading">Continue a quotation <span class="dashboard-count">{{ draft_count }}</span></h3><p class="dashboard-muted">Draft quotations ready for your next step</p></div><a href="{% url 'ims:sales:sales_home' %}?quote_filter=draft#quotations">View all <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>{% for quote in draft_quotes %}<a class="dashboard-record" href="{% url 'ims:sales:quotation_edit' quote.pk %}"><div class="dashboard-record-main"><strong>{{ quote.customer.name }}</strong><span>{{ quote.number }} · {{ quote.date|date:"j M Y" }}</span></div><i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% empty %}<div class="dashboard-compact-empty">No draft quotations.{% if dashboard_permissions.new_quote %} <a href="{% url 'ims:sales:quotation_create' %}">Create a quotation</a>{% endif %}</div>{% endfor %}</section>{% endif %}
+      {% if dashboard_permissions.shipments %}<section class="dashboard-panel" aria-labelledby="dashboard-shipments-heading"><div class="dashboard-panel-heading"><div><h3 id="dashboard-shipments-heading">Shipment follow-up <span class="dashboard-count">{{ shipment_count }}</span></h3><p class="dashboard-muted">Late arrivals and stock ready to receive</p></div><a href="{% url 'ims:inventory:shipment_list' %}?attention=1">View all <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>{% for shipment in shipment_rows %}<a class="dashboard-record" href="{% url 'ims:inventory:shipment_detail' shipment.pk %}"><div class="dashboard-record-main"><strong>{{ shipment.name|default:shipment.shipment_code }}</strong><span>{{ shipment.supplier.name }} · {% if shipment.dashboard_late %}Late{% if shipment.eta_date %}: {{ shipment.eta_date|date:"j M" }}{% endif %}{% else %}Ready to receive{% endif %}</span></div><i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% empty %}<div class="dashboard-compact-empty">No shipments requiring follow-up.</div>{% endfor %}</section>{% endif %}
+    </div>
   </div>
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:sales:sales_home' %}?q=Overdue#invoices" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Overdue</div>
-          <i class="bi bi-exclamation-octagon fs-4 text-danger"></i>
-        </div>
-        <div class="display-6">{{ stats.overdue_invoices }}</div>
-      </div>
-    </a>
-  </div>
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:accounting:sales_summary' %}" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Sales (MTD)</div>
-          <i class="bi bi-cash-coin fs-4 text-success"></i>
-        </div>
-        <div class="display-6">{{ stats.sales_mtd }}</div>
-      </div>
-    </a>
-  </div>
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:credit_control:dashboard' %}" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Overdue Receivables</div>
-          <i class="bi bi-exclamation-circle fs-4 text-danger"></i>
-        </div>
-        <div class="display-6">{{ stats.overdue_receivables }}</div>
-      </div>
-    </a>
-  </div>
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:credit_control:dashboard' %}" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Overdue Payables</div>
-          <i class="bi bi-clock-history fs-4 text-warning"></i>
-        </div>
-        <div class="display-6">{{ stats.overdue_payables }}</div>
-      </div>
-    </a>
-  </div>
-  <div class="col-md-3 col-6">
-    <a href="{% url 'ims:credit_control:dashboard' %}" class="click-card">
-      <div class="card p-3 h-100">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="h6 mb-0">Net Cash Pressure</div>
-          <i class="bi bi-cash-stack fs-4 text-info"></i>
-        </div>
-        <div class="display-6">{{ stats.cash_pressure }}</div>
-      </div>
-    </a>
-  </div>
+  <p class="dashboard-footnote">Figures update when you refresh. Invoiced amounts use saved line totals before tax; payments use their recorded payment dates. {% if currencies|length > 1 %}Different currencies are shown separately.{% endif %}</p>
 </div>
 {% endblock %}

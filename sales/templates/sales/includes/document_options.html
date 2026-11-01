@@ -1,0 +1,4 @@
+<div class="col-md-6"><label class="form-label" for="{{ form.reference.id_for_label }}">Reference / PO number</label>{{ form.reference }}{{ form.reference.errors }}</div>
+{% if not omit_notes %}<div class="col-md-6"><label class="form-label" for="{{ form.notes.id_for_label }}">Printed notes</label>{{ form.notes }}{{ form.notes.errors }}</div>{% endif %}
+<div class="col-md-6"><label class="form-label" for="{{ form.terms.id_for_label }}">Terms & instructions</label>{{ form.terms }}{{ form.terms.errors }}</div>
+<div class="col-md-6" data-custom-fields><label class="form-label" for="{{ form.custom_fields.id_for_label }}">Your own fields</label>{{ form.custom_fields }}{{ form.custom_fields.errors }}<div class="small text-secondary mt-1">{{ form.custom_fields.help_text }}</div></div>

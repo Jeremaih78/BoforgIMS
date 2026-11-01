@@ -2,9 +2,11 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET
+from django.http import HttpResponse
 
 from django.contrib import messages
-from core.permissions import ims_permission
+from core.permissions import ims_permission, allowed
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -44,20 +46,40 @@ from .services import (
 @login_required
 @ims_permission('inventory.view_product', staff=True)
 def product_list(request):
-    q = request.GET.get('q','')
+    q = request.GET.get('q','').strip()[:100]
     low = request.GET.get('low')
+    qs = product_list_queryset(q, low)
+    paginator = Paginator(qs, 20)
+    page = request.GET.get('page')
+    products = paginator.get_page(page)
+    return render(request,'inventory/product_list.html',{'products':products,'q':q,'low':low,
+        'can_view_replenishment':allowed(request.user,'inventory.view_replenishmentplan',staff=False)})
+
+
+def product_list_queryset(q='', low=None):
     qs = Product.objects.all()
     if q:
         qs = qs.filter(
             Q(name__icontains=q)|Q(sku__icontains=q)|Q(category__name__icontains=q)|Q(supplier__name__icontains=q)|Q(barcodes__code__iexact=q)|Q(units__unit_id__iexact=q)|Q(units__serial_number__iexact=q)
         )
     if low == '1':
-        qs = qs.filter(quantity__lte=F('reserved') + F('reorder_level'))
-    qs = qs.distinct().select_related('category','supplier').order_by('name')
-    paginator = Paginator(qs, 20)
-    page = request.GET.get('page')
-    products = paginator.get_page(page)
-    return render(request,'inventory/product_list.html',{'products':products,'q':q,'low':low})
+        from .selectors import low_stock_products
+        qs = low_stock_products(qs)
+    return qs.distinct().select_related('category','supplier').order_by('name', 'pk')
+
+
+@login_required
+@ims_permission('inventory.view_product', staff=True)
+@require_GET
+def product_price_list(request):
+    from .price_list import build_price_list
+    q = request.GET.get('q', '').strip()[:100]
+    low = request.GET.get('low')
+    products = product_list_queryset(q, low).filter(is_active=True)
+    response = HttpResponse(build_price_list(products, q, low == '1'), content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="Boforg-product-price-list.pdf"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 @login_required
 @ims_permission('inventory.add_product', staff=True)
@@ -113,12 +135,16 @@ def shipment_list(request):
     shipments = Shipment.objects.select_related('supplier').order_by('-created_at')
     if status:
         shipments = shipments.filter(status=status)
+    if request.GET.get('attention') == '1':
+        from .selectors import shipment_followups
+        shipments = shipment_followups(shipments)
     return render(
         request,
         'inventory/shipment_list.html',
         {
             'shipments': shipments,
             'status_filter': status,
+            'attention_filter': request.GET.get('attention') == '1',
             'status_choices': Shipment.STATUS_CHOICES,
         },
     )

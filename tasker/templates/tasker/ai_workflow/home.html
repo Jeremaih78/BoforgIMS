@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Personal assistant · Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/ai-workflow.css' %}">{% endblock %}
+{% block content %}
+<div class="ai-workspace container-xl py-4">
+  <header class="ai-work-hero mb-4"><div class="tasker-label">ASSISTANCE WITH CONTROL</div><h1>Make room for meaningful work</h1><p>Understand a capture, break down a task or review a feasible plan. Suggestions become work only after your review.</p><a href="{% url 'ims:tasker:ai_budget' %}">Budget and privacy <i class="bi bi-arrow-right" aria-hidden="true"></i></a></header>
+  {% if not availability.configured %}<div class="alert alert-info" role="status"><strong>Live AI is not ready.</strong> Requests stay subject to worker, model, credential and spending checks. Your regular Tasker tools remain available. {{ availability.budget.reason_label }} {{ availability.message }}</div>{% endif %}
+  <div class="ai-work-grid">
+    <section class="ai-work-panel"><h2>What would help now?</h2><p class="text-muted">Personal requests use your authorized work. Choosing a team gives a read-only briefing from shared facts.</p>
+      <form method="post" data-ai-work-form>{% csrf_token %}{{ form.client_key }}{{ form.non_field_errors }}
+        {% for field in form.visible_fields %}<div class="mb-3" data-ai-field="{{ field.name }}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endfor %}
+        <p class="small text-muted">Only a deliberately selected capture or supplied meeting text is included. AI may make mistakes. Review sources and dates before applying.</p>
+        <button class="btn btn-primary" type="submit">Queue a suggestion</button>
+      </form>
+    </section>
+    <aside><section class="ai-work-panel mb-3"><h2>This week</h2>{% include "tasker/ai_workflow/budget_summary.html" with budget=availability.budget %}</section>
+      <section class="ai-work-panel"><h2>Your recent requests</h2><ul class="ai-work-history">{% for item in history %}<li><a href="{% url 'ims:tasker:ai_work_detail' item.pk %}"><strong>{{ item.get_feature_display }}</strong><span>{{ item.get_status_display }}</span><small>{{ item.created_at|date:"d M, H:i" }}</small></a></li>{% empty %}<li class="text-muted">Your suggestions will appear here. Try a briefing to understand your current work.</li>{% endfor %}</ul></section>
+    </aside>
+  </div>
+</div>{% endblock %}
+{% block extra_js %}<script src="{% static 'tasker/js/ai-workflow.js' %}" defer></script>{% endblock %}

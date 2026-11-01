@@ -4,9 +4,10 @@
   <h3>Customers</h3>
   <a href="{% url 'ims:customers:customer_create' %}" class="btn btn-primary btn-sm">Add Customer</a>
 </div>
-<form class="mb-3">
-  <input class="form-control" name="q" placeholder="Search by name, email, phone..." value="{{ q }}">
+<form data-live-search data-results-target="#customer-results" autocomplete="off" class="mb-3">
+  <input class="form-control" type="search" autocomplete="off" aria-label="Search records" name="q" placeholder="Search by name, email, phone..." value="{{ q }}">
 </form>
+<div id="customer-results" aria-live="polite">
 <div class="card p-2">
 <table class="table table-hover align-middle mb-0">
   <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th></th></tr></thead>
@@ -26,13 +27,13 @@
     <nav>
       <ul class="pagination pagination-sm mb-0">
         {% if customers.has_previous %}
-        <li class="page-item"><a class="page-link" href="?q={{ q }}&page={{ customers.previous_page_number }}">Prev</a></li>
+        <li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}&page={{ customers.previous_page_number }}">Prev</a></li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">Prev</span></li>
         {% endif %}
         <li class="page-item disabled"><span class="page-link">Page {{ customers.number }} of {{ customers.paginator.num_pages }}</span></li>
         {% if customers.has_next %}
-        <li class="page-item"><a class="page-link" href="?q={{ q }}&page={{ customers.next_page_number }}">Next</a></li>
+        <li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}&page={{ customers.next_page_number }}">Next</a></li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">Next</span></li>
         {% endif %}
@@ -40,5 +41,6 @@
     </nav>
   </div>
   {% endif %}
+</div>
 </div>
 {% endblock %}

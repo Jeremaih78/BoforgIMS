@@ -24,7 +24,7 @@ from tasker.services.workbench import WorkConflict, work_version
 
 
 @transaction.atomic
-def save_task(*, form, user):
+def save_task(*, form, user, preserve_notes=False):
     task = form.save(commit=False)
     is_new = task.pk is None
     previous_status = None
@@ -39,7 +39,9 @@ def save_task(*, form, user):
         if not getattr(form, "definition_submitted", False):
             task.definition_of_done = current.definition_of_done
         previous_status = current.status
-        task.notes = normalize_notes(task.notes)
+        # Scoped planning adapters do not edit notes. Preserve their exact
+        # existing bytes rather than normalizing an unrelated person's text.
+        task.notes = current.notes if preserve_notes else normalize_notes(task.notes)
         if task.notes != normalize_notes(current.notes) and form.cleaned_data.get("notes_version") != notes_version(current.notes):
             raise NotesConflictError(current.notes)
 

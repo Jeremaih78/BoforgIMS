@@ -230,7 +230,8 @@ class JobTests(TestCase):
         OutboxJob.objects.filter(pk=job.pk).update(state="FAILED", attempts=5, last_error_code="handler_error")
         self.assertEqual(enqueue_operator_refresh(owner_id=self.user.pk, revision=revision).state, "FAILED")
         module = SimpleNamespace(reconcile_coordination=lambda **kwargs: {},
-            reconcile_notifications=lambda **kwargs: {}, reconcile_reports=lambda **kwargs: {})
+            reconcile_notifications=lambda **kwargs: {}, reconcile_reports=lambda **kwargs: {},
+            reconcile_business_links=lambda **kwargs: {})
         with patch("tasker.services.jobs.importlib.import_module", return_value=module): scheduler_tick(limit=10)
         job.refresh_from_db()
         self.assertEqual((job.state, job.attempts), ("FAILED", 5))
@@ -364,12 +365,13 @@ class JobTests(TestCase):
         module = SimpleNamespace(
             reconcile_coordination=lambda **kwargs: calls.append("coordination") or {"checked": 1},
             reconcile_notifications=lambda **kwargs: calls.append("notifications") or {"checked": 1},
-            reconcile_reports=lambda **kwargs: calls.append("reports") or {"checked": 1})
+            reconcile_reports=lambda **kwargs: calls.append("reports") or {"checked": 1},
+            reconcile_business_links=lambda **kwargs: calls.append("business") or {"checked": 1})
         OperatorState.objects.create(owner=self.user)
         with patch("tasker.services.jobs.importlib.import_module", return_value=module):
             scheduler_tick(limit=10)
             scheduler_tick(limit=10)
-        self.assertEqual(calls, ["coordination", "notifications", "reports"]*2)
+        self.assertEqual(calls, ["coordination", "notifications", "reports", "business"]*2)
         self.assertEqual(OutboxJob.objects.count(), 1)
 
     def test_bounded_scheduler_passes_do_not_starve_later_missing_owner_jobs(self):
@@ -377,7 +379,8 @@ class JobTests(TestCase):
             get_user_model()(username=f"repair-owner-{index}") for index in range(10)])
         OperatorState.objects.bulk_create([OperatorState(owner=user) for user in users])
         module = SimpleNamespace(reconcile_coordination=lambda **kwargs: {},
-            reconcile_notifications=lambda **kwargs: {}, reconcile_reports=lambda **kwargs: {})
+            reconcile_notifications=lambda **kwargs: {}, reconcile_reports=lambda **kwargs: {},
+            reconcile_business_links=lambda **kwargs: {})
         with patch("tasker.services.jobs.importlib.import_module", return_value=module):
             for _ in range(4): scheduler_tick(limit=3)
         self.assertEqual(OutboxJob.objects.filter(kind="operator.refresh").count(), 10)

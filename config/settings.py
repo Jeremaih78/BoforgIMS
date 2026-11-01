@@ -48,6 +48,7 @@ CSRF_TRUSTED_ORIGINS = [
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
+    'operations.apps.OperationsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -81,6 +82,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'tasker.pilot_middleware.PilotAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'config.middleware.BoforgHostsResponseMiddleware',
@@ -224,6 +226,12 @@ TASKER_DIRECTION_ENABLED = os.environ.get('TASKER_DIRECTION_ENABLED', 'false').l
 TASKER_COORDINATION_ENABLED = os.environ.get('TASKER_COORDINATION_ENABLED', 'false').lower() == 'true'
 TASKER_REPORTS_ENABLED = os.environ.get('TASKER_REPORTS_ENABLED', 'false').lower() == 'true'
 TASKER_OPERATOR_DISPATCH_ENABLED = os.environ.get('TASKER_OPERATOR_DISPATCH_ENABLED', 'false').lower() == 'true'
+TASKER_AI_WORKFLOW_ENABLED = os.environ.get('TASKER_AI_WORKFLOW_ENABLED', 'false').lower() == 'true'
+TASKER_STRATEGY_ENABLED = os.environ.get('TASKER_STRATEGY_ENABLED', 'false').lower() == 'true'
+TASKER_COLLECTIONS_ADAPTER_ENABLED = os.environ.get('TASKER_COLLECTIONS_ADAPTER_ENABLED', 'false').lower() == 'true'
+TASKER_REPLENISHMENT_ADAPTER_ENABLED = os.environ.get('TASKER_REPLENISHMENT_ADAPTER_ENABLED', 'false').lower() == 'true'
+# Monetary admission is mandatory in production, including legacy AI actions.
+TASKER_AI_BUDGET_ENFORCED = True
 TASKER_AI_MAX_PROMPT_CHARACTERS = int(os.environ.get('TASKER_AI_MAX_PROMPT_CHARACTERS', '50000'))
 
 LOGGING = {
@@ -281,3 +289,31 @@ if DEBUG:
     CSRF_COOKIE_SECURE = False
 
 BOFORG_WHATSAPP_NUMBER = os.environ.get('BOFORG_WHATSAPP_NUMBER', '263786264994')
+
+# Each source adapter can be rolled back independently without changing source workflows.
+TASKER_SHIPMENT_ADAPTER_ENABLED = os.environ.get('TASKER_SHIPMENT_ADAPTER_ENABLED', 'false').lower() == 'true'
+TASKER_SERVICE_ADAPTER_ENABLED = os.environ.get('TASKER_SERVICE_ADAPTER_ENABLED', 'false').lower() == 'true'
+TASKER_STOCKTAKE_ADAPTER_ENABLED = os.environ.get('TASKER_STOCKTAKE_ADAPTER_ENABLED', 'false').lower() == 'true'
+TASKER_QUOTATION_ADAPTER_ENABLED = os.environ.get('TASKER_QUOTATION_ADAPTER_ENABLED', 'false').lower() == 'true'
+TASKER_FULFILMENT_ADAPTER_ENABLED = os.environ.get('TASKER_FULFILMENT_ADAPTER_ENABLED', 'false').lower() == 'true'
+TASKER_BILL_ADAPTER_ENABLED = os.environ.get('TASKER_BILL_ADAPTER_ENABLED', 'false').lower() == 'true'
+TASKER_PERIOD_ADAPTER_ENABLED = os.environ.get('TASKER_PERIOD_ADAPTER_ENABLED', 'false').lower() == 'true'
+
+TASKER_IMPROVEMENT_ENABLED = os.environ.get('TASKER_IMPROVEMENT_ENABLED', 'false').lower() == 'true'
+TASKER_PILOT_ENABLED = os.environ.get('TASKER_PILOT_ENABLED', 'false').lower() == 'true'
+TASKER_PILOT_ACCESS_ENFORCED = os.environ.get('TASKER_PILOT_ACCESS_ENFORCED', 'false').lower() == 'true'
+TASKER_ROLLOUT_WRITES_ENABLED = os.environ.get('TASKER_ROLLOUT_WRITES_ENABLED', 'false').lower() == 'true'
+TASKER_RECURRENCE_ENABLED = os.environ.get('TASKER_RECURRENCE_ENABLED', 'false').lower() == 'true'
+TASKER_REPORT_EMAIL_LIVE_ENABLED = os.environ.get('TASKER_REPORT_EMAIL_LIVE_ENABLED', 'false').lower() == 'true'
+
+# Report transport remains gated separately from company policy and recipient grants.
+# Preserve Django's existing mail defaults for other IMS features. Tasker
+# additionally requires a real sender and explicit policy/server activation.
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '25'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'false').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'false').lower() == 'true'
+EMAIL_TIMEOUT = int(os.environ['EMAIL_TIMEOUT']) if os.environ.get('EMAIL_TIMEOUT') else None
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')

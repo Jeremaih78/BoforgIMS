@@ -8,6 +8,7 @@
   </div>
 </div>
 <form method="get" class="row g-2 mb-3">
+  {% if attention_filter %}<input type="hidden" name="attention" value="1">{% endif %}
   <div class="col-sm-6 col-md-3">
     <select class="form-select" name="status">
       <option value="">All Statuses</option>
@@ -20,6 +21,7 @@
     <button class="btn btn-outline-primary">Filter</button>
   </div>
 </form>
+{% if attention_filter %}<p class="small text-secondary">Showing late arrivals and shipments with stock ready to receive. <a href="{% url 'ims:inventory:shipment_list' %}">Show all shipments</a></p>{% endif %}
 <div class="card p-3">
   <div class="table-responsive">
     <table class="table align-middle shipments-table">

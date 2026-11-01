@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from . import source_views
 
 app_name = "credit_control"
 
@@ -18,10 +19,14 @@ urlpatterns = [
     path("followups/", views.followups, name="followups"),
     path("promises/", views.promises, name="promises"),
     path("promises/new/", views.promise_create, name="promise_create"),
+    path("promises/<int:pk>/", source_views.promise_detail, name="promise_detail"),
+    path("promises/<int:pk>/assign/", source_views.promise_assign, name="promise_assign"),
     path("disputes/", views.disputes, name="disputes"),
     path("disputes/new/", views.dispute_create, name="dispute_create"),
     path("tasks/", views.tasks, name="tasks"),
     path("tasks/new/", views.task_create, name="task_create"),
+    path("tasks/<int:pk>/", source_views.task_detail, name="task_detail"),
+    path("tasks/<int:pk>/<slug:action>/", source_views.task_action, name="task_action"),
     path("aging/", views.aging_reports, name="aging_reports"),
     path("notifications/", views.notifications, name="notifications"),
     path("reports/<str:report_name>/csv/", views.report_export_csv, name="report_export_csv"),

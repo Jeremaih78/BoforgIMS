@@ -31,7 +31,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const submit = form.querySelector('[type="submit"]');
+    if (submit.disabled) return;
+    submit.disabled = true;
     showErrors({});
+    try {
     const response = await fetch(form.action, {
       method: 'POST',
       body: new FormData(form),
@@ -56,5 +60,10 @@ document.addEventListener('DOMContentLoaded', function () {
     modalEl.addEventListener('hidden.bs.modal', () => {
       (document.getElementById(`${activeSelectId}-search`) || select)?.focus();
     }, {once: true});
+    } catch (_error) {
+      showErrors({'Error': 'Could not connect. Check your connection and try again.'});
+    } finally {
+      submit.disabled = false;
+    }
   });
 });

@@ -3,20 +3,27 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h3 class="mb-0">Sales</h3>
   <div class="d-flex gap-2">
-    <a class="btn btn-primary btn-sm" href="{% url 'ims:sales:quotation_create' %}"><i class="bi bi-file-earmark-plus me-1"></i>New Quotation</a>
-    <a class="btn btn-primary btn-sm" href="{% url 'ims:sales:invoice_create' %}"><i class="bi bi-receipt me-1"></i>New Invoice</a>
+    {% if can_add_quote %}<a class="btn btn-primary btn-sm" href="{% url 'ims:sales:quotation_create' %}"><i class="bi bi-file-earmark-plus me-1"></i>New Quotation</a>{% endif %}
+    {% if can_add_invoice %}<a class="btn btn-primary btn-sm" href="{% url 'ims:sales:invoice_create' %}"><i class="bi bi-receipt me-1"></i>New Invoice</a>{% endif %}
   </div>
 </div>
-<form class="mb-3" method="get">
+<form data-live-search data-results-target="#sales-results" autocomplete="off" class="mb-3" method="get">
+  {% if invoice_filter %}<input type="hidden" name="filter" value="{{ invoice_filter }}">{% endif %}
+  {% if currency_filter %}<input type="hidden" name="currency" value="{{ currency_filter }}">{% endif %}
+  {% if date_from %}<input type="hidden" name="date_from" value="{{ date_from }}">{% endif %}
+  {% if date_to %}<input type="hidden" name="date_to" value="{{ date_to }}">{% endif %}
+  {% if quote_filter %}<input type="hidden" name="quote_filter" value="{{ quote_filter }}">{% endif %}
   <div class="input-group">
     <span class="input-group-text bg-transparent text-light"><i class="bi bi-search"></i></span>
-    <input class="form-control" name="q" placeholder="Search by number, customer, or status..." value="{{ q }}">
+    <input class="form-control" type="search" autocomplete="off" aria-label="Search records" name="q" placeholder="Search by number, customer, or status..." value="{{ q }}">
     <button class="btn btn-outline-light" type="submit">Search</button>
   </div>
   <small class="text-secondary">Tip: try "Pending" or "Overdue"</small>
 </form>
+{% if invoice_filter or currency_filter or date_from or quote_filter %}<p class="small text-secondary">Showing {% if invoice_filter %}{{ invoice_filter_label }} {% endif %}{% if quote_filter %}draft quotations {% endif %}{% if currency_filter %}{{ currency_filter }} {% endif %}{% if date_from %}from {{ date_from }} {% endif %}{% if date_to %}to {{ date_to }} {% endif %} · <a href="{% url 'ims:sales:sales_home' %}">Clear filters</a></p>{% endif %}
+<div id="sales-results" aria-live="polite">
 <div class="row g-3">
-  <div class="col-md-6">
+  {% if show_quotes %}<div class="{% if show_invoices %}col-md-6{% else %}col-12{% endif %}">
     <div class="card p-3">
       <div class="d-flex justify-content-between align-items-center">
         <h5 id="quotations" class="mb-0">Quotations</h5>
@@ -34,13 +41,13 @@
       <nav>
         <ul class="pagination pagination-sm">
           {% if quotations.has_previous %}
-          <li class="page-item"><a class="page-link" href="?q={{ q }}&q_page={{ quotations.previous_page_number }}#quotations">Prev</a></li>
+          <li class="page-item"><a class="page-link" href="?{{ retained_query }}&q_page={{ quotations.previous_page_number }}#quotations">Prev</a></li>
           {% else %}
           <li class="page-item disabled"><span class="page-link">Prev</span></li>
           {% endif %}
           <li class="page-item disabled"><span class="page-link">Page {{ quotations.number }} of {{ quotations.paginator.num_pages }}</span></li>
           {% if quotations.has_next %}
-          <li class="page-item"><a class="page-link" href="?q={{ q }}&q_page={{ quotations.next_page_number }}#quotations">Next</a></li>
+          <li class="page-item"><a class="page-link" href="?{{ retained_query }}&q_page={{ quotations.next_page_number }}#quotations">Next</a></li>
           {% else %}
           <li class="page-item disabled"><span class="page-link">Next</span></li>
           {% endif %}
@@ -49,7 +56,7 @@
       {% endif %}
     </div>
   </div>
-  <div class="col-md-6">
+  {% endif %}{% if show_invoices %}<div class="{% if show_quotes %}col-md-6{% else %}col-12{% endif %}">
     <div class="card p-3">
       <div class="d-flex justify-content-between align-items-center">
         <h5 id="invoices" class="mb-0">Invoices</h5>
@@ -67,13 +74,13 @@
       <nav>
         <ul class="pagination pagination-sm">
           {% if invoices.has_previous %}
-          <li class="page-item"><a class="page-link" href="?q={{ q }}&i_page={{ invoices.previous_page_number }}#invoices">Prev</a></li>
+          <li class="page-item"><a class="page-link" href="?{{ retained_query }}&i_page={{ invoices.previous_page_number }}#invoices">Prev</a></li>
           {% else %}
           <li class="page-item disabled"><span class="page-link">Prev</span></li>
           {% endif %}
           <li class="page-item disabled"><span class="page-link">Page {{ invoices.number }} of {{ invoices.paginator.num_pages }}</span></li>
           {% if invoices.has_next %}
-          <li class="page-item"><a class="page-link" href="?q={{ q }}&i_page={{ invoices.next_page_number }}#invoices">Next</a></li>
+          <li class="page-item"><a class="page-link" href="?{{ retained_query }}&i_page={{ invoices.next_page_number }}#invoices">Next</a></li>
           {% else %}
           <li class="page-item disabled"><span class="page-link">Next</span></li>
           {% endif %}
@@ -81,6 +88,7 @@
       </nav>
       {% endif %}
     </div>
-  </div>
+  </div>{% endif %}
+</div>
 </div>
 {% endblock %}

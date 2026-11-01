@@ -78,6 +78,11 @@ def task_detail(request, slug):
     if getattr(settings, "TASKER_COORDINATION_ENABLED", False):
         from tasker.services.coordination import visible_requests_for
         coordination_requests = visible_requests_for(request.user).filter(task=task).select_related("resolver").order_by("-raised_at", "-pk")[:10]
+    sop_execution=None
+    if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) and request.user.has_perm('tasker.view_soptemplate'):
+        from tasker.improvement_models import SOPExecution
+        from tasker.services.improvement import templates_for
+        sop_execution=SOPExecution.objects.filter(task=task,version__template__in=templates_for(request.user)).select_related('version').first()
     return render(
         request,
         "tasker/task_detail.html",
@@ -88,6 +93,7 @@ def task_detail(request, slug):
             "coordination_requests": coordination_requests,
             "primary_contribution": primary_contribution,
             "source_capture": source_capture,
+            'sop_execution':sop_execution,
             "time_entries": time_entries,
             "activities": activities,
             "comment_form": TaskCommentForm(),

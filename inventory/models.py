@@ -651,3 +651,4 @@ class ShipmentEventLog(models.Model):
 
 # Domain models are split for readability; imported here for Django discovery.
 from .identity_models import ProductBarcode, UnitEvent, UnitSale, ScanRequest, Stocktake, StocktakeLine, StocktakeScan, ServiceCase  # noqa: E402,F401
+from .replenishment_models import ReplenishmentPlan, ReplenishmentEvent  # noqa: E402,F401

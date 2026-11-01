@@ -392,7 +392,9 @@ def build_operator(*, user, now=None, persist=True, exclude_task=None):
         snapshot = OperatorSnapshot.objects.create(owner=actor, expires_at=now if stale else now+timedelta(seconds=SNAPSHOT_SECONDS), policy=config,
             candidates=evidence, exclusions=excluded, state_revision=initial_revision, source_digest=source_digest,
             selected_task_id=chosen["task_id"] if chosen else None)
-    return {"now": chosen, "next": next_items[:6], "waiting": waiting[:10], "decisions": decisions[:12],
+    from .business_guidance import next_business_move
+    operational = next_business_move(actor,selected_task=chosen['task'] if chosen else None,focus_active=running is not None)
+    return {"business_now": operational, "now": chosen, "next": next_items[:6], "waiting": waiting[:10], "decisions": decisions[:12],
             "snapshot": snapshot, "policy": config, "config": config, "source_digest": source_digest,
             "state_revision": initial_revision,
             "freshness": {"evaluated_at": now, "expires_at": now if stale else now+timedelta(seconds=SNAPSHOT_SECONDS), "seconds": 0 if stale else SNAPSHOT_SECONDS, "stale": stale},

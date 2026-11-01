@@ -1,0 +1,23 @@
+{
+  "desktop_viewport": 1280,
+  "desktop_document": 1265,
+  "mobile_viewport": 390,
+  "mobile_document": 375,
+  "employee_peer_data_absent": true,
+  "restricted_pilot_denied": true,
+  "invalid_measurement_draft_retained": true,
+  "error_link_focus_and_tab": true,
+  "all_requirements": 153,
+  "synthetic_protocol_and_draft_member_saved": true,
+  "member_access_remained_disabled": true,
+  "enforced_cohort_no_work_ai_capture_controls": true,
+  "held_measurement_and_preferences_usable": true,
+  "viewport_reset": true,
+  "enforced_preview_stopped": true,
+  "references": [
+    "output/stage13-pilot-desktop.png",
+    "output/stage13-pilot-mobile.png",
+    "output/stage13-employee-scope.png",
+    "output/stage13-cohort-held.png"
+  ]
+}

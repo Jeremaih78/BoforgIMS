@@ -256,8 +256,16 @@ class SupplierBill(models.Model):
     tax = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("0"))
     total = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("0"))
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=DRAFT)
+    status_changed_at = models.DateTimeField(null=True,blank=True,editable=False)
 
     def save(self, *args, **kwargs):
+        fields=kwargs.get('update_fields')
+        if self.pk and (fields is None or 'status' in fields):
+            old=type(self).objects.filter(pk=self.pk).values_list('status',flat=True).first()
+            if old is not None and old!=self.status:
+                self.status_changed_at=timezone.now() if self.status==self.PAID else None
+                if fields is not None:
+                    kwargs['update_fields']=set(fields)|{'status_changed_at'}
         if not self.doc_no:
             seq, _ = NumberSequence.objects.get_or_create(company=self.company, key="BILL", defaults={"prefix": "BILL-"})
             self.doc_no = seq.next()

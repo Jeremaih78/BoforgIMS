@@ -1,0 +1,4 @@
+{% if document.reference %}<p><strong>Reference:</strong> {{ document.reference }}</p>{% endif %}
+{% for label, value in document.custom_fields.items %}<p><strong>{{ label }}:</strong> {{ value }}</p>{% endfor %}
+{% if document.notes %}<p><strong>Notes</strong><br>{{ document.notes|linebreaksbr }}</p>{% endif %}
+{% if document.terms %}<p><strong>Terms & instructions</strong><br>{{ document.terms|linebreaksbr }}</p>{% endif %}

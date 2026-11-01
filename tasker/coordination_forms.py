@@ -76,6 +76,11 @@ class ReportPolicyForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from django.conf import settings
+        if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):
+            self.fields['email_mode'].choices=(*self.fields['email_mode'].choices,('SMTP','Configured company email sender'))
+            self.fields['email_enabled']=forms.BooleanField(required=False,label='Enable company report email',
+                help_text='Requires the separate server activation switch, configured sender and authorized recipients. Unknown delivery attempts are held for review.')
         _style(self)
 
 

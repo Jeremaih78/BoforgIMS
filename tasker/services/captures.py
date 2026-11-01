@@ -188,7 +188,8 @@ def mutate_capture(*, user, pk, version, action, team=None):
 
 
 @transaction.atomic
-def promote_capture(*, user, pk, version, target="task", title="", due_date=None, team=None, goal=None):
+def promote_capture(*, user, pk, version, target="task", title="", due_date=None, team=None, goal=None,
+                    work_description=None, definition_of_done=""):
     user = _actor(user)
     item = _owned(user, pk)
     version = _version(version)
@@ -222,8 +223,10 @@ def promote_capture(*, user, pk, version, target="task", title="", due_date=None
         raise CaptureConflict(item)
     selected_title = title.strip() if isinstance(title, str) else ""
     selected_title = selected_title or item.title or item.content.splitlines()[0][:255]
-    description = item.content
-    if item.url and item.url not in description:
+    if work_description is not None and (not isinstance(work_description,str) or len(work_description)>5000):
+        raise ValidationError('Keep the experiment work description within 5,000 characters.')
+    description = item.content if work_description is None else work_description
+    if work_description is None and item.url and item.url not in description:
         description += "\n\n" + item.url
     description += "\n\nCapture source (access follows its visibility): " + item.get_absolute_url()
     if target == "task":
@@ -231,6 +234,7 @@ def promote_capture(*, user, pk, version, target="task", title="", due_date=None
             raise PermissionDenied
         selected_team = _sharing_team(user, team) if team else None
         task = Task(owner=user, title=selected_title, description=description, due_date=due_date,
+                    definition_of_done=definition_of_done,
                     team=selected_team, company=selected_team.company if selected_team else None,
                     assigned_by=user, created_by=user, updated_by=user)
         # Allocate the URL before validation. Different users can promote equal

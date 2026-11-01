@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "current_source_smoke": true,
+  "synthetic_only": true,
+  "report_employee_days": 320,
+  "report_queries": 58,
+  "report_seconds": 1.547,
+  "held_cohort_measurement_and_preferences_only": true,
+  "default_access_rollback": true,
+  "manager_export": true,
+  "restricted_denied": true,
+  "pilot_evidence_writes": 0
+}

@@ -122,6 +122,10 @@ def _team_facts(team, day):
     member_total = membership_qs.count()
     memberships = list(membership_qs[:MEMBER_LIMIT])
     owner_ids = [row.user_id for row in memberships]
+    closures={}
+    if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):
+        from tasker.improvement_models import DayClosure
+        closures=dict(DayClosure.objects.filter(owner_id__in=owner_ids,plan__plan_date=day).values_list('owner_id','closed'))
     latest = _latest_submissions(team, day, owner_ids)
     plan_rows = list(DailyPlan.objects.filter(owner_id__in=owner_ids, plan_date=day).values_list("pk", "owner_id"))
     plan_owners = dict(plan_rows)
@@ -157,6 +161,8 @@ def _team_facts(team, day):
         key_result__is_deleted=False, key_result__goal__is_deleted=False,
         key_result__goal__company_id=team.company_id).filter(Q(key_result__goal__team__isnull=True) | Q(key_result__goal__team=team)).filter(
         Q(task__isnull=True) | Q(task__team=team, task__company_id=team.company_id, task__owner_id=F("employee_id"), task__status=Task.Status.COMPLETED, task__is_deleted=False))
+    from .business_outcomes import filter_valid_business_outcomes
+    outcomes_qs = filter_valid_business_outcomes(outcomes_qs)
     outcome_total = outcomes_qs.count()
     outcomes = list(outcomes_qs.select_related("key_result", "task").order_by("pk")[:OUTCOME_LIMIT])
     try:
@@ -215,6 +221,8 @@ def _team_facts(team, day):
             if block.owner_id == employee.pk and task.owner_id == employee.pk:
                 member["commitments"].append({**task_fact(task), "kind": "ACCEPTED_TIME_BLOCK", "block_id": block.pk,
                     "starts_at": block.starts_at.isoformat(), "ends_at": block.ends_at.isoformat()})
+        if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):
+            member['day_state']='CLOSED' if closures.get(employee.pk) else 'REOPENED' if employee.pk in closures else 'NOT_DECLARED'
         members.append(member)
     return {"team_id": team.pk, "team_name": team.name, "company_id": team.company_id,
         "report_date": day.isoformat(), "timezone_name": zone_name, "members": members,
@@ -297,10 +305,11 @@ def _assert_sources_current(report):
     outcome_refs = {row["outcome_id"]: member["employee_id"] for member in members for row in member.get("outcomes", [])}
     if outcome_refs:
         from tasker.goal_models import OutcomeMeasurement
-        current_outcomes = dict(OutcomeMeasurement.objects.filter(pk__in=outcome_refs,
+        from .business_outcomes import filter_valid_business_outcomes
+        current_outcomes = dict(filter_valid_business_outcomes(OutcomeMeasurement.objects.filter(pk__in=outcome_refs,
             team=report.team, company_id=report.team.company_id, status="ACCEPTED", employee_id__in=recorded,
             key_result__is_deleted=False, key_result__goal__is_deleted=False,
-            key_result__goal__company_id=report.team.company_id).values_list("pk", "employee_id"))
+            key_result__goal__company_id=report.team.company_id)).values_list("pk", "employee_id"))
         if current_outcomes != outcome_refs:
             raise ReportConflict("Accepted-outcome sources changed. Generate a current factual revision.")
 
@@ -373,7 +382,7 @@ def handle_build_report(payload, job=None):
 @transaction.atomic
 def save_report_policy(*, user, company, expected_revision="unconfigured-v1", timezone_name="Africa/Harare", cutoff_time=None,
         consolidation="UNCONFIGURED", correction_policy="UNCONFIGURED", missing_policy="UNCONFIGURED", weekdays=None,
-        email_mode="UNCONFIGURED", retention_days=None):
+        email_mode="UNCONFIGURED", retention_days=None, email_enabled=False):
     actor = _actor(user, lock=True)
     company_id = getattr(company, "pk", company)
     company = Company.objects.select_for_update().filter(pk=company_id, is_active=True).first()
@@ -383,12 +392,15 @@ def save_report_policy(*, user, company, expected_revision="unconfigured-v1", ti
     if str(expected_revision) != (str(policy.revision) if policy else "unconfigured-v1"):
         raise ReportConflict("The reporting policy changed. Keep your draft and review the saved policy before retrying.")
     policy = policy or ReportPolicy(company=company)
+    if type(email_enabled) is not bool:raise ValidationError('Choose an explicit email activation state.')
+    policy.email_enabled=email_enabled
     for key, value in {"timezone_name": timezone_name, "cutoff_time": cutoff_time, "consolidation": consolidation,
             "correction_policy": correction_policy, "missing_policy": missing_policy, "weekdays": weekdays if weekdays is not None else [],
             "email_mode": email_mode, "retention_days": retention_days}.items():
         setattr(policy, key, value)
     policy.configured = bool(cutoff_time is not None and policy.weekdays and consolidation != "UNCONFIGURED" and
-        correction_policy == "APPEND_REVISION" and missing_policy == "SHOW_MISSING" and email_mode == "TEST")
+        correction_policy == "APPEND_REVISION" and missing_policy == "SHOW_MISSING" and email_mode in (
+            ('TEST','SMTP') if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) else ('TEST',)))
     policy.revision, policy.updated_by = uuid.uuid4(), actor
     policy.save()
     OrganizationEvent.objects.create(company=company, actor=actor, action="report.policy_saved", object_type="ReportPolicy",
@@ -408,6 +420,7 @@ def render_report_email(report):
         f"As of {facts['as_of']} ({facts['timezone_name']})", "Arrival is self-reported. No worked-hour or productivity percentage is inferred."]
     for member in facts["members"]:
         lines.append(f"{member['name']}: {'End day submitted' if member['submission']['state']=='CLOSED' else 'No report submission'}")
+        if 'day_state' in member:lines.append('  Day declaration: '+member['day_state'].replace('_',' ').title())
         lines.append(f"  Accepted tasks: {len(member['accepted_tasks'])}; accepted outcomes: {len(member['outcomes'])}; commitments: {len(member['commitments'])}; blockers: {len(member['blockers'])}.")
         for task in member["accepted_tasks"]:
             lines.append(f"  Completed: {task['title']}")
@@ -466,7 +479,8 @@ def handle_report_delivery(payload, job=None, adapter=None):
             payload={"team_id": report.team_id, "report_date": report.report_date.isoformat()})
         return JobCancelled("report_sources_changed")
     policy = _policy(report.team)
-    if not policy or not policy.configured or policy.email_mode != "TEST" or policy.email_enabled or getattr(settings, "TASKER_REPORT_EMAIL_LIVE_ENABLED", False):
+    legacy_live_guard=getattr(settings,'TASKER_REPORT_EMAIL_LIVE_ENABLED',False) and not getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False)
+    if not policy or not policy.configured or policy.email_mode != "TEST" or policy.email_enabled or legacy_live_guard:
         settle("HELD", "report_policy_unconfigured" if not policy or not policy.configured else "live_email_disabled")
         return JobCancelled("report_policy_unconfigured")
     now = timezone.now()
@@ -534,7 +548,7 @@ def reconcile_reports(*, now=None, limit=100):
     for team_id, day in pairs:
         EndDaySubmission.objects.filter(team_id=team_id, report_date=day).update(last_checked_at=now)
 
-    policies = list(ReportPolicy.objects.filter(configured=True, email_mode="TEST", consolidation="AT_CUTOFF",
+    policies = list(ReportPolicy.objects.filter(configured=True, email_mode__in=(('TEST','SMTP') if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) else ('TEST',)), consolidation="AT_CUTOFF",
         company__is_active=True).order_by(F("last_checked_at").asc(nulls_first=True), "pk")[:limit])
     due_policies = []
     for policy in policies:
@@ -577,10 +591,12 @@ def reconcile_reports(*, now=None, limit=100):
         policy = _policy(delivery.report_snapshot.team)
         # Known transport failures retain the original job's bounded budget;
         # UNKNOWN deliveries and exhausted FAILED deliveries are never revived.
-        if not policy or not policy.configured or OutboxJob.objects.filter(kind="reports.deliver",
+        from .report_email import job_kind
+        kind=job_kind(delivery.report_snapshot)
+        if not policy or not policy.configured or OutboxJob.objects.filter(kind__in=("reports.deliver","reports.smtp"),
                 payload__delivery_id=delivery.pk, state__in=("QUEUED", "RUNNING")).exists():
             continue
-        enqueue_job(kind="reports.deliver", dedupe_key=f"reports.deliver:{delivery.pk}:{policy.revision}",
+        enqueue_job(kind=kind, dedupe_key=f"{kind}:{delivery.pk}:{policy.revision}",
             payload={"delivery_id": delivery.pk}, owner=delivery.recipient, run_after=delivery.next_attempt_at or now)
         requested += 1
     return {"requested": requested, "reviewed_pairs": len(set(pairs)), "reviewed_policies": len(policies), "reviewed_deliveries": len(deliveries)}

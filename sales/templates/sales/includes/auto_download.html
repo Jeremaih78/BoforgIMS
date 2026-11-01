@@ -1,0 +1,5 @@
+{% if request.GET.download == '1' %}
+<p class="alert alert-success" role="status">Saved. Your PDF download is starting. <a href="{{ pdf_url }}">Download again</a></p>
+<iframe src="{{ pdf_url }}" title="Download saved document PDF" hidden></iframe>
+<script>if (new URLSearchParams(location.search).get('download') === '1') { const url = new URL(location.href); url.searchParams.delete('download'); history.replaceState(null, '', url); }</script>
+{% endif %}

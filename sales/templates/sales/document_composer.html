@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{% if document %}Edit {{ document.number }}{% else %}New {{ kind|title }}{% endif %} | Boforg IMS{% endblock %}
+{% block content %}
+<div class="document-workspace">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div><div class="sales-form-kicker">Sales / {{ kind|title }}</div><h1 class="h3 mb-1">{% if document %}Edit {{ document.number }}{% else %}New {{ kind|title }}{% endif %}</h1><p class="text-secondary mb-0">Choose a customer, add products or combos, and save everything together.</p></div>
+    <a class="btn btn-outline-light" href="{% url 'ims:sales:sales_home' %}">Back to sales</a>
+  </div>
+  {% include 'sales/includes/customer_quick_create_modal.html' with customer_select_id=form.customer.id_for_label %}
+  <form method="post" id="document-composer" data-document-composer>
+    {% csrf_token %}
+    {% if form.errors or line_set.errors or line_set.non_form_errors or combo_set.errors or combo_set.non_form_errors %}<div class="alert alert-danger" role="alert"><strong>The document was not saved.</strong> Correct the highlighted fields below. {{ form.non_field_errors }}{{ line_set.non_form_errors }}{{ combo_set.non_form_errors }}</div>{% endif %}
+    <section class="card form-card p-4 mb-3" aria-labelledby="customer-heading">
+      <h2 class="h5 mb-3" id="customer-heading">Customer & dates</h2>
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label" for="{{ form.customer.id_for_label }}">Customer</label>{{ form.customer }}{{ form.customer.errors }}</div>
+        <div class="col-md-3"><label class="form-label" for="{{ form.date.id_for_label }}">Date</label>{{ form.date }}{{ form.date.errors }}</div>
+        {% if form.due_date %}<div class="col-md-3"><label class="form-label" for="{{ form.due_date.id_for_label }}">Due date (optional)</label>{{ form.due_date }}{{ form.due_date.errors }}</div>{% endif %}
+      </div>
+    </section>
+    <section class="card form-card p-4 mb-3" aria-labelledby="products-heading">
+      <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><div><h2 class="h5 mb-1" id="products-heading">Products</h2><p class="text-secondary small mb-0">Optional when using combos. Search, press Enter to choose, then edit quantity and price.</p></div><div class="d-flex gap-2"><button class="btn btn-outline-primary" type="button" data-add-document-line>+ Add product</button><button class="btn btn-outline-primary" type="button" data-add-document-combo>+ Add combo</button></div></div>
+      {{ line_set.management_form }}
+      <div data-document-lines>
+        {% for line_form in line_set %}{% include 'sales/includes/composer_line.html' %}{% endfor %}
+      </div>
+      {% for line in fixed_lines %}<div class="d-flex justify-content-between border-top py-2"><span>{{ line.description|default:line.combo }} <small>(existing adjustment)</small></span><strong>{{ line.line_total }}</strong></div>{% endfor %}
+      <template id="empty-document-line">{% include 'sales/includes/composer_line.html' with line_form=line_set.empty_form %}</template>
+      <button class="btn btn-link px-0 mt-2" type="button" data-add-document-line>+ Add another product</button>
+    </section>
+    <section class="card form-card p-4 mb-3" aria-labelledby="combos-heading">
+      <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><div><h2 class="h5 mb-1" id="combos-heading">Combos</h2><p class="text-secondary small mb-0">Use combos on their own or mix them with products. Combo discounts are included automatically.</p></div><button class="btn btn-outline-primary" type="button" data-add-document-combo>+ Add combo</button></div>
+      {{ combo_set.management_form }}
+      <div data-document-combos>{% for combo_form in combo_set %}{% include 'sales/includes/composer_combo.html' %}{% endfor %}</div>
+      <p class="small text-secondary mb-0" data-combo-empty {% if combo_set.forms %}hidden{% endif %}>No combos added yet. Search by combo name, code or an included product.</p>
+      <template id="empty-document-combo">{% include 'sales/includes/composer_combo.html' with combo_form=combo_set.empty_form %}</template>
+      {% if document %}<p class="small text-secondary mt-3 mb-0">Previously saved combos are shown above as their component products and discount lines. Add combos here to include more in this save.</p>{% endif %}
+    </section>
+    <section class="card form-card p-4 mb-3">
+      <details {% if form.reference.value or form.notes.value or form.terms.value or form.custom_fields.errors %}open{% endif %}>
+        <summary class="h5 mb-0">Customize document <span class="small text-secondary fw-normal">Reference, notes, terms & your own fields</span></summary>
+        <div class="row g-3 mt-2">
+          {% include 'sales/includes/document_options.html' %}
+        </div>
+      </details>
+    </section>
+    <div class="document-savebar">
+      <div><small class="d-block text-secondary">Total before tax <span data-total-currency></span></small><strong class="h3 mb-0" data-document-total data-fixed-total="{{ fixed_total }}" role="status">0.00</strong><small class="d-block text-secondary">Combo totals include their discounts.</small></div>
+      <div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-outline-primary" name="save_action" value="save">Save {{ kind }}</button><button type="submit" class="btn btn-primary" name="save_action" value="pdf">Save & download PDF</button></div>
+    </div>
+    <p class="small text-secondary mt-3">Ctrl / ⌘ + Enter to save. {% if kind == 'invoice' %}Saving reserves stock. Payments and physical unit selection are available on the saved invoice.{% else %}Quotations do not reserve stock. Convert the saved quotation to an invoice in one click.{% endif %}</p>
+    <noscript><p>Add products using the existing document page, or enable JavaScript for product suggestions and additional rows.</p></noscript>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/product_combobox.js' %}"></script><script src="{% static 'js/document_composer.js' %}"></script>{% endblock %}

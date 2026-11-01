@@ -1,0 +1,39 @@
+body:not(.tasker-app) { --bs-secondary-color: #a9c1d6; }
+body:not(.tasker-app) main form input, body:not(.tasker-app) main form select, body:not(.tasker-app) main form textarea { max-width:100%; }
+body:not(.tasker-app) main form p > input:not([type=checkbox]):not([type=hidden]), body:not(.tasker-app) main form p > select, body:not(.tasker-app) main form p > textarea { width:100%; min-height:42px; padding:.5rem .75rem; border:1px solid #b6c6d5; border-radius:8px; }
+body:not(.tasker-app) .table :is(span, small, strong) { color:inherit; }
+body:not(.tasker-app) .form-card .text-secondary { color:#536477 !important; }
+body:not(.tasker-app) .form-card .btn-primary { color:#fff !important; background:#176bc1; border-color:#176bc1; }
+body:not(.tasker-app) .form-card .btn-outline-primary { color:#145a9e !important; border-color:#2678c5; }
+body:not(.tasker-app) .form-card .btn-outline-primary:hover { color:#fff !important; }
+body:not(.tasker-app) .form-card .btn-outline-danger { color:#b42332 !important; }
+.ims-select { position:relative; min-width:0; }
+.ims-select > input { width:100%; padding-right:2.5rem; min-height:42px; }
+.ims-select__clear { position:absolute; right:4px; top:4px; width:34px; height:34px; border:0; background:transparent; color:inherit; font-size:22px; }
+.ims-select__results { position:fixed; z-index:1080; overflow:auto; overscroll-behavior:contain; border:1px solid #9db4ca; border-radius:10px; background:#fff; color:#152e46; box-shadow:0 12px 30px #00172b33; }
+.ims-select__option, .ims-select__empty { padding:.7rem .85rem; cursor:pointer; font-size:.95rem; overflow-wrap:anywhere; }
+.ims-select__option:hover, .ims-select__option[aria-selected=true] { background:#e4f0ff; color:#083f75; }
+.ims-select__option + .ims-select__option { border-top:1px solid #edf1f5; }
+.document-workspace { max-width:1440px; margin:auto; }
+.document-workspace .input-group { flex-wrap:nowrap; }
+.document-workspace .input-group > .product-combobox__input { width:1%; min-width:0; flex:1 1 auto; }
+.document-workspace .btn-primary { background:#176bc1; border-color:#176bc1; color:#fff; }
+.document-workspace .product-combobox__results { width:max(100%, 460px); max-width:min(650px, calc(100vw - 60px)); z-index:20; }
+.document-workspace .product-combobox__option { white-space:normal; }
+.document-workspace summary { cursor:pointer; }
+.document-workspace summary .small { display:inline-block; margin-left:.5rem; }
+.document-line:last-child { border-bottom:0 !important; }
+.document-line input[type=number] { min-width:0; }
+.document-savebar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; position:sticky; bottom:12px; z-index:10; padding:1.2rem 1.5rem; background:#fff; color:#122f49; border:1px solid #c9d9e8; border-radius:14px; box-shadow:0 5px 28px #0003; }
+.document-savebar :is(strong, small, span) { color:inherit; }
+.document-savebar .text-secondary { color:#536477 !important; }
+.document-workspace .errorlist { color:#b42332 !important; padding-left:1.2rem; margin:.35rem 0; font-size:.9rem; }
+@media(max-width:767px) {
+  .document-workspace .card { padding:1rem !important; }
+  .document-savebar { bottom:4px; padding:.8rem; gap:.6rem; }
+  .document-savebar > div:first-child { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+  .document-savebar > div:first-child > small:last-child { display:none !important; }
+  .document-savebar > div { width:100%; }
+  .document-savebar button { flex:1; }
+  .document-workspace .product-combobox__results { width:100%; max-width:100%; }
+}

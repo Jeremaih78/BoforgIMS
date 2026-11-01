@@ -780,3 +780,14 @@ from .job_models import JobWorkerHeartbeat, OutboxJob  # noqa: E402,F401
 from .coordination_models import CoordinationEvent, CoordinationRequest  # noqa: E402,F401
 from .notification_models import Notification, NotificationDelivery, NotificationPreference  # noqa: E402,F401
 from .report_models import EndDaySubmission, ManagerReportSnapshot, ReportPolicy  # noqa: E402,F401
+from .ai_workflow_models import AIWorkRequest  # noqa: E402,F401
+from .ai_budget_models import AIBudgetPolicy, AICompanyBudget, AIBudgetEnrollment, AIPriceCard, AISpendReservation, AISpendAttempt  # noqa: E402,F401
+from .proposal_models import AIProposal, AIProposalEvent  # noqa: E402,F401
+from .strategy_models import WorkDeclaration, WorkDeclarationEvent  # noqa: E402,F401
+from .scenario_models import StrategyScenario, StrategyScenarioEvent  # noqa: E402,F401
+from .business_models import BusinessRecordLink, BusinessLinkEvent, BusinessSyncCursor  # noqa: E402,F401
+
+from .business_outcome_models import BusinessContribution, BusinessOutcomeEvidence  # noqa: E402,F401
+
+from .improvement_models import (SOPTemplate, SOPVersion, SOPExecution, RecurringWorkflow, RoutineException, RoutineOccurrence, ImprovementEvent, CarryDecision, WeeklyReview, Experiment, ExperimentResult, DayClosure, DayRevision)  # noqa: E402,F401
+from .pilot_models import Pilot,PilotMember,PilotObservation,PilotEvent,PilotReleaseEvidence,PilotValidation  # noqa: E402,F401

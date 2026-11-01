@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Replenishment · Boforg IMS{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'inventory/css/replenishment.css' %}?v=stage11-replenishment-20261030-final2">{% endblock %}
+{% block content %}<div class="replenishment-workspace container-xl py-4"><p class="small"><a href="{% url 'ims:operations:home' %}">Operational responsibilities</a> · <a href="{% url 'ims:inventory:replenishment_list' %}">Replenishment</a></p>{% block replenishment_content %}{% endblock %}</div>{% endblock %}

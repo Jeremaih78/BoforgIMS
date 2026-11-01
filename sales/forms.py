@@ -25,6 +25,22 @@ class CustomerSearchSelect(forms.Select):
 
 
 class CustomerOrderedFormMixin:
+    def clean_custom_fields(self):
+        value = self.cleaned_data.get('custom_fields') or {}
+        if not isinstance(value, dict) or len(value) > 12:
+            raise forms.ValidationError('Use up to 12 named custom fields.')
+        cleaned = {}
+        for label, text in value.items():
+            if not isinstance(label, str) or not isinstance(text, str):
+                raise forms.ValidationError('Custom field names and values must be text.')
+            label = label.strip()
+            if not label or len(label) > 60 or len(text) > 500:
+                raise forms.ValidationError('Use names of 1–60 characters and values up to 500 characters.')
+            if label in cleaned:
+                raise forms.ValidationError('Custom field names must be unique.')
+            cleaned[label] = text.strip()
+        return cleaned
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'customer' in self.fields:
@@ -43,6 +59,12 @@ class CustomerOrderedFormMixin:
                 widget.attrs['class'] = f'{existing} {css_class}'.strip()
             if name == 'notes':
                 field.widget.attrs['rows'] = 1
+            if name == 'terms':
+                field.widget.attrs['rows'] = 3
+            if name == 'custom_fields':
+                field.widget = forms.Textarea(attrs={'class': 'form-control', 'rows': 3,
+                    'data-custom-fields-source': '', 'aria-label': 'Custom fields as JSON'})
+                field.help_text = 'Add your own fields, such as delivery address, PO number or warranty.'
 
 
 class QuotationForm(CustomerOrderedFormMixin, forms.ModelForm):
@@ -54,7 +76,7 @@ class QuotationForm(CustomerOrderedFormMixin, forms.ModelForm):
 
     class Meta:
         model = Quotation
-        fields = ['customer', 'date', 'notes']
+        fields = ['customer', 'date', 'reference', 'notes', 'terms', 'custom_fields']
 
 
 class InvoiceForm(CustomerOrderedFormMixin, forms.ModelForm):
@@ -66,7 +88,13 @@ class InvoiceForm(CustomerOrderedFormMixin, forms.ModelForm):
 
     class Meta:
         model = Invoice
-        fields = ['customer', 'date', 'due_date', 'notes']
+        fields = ['customer', 'date', 'due_date', 'reference', 'notes', 'terms', 'custom_fields']
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('date') and cleaned.get('due_date') and cleaned['due_date'] < cleaned['date']:
+            self.add_error('due_date', 'Due date cannot be before the invoice date.')
+        return cleaned
 
 
 class DocumentLineForm(forms.ModelForm):
@@ -76,7 +104,9 @@ class DocumentLineForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['product'].queryset = Product.objects.filter(is_active=True).select_related('category')
+        self.fields['product'].queryset = Product.objects.filter(
+            Q(is_active=True) | Q(pk=self.instance.product_id)
+        ).select_related('category')
         self.fields['product'].widget = forms.HiddenInput()
         self.fields['unit_price'].required = False
         self.fields['tax_rate_percent'].required = False
@@ -136,9 +166,76 @@ class DocumentLineForm(forms.ModelForm):
         return instance
 
 
+class DocumentLineSet(forms.BaseModelFormSet):
+    """A batch is validated before any header, line or reservation is written."""
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        currencies = set()
+        for form in self.forms:
+            data = form.cleaned_data
+            if not data or data.get('DELETE'):
+                continue
+            product = data.get('product')
+            if product:
+                currencies.add(product.currency)
+            if form.instance.pk and (set(form.changed_data) & {'product', 'quantity'}):
+                if form.instance.product_units.exists():
+                    raise forms.ValidationError('A line with assigned physical units cannot change product or quantity here. Remove the line from the document first.')
+        for form in self.deleted_forms:
+            if form.instance.pk and form.instance.product_units.exists():
+                raise forms.ValidationError('Remove lines with assigned physical units from the document page so their units are released.')
+        if len(currencies) > 1:
+            raise forms.ValidationError('Use products in one currency per document. Currency conversion is not automatic.')
+
+
+DocumentLineFormSet = forms.modelformset_factory(
+    DocumentLine, form=DocumentLineForm, formset=DocumentLineSet,
+    extra=1, can_delete=True, min_num=0,
+    max_num=100, validate_max=True, absolute_max=100,
+)
+
+
 class ComboSelectionForm(forms.Form):
     combo = forms.ModelChoiceField(queryset=Combo.objects.filter(is_active=True))
     quantity = forms.IntegerField(min_value=1, initial=1)
+
+
+class ComposerComboForm(ComboSelectionForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['combo'].queryset = Combo.objects.filter(is_active=True).prefetch_related('items__product')
+        self.fields['combo'].widget = forms.HiddenInput()
+        self.fields['quantity'].widget.attrs.update({'class': 'form-control', 'min': '1', 'step': '1'})
+        self.selected_combo = None
+        self.combo_info = None
+        combo_id = self.data.get(self.add_prefix('combo')) if self.is_bound else self.initial.get('combo')
+        if combo_id:
+            try:
+                from .combo_catalog import combo_details
+                self.selected_combo = self.fields['combo'].queryset.get(pk=combo_id)
+                self.combo_info = combo_details(self.selected_combo)
+            except (Combo.DoesNotExist, TypeError, ValueError):
+                pass
+
+    def clean(self):
+        cleaned = super().clean()
+        combo, quantity = cleaned.get('combo'), cleaned.get('quantity')
+        if combo and quantity:
+            from .combo_catalog import validate_combo_quantity
+            try:
+                cleaned['combo_info'] = validate_combo_quantity(combo, quantity)
+            except ValueError as exc:
+                raise forms.ValidationError(str(exc)) from exc
+        return cleaned
+
+
+ComposerComboFormSet = forms.formset_factory(
+    ComposerComboForm, extra=0, can_delete=True,
+    max_num=100, validate_max=True, absolute_max=100,
+)
 
 
 class PaymentForm(forms.ModelForm):

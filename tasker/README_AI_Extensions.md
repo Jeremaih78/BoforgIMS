@@ -1,4 +1,5 @@
 # Boforg AI Tasker — AI Extension Boundary
+api_key="<REDACTED_OPENAI_API_KEY>"
 
 No user-facing AI feature is enabled. Phase 2 Milestone 1 now implements the audited provider foundation described in [README_AI_FOUNDATION.md](README_AI_FOUNDATION.md). This document remains the data-minimization and future-productivity contract.
 

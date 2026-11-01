@@ -1,0 +1,41 @@
+python-dotenv could not parse statement starting at line 9
+{
+  "local_candidate": "VERIFIED",
+  "source_digest": "68b7a129ff772eec0ab1ae7e96d15664185a5b3fb441079aea1889ed7baaebc7",
+  "local_checks": {
+    "regressions": "VERIFIED",
+    "postgres_concurrency": "VERIFIED",
+    "migration_restore": "VERIFIED",
+    "static_manifest": "VERIFIED",
+    "desktop_mobile_keyboard": "VERIFIED",
+    "end_to_end_roles": "VERIFIED",
+    "degraded_recovery": "VERIFIED"
+  },
+  "requirements": 153,
+  "real_pilot": "NO_GO_PENDING_OPERATING_EVIDENCE",
+  "real_productivity": "SYNTHETIC_NOT_EVIDENCE",
+  "provider_request": false,
+  "database_write": false,
+  "synthetic": true,
+  "productivity_blockers": [
+    "synthetic_data_not_productivity_evidence"
+  ],
+  "operating_checks": {
+    "owner_roster": "PENDING",
+    "baseline_sources": "PENDING",
+    "staff_usability": "PENDING",
+    "backup_restore": "PENDING",
+    "supervision": "PENDING",
+    "mail_setup": "PENDING",
+    "privacy_policy": "PENDING",
+    "goal_definitions": "PENDING",
+    "security_accessibility": "PENDING",
+    "deployment_authorization": "PENDING",
+    "ai_evaluation": "DEFERRED"
+  },
+  "health": {
+    "worker_recent": false,
+    "scheduler_recent": false,
+    "failure_or_expired_lease": false
+  }
+}

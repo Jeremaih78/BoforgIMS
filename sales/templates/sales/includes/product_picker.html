@@ -1,0 +1,11 @@
+<label class="form-label" for="product-search-{{ item_form.product.id_for_label }}">Product</label>
+<div class="product-combobox" data-product-combobox data-search-url="{% url 'ims:sales:product_search' %}" {% if item_form.selected_product %}data-currency="{{ item_form.selected_product.currency }}"{% endif %}>
+  {{ item_form.product }}
+  <div class="input-group">
+    <input id="product-search-{{ item_form.product.id_for_label }}" class="form-control product-combobox__input" type="search" autocomplete="off" placeholder="Type name, SKU or category…" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="product-results-{{ item_form.product.id_for_label }}" value="{% if item_form.selected_product %}{{ item_form.selected_product.name }} ({{ item_form.selected_product.sku }}){% endif %}">
+    <button class="btn btn-outline-secondary product-combobox__clear" type="button" aria-label="Clear selected product">×</button>
+  </div>
+  <div id="product-results-{{ item_form.product.id_for_label }}" class="product-combobox__results list-group shadow" role="listbox" hidden></div>
+  <div class="form-text" data-product-info>{% if item_form.selected_product %}{{ item_form.selected_product.currency }} · {{ item_form.selected_product.available_stock }} available{% endif %}</div>
+</div>
+{{ item_form.product.errors }}

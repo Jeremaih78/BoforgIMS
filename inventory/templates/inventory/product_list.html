@@ -2,14 +2,19 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Products</h3>
-  <div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'ims:inventory:product_price_list' %}?q={{ q|urlencode }}{% if low %}&low=1{% endif %}" class="btn btn-outline-light btn-sm"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Download price list PDF</a>
+    {% if can_view_replenishment %}<a href="{% url 'ims:inventory:replenishment_list' %}" class="btn btn-outline-light btn-sm">Replenishment</a>{% endif %}
     <a href="{% url 'ims:inventory:movement_create' %}" class="btn btn-outline-light btn-sm">Stock In/Out</a>
     <a href="{% url 'ims:inventory:product_create' %}" class="btn btn-primary btn-sm">Add Product</a>
   </div>
 </div>
-<form class="mb-3">
-  <input class="form-control" name="q" aria-label="Search products" placeholder="Search name, SKU, barcode, category or supplier..." value="{{ q }}">
+<form class="mb-3" autocomplete="off" data-live-search data-results-target="#product-results">
+  {% if low %}<input type="hidden" name="low" value="1">{% endif %}
+  <div class="input-group"><input class="form-control" type="search" name="q" aria-label="Search products" placeholder="Search name, SKU, barcode, category or supplier..." value="{{ q }}" autocomplete="off"><button class="btn btn-primary" type="submit">Search</button></div>
+  <div class="form-text text-secondary">Prices export all matching active products across every page.</div>
 </form>
+<div id="product-results" aria-live="polite">
 <div class="d-md-none product-mobile-list">
   {% for p in products %}
   <article class="card p-3 mb-3">
@@ -72,5 +77,6 @@
     </nav>
   </div>
   {% endif %}
+</div>
 </div>
 {% endblock %}

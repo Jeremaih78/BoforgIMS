@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "tables_compared": 171,
+  "structural_constraints_equal": true,
+  "pilot_constraint_definitions_equal": true,
+  "evidence_equal": true,
+  "evidence_digest": "d3d76addf54ab181381334e3bf7365e83f1e580f2bfe050176103a9f7cf7c9a1",
+  "pilot_observations": 320,
+  "baseline_observations": 160,
+  "dump_sha256": "ed32b6d94271ff68dc3c0644567f8044ef2c43985e1865cb5bd041ee21330ac7",
+  "scope": "Disposable synthetic loopback databases only; sessions excluded from count comparison.",
+  "normalization_notice": "PostgreSQL 18 reparses existing ANY-array casts during restore; structural/validated constraints and exact new pilot definitions are compared, not unrelated deparser whitespace/cast shapes."
+}

@@ -1,0 +1,1 @@
+{% if line.product and line.description|slice:':6' == 'Combo:' %}{{ line.product.name }}<br><small>{{ line.description }}</small>{% elif line.description %}{{ line.description }}{% elif line.product %}{{ line.product.name }}{% elif line.combo %}{{ line.combo.name }}{% else %}Item{% endif %}

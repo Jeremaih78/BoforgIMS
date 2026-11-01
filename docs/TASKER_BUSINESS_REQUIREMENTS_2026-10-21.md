@@ -14,6 +14,10 @@ Read this addendum together with [the product strategy](TASKER_PRODUCT_STRATEGY_
 
 These are real strategic objectives, but the unconfirmed measures must remain unknown. Do not seed fictitious baselines, market shares, customer targets, team structures or financial achievement. Suggested measures below are decision aids, not approved commitments.
 
+## Pilot decisions confirmed 31 October 2026
+
+The owner nominated **admin** and selected **staggered rollout comparing matched roles before and after each group starts**. Admin is recorded as the proposed accountable pilot owner, subject to selecting that registered account in its real scope. This answer does not identify a full employee roster, create management relationships, approve study dates or authorize invitations/deployment. Actual registered participants, team manager, matching blocks, accepted staffing/output/quality sources, prospective windows and independent review still need confirmation. Stage 13 supplies the software and an explicitly synthetic rehearsal; real productivity remains unvalidated.
+
 ## Confirmed operating requirements
 
 | ID | Requirement | Stage ownership |
@@ -97,3 +101,7 @@ Before changing employee behavior, record role-specific accepted outputs, staffi
 | Live deployment, sending or paid-provider calls | Not performed by this preparation. |
 
 Unresolved business definitions do not prevent Stage 1 local correctness work. They do prevent inventing live policy, publishing measured achievements or declaring rollout readiness.
+
+## Confirmed 29 October 2026: AI policy
+
+The owner confirmed USD as the AI budget currency; calendar weeks reset Monday at 00:00 Africa/Harare. Each employee may use at most USD 0.50 per week, and the company may spend at most USD 5 per week in total across its enrolled employees. Stage 9 records the global policy disabled; each billing company's budget, requester attribution and named pilot enrollment require explicit setup. No production model price is inferred, paid calls remain disabled, and automatic factual reporting does not incur AI usage.

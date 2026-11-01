@@ -14,6 +14,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     {% endif %}
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    {% if not is_tasker_request %}<link rel="stylesheet" href="{% static 'css/ims_experience.css' %}?v=20261030">{% endif %}
     {% if is_tasker_request %}<link rel="stylesheet" href="{% static 'tasker/css/ui.css' %}?v=stage3-20261022-final">{% endif %}
     {% block extra_css %}{% endblock %}
     {% if is_tasker_request %}<link rel="stylesheet" href="{% static 'tasker/css/shell.css' %}?v=stage4-20261027-final3"><link rel="stylesheet" href="{% static 'tasker/css/capture.css' %}?v=stage4-20261027-final3">{% endif %}
@@ -90,9 +91,9 @@
     </div>
 
     {% if is_tasker_request %}
-    <div id="taskerUIConfig" hidden data-user-id="{{ user.pk }}" data-today-url="{% url 'ims:tasker:index' %}" data-work-url="{% url 'ims:tasker:task_list' %}" data-settings-url="{% url 'ims:tasker:ui_preferences' %}" {% if perms.tasker.add_task %}data-create-url="{% url 'ims:tasker:task_create' %}"{% endif %} {% if perms.tasker.view_dailyplan %}data-planner-url="{% url 'ims:tasker:daily_plan' %}"{% endif %} {% if tasker_goals_available %}data-goals-url="{% url 'ims:tasker:goal_list' %}"{% endif %}></div>
+    <div id="taskerUIConfig" hidden data-user-id="{{ user.pk }}" {% if tasker_now_available %}data-today-url="{% url 'ims:tasker:index' %}"{% endif %} {% if tasker_core_available %}data-work-url="{% url 'ims:tasker:task_list' %}"{% endif %} data-settings-url="{% url 'ims:tasker:ui_preferences' %}" {% if tasker_core_available and perms.tasker.add_task %}data-create-url="{% url 'ims:tasker:task_create' %}"{% endif %} {% if tasker_plan_available %}data-planner-url="{% url 'ims:tasker:daily_plan' %}"{% endif %} {% if tasker_goals_available %}data-goals-url="{% url 'ims:tasker:goal_list' %}"{% endif %}></div>
     <div class="tasker-route-loader" id="taskerRouteLoader" aria-hidden="true"><span></span></div>
-    {% if perms.tasker.add_task %}
+    {% if tasker_now_available and perms.tasker.add_task %}
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-labelledby="globalQuickAddLabel" aria-hidden="true" data-reopen="{% if quick_add_form.errors %}true{% else %}false{% endif %}">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content tasker-global-modal">
@@ -109,7 +110,7 @@
       </div>
     </div>
     {% endif %}
-    {% if perms.tasker.view_task %}{% include 'tasker/capture/quick_modal.html' %}{% endif %}
+    {% if tasker_core_available and perms.tasker.view_task %}{% include 'tasker/capture/quick_modal.html' %}{% endif %}
     {% include 'tasker/shell/shortcut_help.html' %}
     {% endif %}
 
@@ -146,6 +147,7 @@
     {% if is_tasker_request %}<script src="{% static 'tasker/js/ui.js' %}?v=stage4-20261027-final3"></script>{% endif %}
     <script src="{% static 'js/ims.js' %}"></script>
     <script src="{% static 'js/customer_combobox.js' %}" defer></script>
+    {% if not is_tasker_request %}<script src="{% static 'js/searchable_select.js' %}" defer></script><script src="{% static 'js/document_options.js' %}" defer></script><script src="{% static 'js/live_search.js' %}" defer></script>{% endif %}
     {% block extra_js %}{% endblock %}
   </body>
 </html>

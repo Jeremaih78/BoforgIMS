@@ -69,6 +69,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    status_changed_at = models.DateTimeField(null=True,blank=True,editable=False)
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -76,6 +77,19 @@ class Order(models.Model):
 
     def __str__(self):
         return self.number
+
+    def save(self,*args,**kwargs):
+        fields=kwargs.get('update_fields')
+        if self.pk and (fields is None or 'status' in fields):
+            old=type(self).objects.filter(pk=self.pk).values_list('status',flat=True).first()
+            if old is not None and old!=self.status:
+                # Only a native shipping transition supplies dated completion.
+                # Intermediate saves must not leave a paid timestamp that a
+                # later bulk-imported shipped status could reuse as evidence.
+                self.status_changed_at=timezone.now() if self.status==self.Status.SHIPPED else None
+                if fields is not None:
+                    kwargs['update_fields']=set(fields)|{'status_changed_at'}
+        return super().save(*args,**kwargs)
 
     @property
     def is_paid(self):

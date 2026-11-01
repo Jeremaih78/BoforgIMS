@@ -138,3 +138,11 @@ staticfiles/
 
 
 private_media/
+
+# Local authoring scripts, previews and generated files are not releases.
+/tmp/
+/output/*
+!/output/tasker-stage13-release-evidence.json
+!/output/stage13-*.json
+!/output/stage13-*.png
+!/output/stage13-*.log

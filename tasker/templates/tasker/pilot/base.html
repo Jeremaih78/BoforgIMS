@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Pilot · Boforg Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/improvement.css' %}"><link rel="stylesheet" href="{% static 'tasker/css/pilot.css' %}">{% endblock %}
+{% block content %}<div class="improve-workspace pilot-workspace container-xl py-4"><nav class="improve-nav" aria-label="Pilot workspace"><a href="{% url 'ims:tasker:pilot_list' %}">Pilots</a>{% if pilot %}<a href="{% url 'ims:tasker:pilot_detail' pilot.pk %}">Measurement</a>{% if can_manage or readiness.operating %}<a href="{% url 'ims:tasker:pilot_release' pilot.pk %}">Release readiness</a>{% endif %}{% endif %}<a href="{% url 'ims:tasker:baseline_list' %}">Stage 2 baselines</a></nav>{% block pilot_content %}{% endblock %}</div>{% endblock %}

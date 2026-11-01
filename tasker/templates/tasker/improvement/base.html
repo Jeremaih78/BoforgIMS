@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Improve · Boforg Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/improvement.css' %}">{% endblock %}
+{% block content %}<div class="improve-workspace container-xl py-4">
+<nav class="improve-nav" aria-label="Improvement workspace">
+<a href="{% url 'ims:tasker:improvement_home' %}" {% if nav == 'weekly' %}aria-current="page"{% endif %}>Weekly review</a>
+{% if perms.tasker.view_soptemplate %}<a href="{% url 'ims:tasker:sop_list' %}" {% if nav == 'sop' %}aria-current="page"{% endif %}>SOP library</a>{% endif %}
+{% if perms.tasker.view_recurringworkflow %}<a href="{% url 'ims:tasker:routine_list' %}" {% if nav == 'routine' %}aria-current="page"{% endif %}>Recurring work</a>{% endif %}
+<a href="{% url 'ims:tasker:improvement_ideas' %}" {% if nav == 'idea' %}aria-current="page"{% endif %}>Idea review</a>
+{% if perms.tasker.view_experiment %}<a href="{% url 'ims:tasker:experiment_list' %}" {% if nav == 'experiment' %}aria-current="page"{% endif %}>Experiments</a>{% endif %}</nav>
+{% block improvement_content %}{% endblock %}</div>{% endblock %}

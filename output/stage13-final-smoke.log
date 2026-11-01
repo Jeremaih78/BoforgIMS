@@ -1,0 +1,42 @@
+python-dotenv could not parse statement starting at line 9
+Forbidden: /tasks/
+Forbidden: /
+Forbidden (Permission denied): /pilot/2/release/
+Traceback (most recent call last):
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\venv\Lib\site-packages\django\views\decorators\http.py", line 64, in inner
+    return func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\tasker\views\pilot.py", line 31, in view
+    try:return fn(request,*args,**kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\tasker\views\pilot.py", line 151, in pilot_release
+    if not pilots.manages(request.user,item):raise PermissionDenied
+                                             ^^^^^^^^^^^^^^^^^^^^^^
+django.core.exceptions.PermissionDenied
+Not Found: /pilot/2/
+Not Found: /pilot/2/
+{
+  "passed": true,
+  "current_source_smoke": true,
+  "synthetic_only": true,
+  "report_employee_days": 320,
+  "report_queries": 58,
+  "report_seconds": 0.578,
+  "held_cohort_measurement_and_preferences_only": true,
+  "default_access_rollback": true,
+  "manager_export": true,
+  "restricted_denied": true,
+  "pilot_evidence_writes": 0
+}

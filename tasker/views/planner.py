@@ -106,16 +106,16 @@ def daily_review(request):
         user=request.user,
         plan=plan,
     )
+    status=200
+    if request.method == 'POST':status=400
     if request.method == "POST" and form.is_valid():
-        save_daily_review(form=form, user=request.user, plan=plan)
-        messages.success(request, "Day reviewed. Tomorrow now has a clearer starting point.")
-        if getattr(settings, "TASKER_REPORTS_ENABLED", False):
-            from tasker.models import EndDaySubmission
-            if EndDaySubmission.objects.filter(owner=request.user, review=form.instance).exists():
-                messages.info(request, "Shared End day facts are recorded for your team report. Email preparation and delivery are tracked separately.")
-            else:
-                messages.info(request, "No active reporting team is configured for you. Your private review is saved; no team report submission was created.")
-        return _date_redirect(request,"ims:tasker:daily_review",plan_date)
+        try:
+            save_daily_review(form=form, user=request.user, plan=plan)
+        except ValidationError as error:
+            form.add_error(None,error);status=409
+        else:
+            messages.success(request, "Private review saved. Close your day separately when ready." if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) else "Day reviewed. Tomorrow now has a clearer starting point.")
+            return _date_redirect(request,"ims:tasker:daily_review",plan_date)
 
     submissions = []
     if review and getattr(settings, "TASKER_REPORTS_ENABLED", False):
@@ -125,10 +125,14 @@ def daily_review(request):
             if submission.team_id not in seen:
                 submissions.append(submission)
                 seen.add(submission.team_id)
+    improvement={}
+    if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):
+        from .improvement import day_context
+        improvement=day_context(request.user,plan,review)
     return render(
         request,
         "tasker/daily_review.html",
-        {"form": form, "plan": plan, "review": review, "can_edit": can_edit,"plan_date":plan_date,"review_readonly_date":plan_date != planning_date_for_today(request), "report_submissions": submissions},
+        {"form": form, "plan": plan, "review": review, "can_edit": can_edit,"plan_date":plan_date,"review_readonly_date":plan_date != planning_date_for_today(request), "report_submissions": submissions,**improvement},status=status,
     )
 
 

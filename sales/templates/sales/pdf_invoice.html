@@ -79,7 +79,7 @@
       </td>
       <td class="right" style="vertical-align:middle; width:32%;">
         <h1 class="heading">Invoice {{ inv.number }}</h1>
-        <div class="small">Date: {{ inv.date }}<br>Due: {{ inv.due_date }}</div>
+        <div class="small">Date: {{ inv.date }}<br>Due: {{ inv.due_date|default:"—" }}</div>
       </td>
     </tr>
   </table>
@@ -91,15 +91,15 @@
       <td style="vertical-align:top;">
         <div class="small muted" style="text-transform:uppercase; letter-spacing:.4px;">Bill To</div>
         <div><strong>{{ inv.customer.name }}</strong></div>
-        <div class="small">{{ inv.customer.address }}</div>
-        <div class="small">{{ inv.customer.email }} {% if inv.customer.phone %}| {{ inv.customer.phone }}{% endif %}</div>
+        <div class="small">{{ inv.customer.address|default_if_none:"" }}</div>
+        <div class="small">{{ inv.customer.email|default_if_none:"" }} {% if inv.customer.phone %}| {{ inv.customer.phone|default_if_none:"" }}{% endif %}</div>
       </td>
       <td class="right" style="vertical-align:top;">
         <div class="small muted" style="text-transform:uppercase; letter-spacing:.4px;">Invoice Details</div>
         <table class="info-table small" style="margin-left:auto;">
           <tr><td>Invoice #:</td><td>{{ inv.number }}</td></tr>
           <tr><td>Date:</td><td>{{ inv.date }}</td></tr>
-          <tr><td>Due Date:</td><td>{{ inv.due_date }}</td></tr>
+          <tr><td>Due Date:</td><td>{{ inv.due_date|default:"—" }}</td></tr>
         </table>
       </td>
     </tr>
@@ -118,10 +118,10 @@
     <tbody>
       {% for it in inv.items.all %}
       <tr>
-        <td>{{ it.product|default:it.description }}{% if it.unitsale_set.exists %}{% for sale in it.unitsale_set.all %}<br><small>{{ sale.unit.unit_id }}{% if sale.unit.serial_number %} · Mfr: {{ sale.unit.serial_number }}{% endif %}</small>{% endfor %}{% else %}{% for unit in it.product_units.all %}<br><small>{{ unit.unit_id }}{% if unit.serial_number %} · Mfr: {{ unit.serial_number }}{% endif %}</small>{% endfor %}{% endif %}</td>
+        <td>{% include 'sales/includes/printed_line_description.html' with line=it only %}{% if it.unitsale_set.exists %}{% for sale in it.unitsale_set.all %}<br><small>{{ sale.unit.unit_id }}{% if sale.unit.serial_number %} · Mfr: {{ sale.unit.serial_number }}{% endif %}</small>{% endfor %}{% else %}{% for unit in it.product_units.all %}<br><small>{{ unit.unit_id }}{% if unit.serial_number %} · Mfr: {{ unit.serial_number }}{% endif %}</small>{% endfor %}{% endif %}</td>
         <td class="right">{{ it.quantity }}</td>
         <td class="right">{{ it.unit_price }}</td>
-        <td class="right">{{ it.total }}</td>
+        <td class="right">{{ it.line_total }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -136,6 +136,8 @@
       </tr>
     </tbody>
   </table>
+
+  {% include 'sales/includes/pdf_document_options.html' with document=inv %}
 
   <!-- Footer -->
   <div class="footer">

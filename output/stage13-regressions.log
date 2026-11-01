@@ -1,0 +1,105 @@
+python-dotenv could not parse statement starting at line 9
+Creating test database for alias 'default'...
+
+Got an error creating the test database: database "test_ims_review" already exists
+
+
+Destroying old test database for alias 'default'...
+
+.........AI request failed
+....AI request failed
+.......AI request failed
+.AI request failed
+.AI request succeeded
+.....AI request failed
+AI request failed
+.AI request succeeded
+.AI request succeeded
+..AI request succeeded
+......AI request failed
+AI request failed
+.AI request succeeded
+.AI request failed
+.AI request failed
+..AI request succeeded
+.AI request failed
+.AI request succeeded
+.AI request succeeded
+...................................................AI request failed
+.AI request succeeded
+AI request failed
+.AI request failed
+AI request succeeded
+.AI request succeeded
+AI request failed
+.AI request succeeded
+.AI request failed
+..AI request failed
+.AI request succeeded
+.AI request succeeded
+AI request failed
+.AI request failed
+.AI request failed
+.AI request succeeded
+.AI request succeeded
+.AI request failed
+........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................AI request succeeded
+.AI request succeeded
+AI request succeeded
+AI request succeeded
+.....AI request succeeded
+.AI request succeeded
+.AI request succeeded
+AI request succeeded
+AI request succeeded
+AI request succeeded
+AI request succeeded
+AI request succeeded
+...AI request succeeded
+.AI request succeeded
+...AI request failed
+...AI request failed
+.........................................................................................................................................................................................................................................................................................................................................................Expense posting failed
+Traceback (most recent call last):
+  File "C:\Users\admin\Videos\Boforg\IMS\BoforgIMS\accounting\views.py", line 343, in expense_create
+    post_expense(exp.id)
+  File "C:\Users\admin\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\admin\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+ValueError: missing configuration
+.....................................................................................................................................................................................................................................................................................................AI request failed
+.AI request succeeded
+.AI request failed
+..AI request failed
+..................AI request failed
+AI request succeeded
+..AI request succeeded
+...................................................................................................................................
+----------------------------------------------------------------------
+Ran 1489 tests in 1122.981s
+
+OK
+Destroying test database for alias 'default'...
+
+Found 1489 test(s).
+System check identified no issues (0 silenced).
+Created Tasker Employee (59 permissions)
+Created Tasker Supervisor (70 permissions)
+Created Tasker Manager (368 permissions)
+Created Tasker Administrator (368 permissions)
+Created Tasker Employee (59 permissions)
+Created Tasker Supervisor (70 permissions)
+Created Tasker Manager (368 permissions)
+Created Tasker Administrator (368 permissions)
+Updated Tasker Employee (59 permissions)
+Updated Tasker Supervisor (70 permissions)
+Updated Tasker Manager (368 permissions)
+Updated Tasker Administrator (368 permissions)
+Seed complete.
+Seed complete.
+Seed complete.

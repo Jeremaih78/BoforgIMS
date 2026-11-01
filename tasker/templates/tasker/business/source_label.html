@@ -1,0 +1,1 @@
+{% if item.source_type == 'collection_task' %}Collection follow-up{% elif item.source_type == 'promise_to_pay' %}Payment promise review{% elif item.source_type == 'replenishment_plan' %}Stock replenishment{% elif item.source_app == 'operations' %}Operational source action{% else %}Business action{% endif %}

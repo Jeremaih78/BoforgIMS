@@ -20,6 +20,8 @@ class TokenUsage:
     output_tokens: int = 0
     cached_input_tokens: int = 0
     reasoning_tokens: int = 0
+    # A separately billed cache write is not the same as a cached read.
+    cache_write_tokens: int = 0
 
     @property
     def total_tokens(self):

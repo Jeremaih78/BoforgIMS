@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import date
 import logging
 from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
@@ -52,11 +53,48 @@ def sales_home(request):
         Q(customer__name__icontains=q) |
         Q(status__icontains=q)
     ).select_related('customer').prefetch_related('lines', 'payments')
+    from .workspace import VALID_STATUSES, with_invoice_balances, unpaid_invoices, overdue_invoices
+    from django.utils import timezone
+    from django.db.models import Exists, OuterRef
+    invoice_filter = request.GET.get('filter', '')
+    currency = request.GET.get('currency', '').strip()[:5]
+    if invoice_filter or currency:
+        inv_qs = with_invoice_balances(inv_qs)
+    if currency:
+        inv_qs = inv_qs.filter(workspace_currency=currency)
+    if invoice_filter in {'issued', 'received', 'unpaid', 'overdue', 'due_today'}:
+        inv_qs = inv_qs.filter(status__in=VALID_STATUSES, date__lte=timezone.localdate())
+    if invoice_filter == 'unpaid':
+        inv_qs = unpaid_invoices(inv_qs).filter(date__lte=timezone.localdate())
+    elif invoice_filter == 'overdue':
+        inv_qs = overdue_invoices(inv_qs, timezone.localdate()).filter(date__lte=timezone.localdate())
+    elif invoice_filter == 'due_today':
+        inv_qs = unpaid_invoices(inv_qs).filter(due_date=timezone.localdate())
+    date_filters = {}
+    for parameter, lookup in [('date_from', 'gte'), ('date_to', 'lte')]:
+        try:
+            value = date.fromisoformat(request.GET.get(parameter, ''))
+        except ValueError:
+            continue
+        date_filters[lookup] = value
+    if invoice_filter == 'received':
+        payment_ids = Payment.objects.all()
+        for lookup, value in date_filters.items():
+            payment_ids = payment_ids.filter(**{f'date__{lookup}': value})
+        inv_qs = inv_qs.filter(pk__in=payment_ids.values('invoice_id'))
+    else:
+        for lookup, value in date_filters.items():
+            inv_qs = inv_qs.filter(**{f'date__{lookup}': value})
     quo_qs = Quotation.objects.filter(
         Q(number__icontains=q) |
         Q(customer__name__icontains=q) |
         Q(status__icontains=q)
-    ).select_related('customer')
+    ).select_related('customer').prefetch_related('lines')
+    if request.GET.get('quote_filter') == 'draft':
+        quo_qs = quo_qs.filter(status=Quotation.DRAFT).annotate(converted=Exists(Invoice.objects.filter(quotation_id=OuterRef('pk')))).filter(converted=False)
+    can_view_quotes = allowed(request.user, 'sales.view_quotation', staff=True)
+    if not can_view_quotes:
+        quo_qs = quo_qs.none()
 
     qp = request.GET.get('q_page')
     ip = request.GET.get('i_page')
@@ -66,7 +104,21 @@ def sales_home(request):
         status_context = get_invoice_status_context(invoice)
         invoice.invoice_status_label = status_context['invoice_status_label']
         invoice.invoice_status_class = status_context['invoice_status_class']
-    return render(request, 'sales/home.html', {'invoices': inv_pg, 'quotations': quo_pg, 'q': q})
+    retained = request.GET.copy()
+    retained.pop('i_page', None)
+    retained.pop('q_page', None)
+    return render(request, 'sales/home.html', {
+        'invoices': inv_pg, 'quotations': quo_pg, 'q': q,
+        'invoice_filter': invoice_filter, 'currency_filter': currency,
+        'date_from': request.GET.get('date_from', ''), 'date_to': request.GET.get('date_to', ''),
+        'quote_filter': request.GET.get('quote_filter', ''), 'retained_query': retained.urlencode(),
+        'can_view_quotes': can_view_quotes,
+        'show_quotes': can_view_quotes and not invoice_filter,
+        'show_invoices': not can_view_quotes or request.GET.get('quote_filter') != 'draft' or bool(invoice_filter),
+        'invoice_filter_label': {'issued':'issued invoices', 'received':'invoices with payments', 'unpaid':'unpaid invoices', 'overdue':'overdue invoices', 'due_today':'invoices due today'}.get(invoice_filter, invoice_filter),
+        'can_add_invoice': allowed(request.user, 'sales.add_invoice', staff=True),
+        'can_add_quote': allowed(request.user, 'sales.add_quotation', staff=True),
+    })
 
 
 @login_required
@@ -120,6 +172,10 @@ def product_search(request):
 @login_required
 @ims_permission('sales.add_quotation', staff=True)
 def quotation_create(request):
+    if request.method != 'POST' or 'lines-TOTAL_FORMS' in request.POST or 'combos-TOTAL_FORMS' in request.POST:
+        from .composer import compose
+        with transaction.atomic():
+            return compose(request, 'quotation')
     form = QuotationForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         quotation = form.save()
@@ -220,7 +276,8 @@ def quotation_to_invoice(request, pk):
     try:
         with transaction.atomic():
             invoice = Invoice.objects.create(customer=quotation.customer, quotation=quotation,
-                notes=quotation.notes, created_by=request.user)
+                notes=quotation.notes, reference=quotation.reference, terms=quotation.terms,
+                custom_fields=quotation.custom_fields, created_by=request.user)
             for line in quotation.lines.all():
                 DocumentLine.objects.create(invoice=invoice, product=line.product, combo=line.combo,
                     description=line.description, quantity=line.quantity, unit_price=line.unit_price,
@@ -253,6 +310,10 @@ def quotation_pdf(request, pk):
 @login_required
 @ims_permission('sales.add_invoice', staff=True)
 def invoice_create(request):
+    if request.method != 'POST' or 'lines-TOTAL_FORMS' in request.POST or 'combos-TOTAL_FORMS' in request.POST:
+        from .composer import compose
+        with transaction.atomic():
+            return compose(request, 'invoice')
     form = InvoiceForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         invoice = form.save(commit=False)
@@ -260,6 +321,22 @@ def invoice_create(request):
         invoice.save()
         return redirect('ims:sales:invoice_edit', invoice.id)
     return render(request, 'sales/invoice_form.html', {'form': form})
+
+
+@login_required
+@ims_permission('sales.change_invoice', staff=True)
+@transaction.atomic
+def invoice_compose(request, pk):
+    from .composer import compose
+    return compose(request, 'invoice', pk)
+
+
+@login_required
+@ims_permission('sales.change_quotation', staff=True)
+@transaction.atomic
+def quotation_compose(request, pk):
+    from .composer import compose
+    return compose(request, 'quotation', pk)
 
 
 @login_required

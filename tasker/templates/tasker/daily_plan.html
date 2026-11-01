@@ -4,7 +4,7 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/planner.css' %}"><link rel="stylesheet" href="{% static 'tasker/css/planning.css' %}?v=stage6-20261027">{% endblock %}
 {% block content %}
 <div class="planner-page">
-  {% include 'tasker/planning/nav.html' %}
+  {% include 'tasker/planning/nav.html' %}{% include 'tasker/includes/ai_entry.html' with feature='PLAN' ai_label='Review a feasible plan with AI' %}
   <form method="get" class="planning-datebar" aria-label="Choose intentions date"><a class="btn btn-outline-secondary" href="?date={{ previous_date|date:'Y-m-d' }}" aria-label="Previous day">←</a><label for="intentionsDate">Date</label><input id="intentionsDate" class="form-control" type="date" name="date" value="{{ plan_date|date:'Y-m-d' }}"><button class="btn btn-outline-secondary" type="submit">Go</button><a class="btn btn-outline-secondary" href="?date={{ next_date|date:'Y-m-d' }}" aria-label="Next day">→</a></form>
   {% if capacity %}{% include 'tasker/planning/capacity.html' %}{% endif %}
   {% if capacity_error %}<p class="planning-warning" role="alert">Capacity is unavailable for this local date: {{ capacity_error }}</p>{% endif %}

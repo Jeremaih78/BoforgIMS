@@ -1,0 +1,22 @@
+<div class="document-line border-bottom py-3" data-document-combo>
+  <div hidden>{{ combo_form.DELETE }}</div>
+  {{ combo_form.non_field_errors }}
+  <div class="row g-3 align-items-start">
+    <div class="col-lg-7">
+      <label class="form-label" for="combo-search-{{ combo_form.combo.id_for_label }}">Combo</label>
+      <div class="product-combobox" data-product-combobox data-catalog-kind="combo" data-search-url="{% url 'ims:sales:combo_search' %}" {% if combo_form.combo_info %}data-currency="{{ combo_form.combo_info.currency }}" data-combo-price="{{ combo_form.combo_info.price }}" data-combo-discount="{{ combo_form.combo_info.discount }}"{% endif %}>
+        {{ combo_form.combo }}
+        <div class="input-group">
+          <input id="combo-search-{{ combo_form.combo.id_for_label }}" class="form-control product-combobox__input" type="search" autocomplete="off" placeholder="Type a combo name, code or included product…" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="combo-results-{{ combo_form.combo.id_for_label }}" value="{% if combo_form.selected_combo %}{{ combo_form.selected_combo.name }} ({{ combo_form.selected_combo.code }}){% endif %}">
+          <button class="btn btn-outline-secondary product-combobox__clear" type="button" aria-label="Clear selected combo">×</button>
+        </div>
+        <div id="combo-results-{{ combo_form.combo.id_for_label }}" class="product-combobox__results list-group shadow" role="listbox" hidden></div>
+        <div class="form-text" data-product-info>{% if combo_form.combo_info %}{{ combo_form.combo_info.currency }} {{ combo_form.combo_info.price }} per combo · Save {{ combo_form.combo_info.discount }} per combo{% endif %}</div>
+        <div class="form-text" data-combo-components>{% if combo_form.combo_info %}Each combo: {% for component in combo_form.combo_info.components %}{{ component.quantity }} × {{ component.name }}{% if not forloop.last %} · {% endif %}{% endfor %}{% endif %}</div>
+      </div>
+      {{ combo_form.combo.errors }}
+    </div>
+    <div class="col-5 col-lg-2"><label class="form-label" for="{{ combo_form.quantity.id_for_label }}">Combos</label>{{ combo_form.quantity }}{{ combo_form.quantity.errors }}</div>
+    <div class="col-7 col-lg-3 d-flex justify-content-between align-items-center gap-2 pt-lg-4"><div><output class="fw-bold text-nowrap" data-combo-total>0.00</output><small class="d-block text-secondary" data-combo-saving></small></div><button class="btn btn-outline-danger btn-sm" type="button" data-remove-document-combo aria-label="Remove combo row">Remove</button></div>
+  </div>
+</div>

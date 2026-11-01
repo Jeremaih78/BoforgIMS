@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Business actions · Tasker{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'tasker/css/business.css' %}?v=stage11-20261030-final">{% endblock %}
+{% block content %}<div class="business-workspace container-xl py-4">{% block business_content %}{% endblock %}</div>{% endblock %}

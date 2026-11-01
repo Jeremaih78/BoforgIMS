@@ -1,5 +1,6 @@
 // Contain wide legacy tables and retain native form validation/submitter names.
-document.querySelectorAll('main table').forEach(table => {
+window.prepareIMSTables = (scope = document) => scope.querySelectorAll('table').forEach(table => {
+  if (!table.closest('main')) return;
   if (table.closest('.table-responsive, .table-wrapper')) return;
   const wrapper = document.createElement('div');
   wrapper.className = 'table-responsive';
@@ -9,6 +10,7 @@ document.querySelectorAll('main table').forEach(table => {
   table.before(wrapper);
   wrapper.append(table);
 });
+window.prepareIMSTables();
 document.querySelectorAll('input[type=number]').forEach(input => {
   input.inputMode = input.step && input.step !== '1' ? 'decimal' : 'numeric';
 });

@@ -1,0 +1,1 @@
+{% if row.current.status == 'OPEN' %}Ready{% elif row.current.status == 'IN_PROGRESS' %}In progress{% elif row.current.status == 'COMPLETED' %}Completed at source{% elif row.current.status == 'UNASSIGNED' %}Owner needed{% elif row.current.status == 'CANCELLED' %}No active action{% else %}Review needed{% endif %}

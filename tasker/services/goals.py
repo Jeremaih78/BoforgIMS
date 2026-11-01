@@ -271,7 +271,14 @@ def _history(outcome, *, status, actor, reason=""):
 
 
 @transaction.atomic
-def accept_outcome(*, outcome, user):
+def accept_outcome(*, outcome, user, _business_verified=False):
+    if outcome.source_type == 'business_action' and not _business_verified:
+        from .business_outcomes import accept_source_output
+        from tasker.business_outcome_models import BusinessOutcomeEvidence
+        proof=BusinessOutcomeEvidence.objects.select_related('link').filter(outcome=outcome).first()
+        if proof is None:
+            raise ValidationError('This business output needs authoritative source evidence.')
+        return accept_source_output(user=user,link_id=proof.link_id,expected_revision=proof.link.revision)
     identity = OutcomeMeasurement.objects.values("task_id", "company_id", "team_id").get(pk=outcome.pk)
     if identity["task_id"]:
         Task.all_objects.select_for_update().get(pk=identity["task_id"])
@@ -287,6 +294,8 @@ def accept_outcome(*, outcome, user):
         raise ValidationError("The result and employee membership must still be active.")
     if not _task_evidence_valid(outcome):
         raise ValidationError("Task evidence requires a completed, live task with unchanged owner, scope and primary contribution.")
+    from .business_outcomes import check_acceptance
+    check_acceptance(outcome)
     if outcome.status == OutcomeMeasurement.Status.ACCEPTED:
         return outcome
     outcome.status = OutcomeMeasurement.Status.ACCEPTED
@@ -380,6 +389,8 @@ def key_result_progress(result):
         queryset = queryset.filter(occurred_on__gte=start_date)
     if end_date:
         queryset = queryset.filter(occurred_on__lte=end_date)
+    from .business_outcomes import filter_valid_business_outcomes
+    queryset = filter_valid_business_outcomes(queryset)
     count = queryset.count()
     if result.aggregation == KeyResult.Aggregation.LATEST:
         latest = queryset.values_list("value", flat=True).first()

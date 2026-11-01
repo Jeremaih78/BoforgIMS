@@ -1,6 +1,7 @@
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
@@ -29,6 +30,8 @@ DAY_FEATURES = {
 @permission_required("tasker.view_task", raise_exception=True)
 @require_GET
 def assistant_home(request):
+    if getattr(settings, "TASKER_AI_WORKFLOW_ENABLED", False):
+        return redirect("ims:tasker:ai_work_home")
     conversations = AIConversation.objects.filter(
         owner=request.user, agent_type=PersonalProductivityAssistant.agent_type
     )[:8]
@@ -75,6 +78,17 @@ def assistant_task_action(request, slug, action):
 
 
 def _run(request, *, feature, title, task=None):
+    if getattr(settings, "TASKER_AI_WORKFLOW_ENABLED", False):
+        from tasker.services.ai_workflow import create_work_request
+        mapped = {"plan_day": "PLAN", "prioritize": "PLAN", "next_task": "BRIEFING",
+            "summarize_day": "BRIEFING", "break_task": "BREAKDOWN", "explain_task": "EXPLAIN"}
+        try:
+            item = create_work_request(user=request.user, feature=mapped[feature],
+                client_key=request.POST.get("client_key"), task_id=task.pk if task else None)
+        except (AIServiceError, ValidationError) as exc:
+            messages.warning(request, exc.user_message if isinstance(exc, AIServiceError) else "; ".join(exc.messages))
+            return redirect("ims:tasker:ai_work_home")
+        return redirect("ims:tasker:ai_work_detail", pk=item.pk)
     try:
         payload, message = PersonalProductivityAssistant().run(
             user=request.user, feature=feature, task=task
@@ -102,6 +116,9 @@ def _run(request, *, feature, title, task=None):
 @permission_required("tasker.change_task", raise_exception=True)
 @require_POST
 def assistant_apply_steps(request, slug, message_pk):
+    if getattr(settings, "TASKER_AI_WORKFLOW_ENABLED", False):
+        messages.info(request, "Generate a current suggestion in Personal assistant, then review and apply its changes.")
+        return redirect("ims:tasker:ai_work_home")
     task = get_object_or_404(Task, owner=request.user, slug=slug)
     try:
         indexes = [int(value) for value in request.POST.getlist("steps")]

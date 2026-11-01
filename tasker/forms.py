@@ -421,3 +421,15 @@ class DailyReviewForm(forms.ModelForm):
             .order_by(F("due_date").asc(nulls_last=True), "title")
         )
         self.fields["carry_over_tasks"].queryset = candidate_tasks
+        from django.conf import settings
+        if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):
+            import uuid
+            from tasker.services.day_closure import review_version
+            from tasker.improvement_models import DayClosure
+            current=DailyReview.objects.filter(plan=plan).first()
+            closure=DayClosure.objects.filter(plan=plan,owner=user).first()
+            self.fields['review_version']=forms.CharField(widget=forms.HiddenInput,initial=review_version(current))
+            self.fields['review_client_key']=forms.UUIDField(widget=forms.HiddenInput,initial=uuid.uuid4)
+            self.fields['close_revision']=forms.CharField(widget=forms.HiddenInput,initial=str(closure.revision) if closure else 'new')
+            self.fields['correction_reason']=forms.CharField(required=False,max_length=1000,
+                label='Private correction reason',widget=forms.Textarea(attrs={'rows':2,'class':'form-control'}))

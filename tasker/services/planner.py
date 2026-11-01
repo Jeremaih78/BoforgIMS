@@ -69,6 +69,11 @@ def save_daily_review(*, form, user, plan):
     capability = "tasker.add_dailyreview" if is_new else "tasker.change_dailyreview"
     if not user.has_perm(capability) or (not is_new and review.plan_id != plan.pk):
         raise PermissionDenied
+    from django.conf import settings
+    if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):
+        from .day_closure import before_review_save
+        replayed=before_review_save(user=user,plan=plan,form=form)
+        if replayed:return replayed
     previous_ids = set(review.carry_over_tasks.values_list("pk", flat=True)) if not is_new else set()
     selected_ids = {task.pk for task in form.cleaned_data["carry_over_tasks"]}
     # Review and M2M saves invalidate operator advice. Lock every Task that can
@@ -107,7 +112,10 @@ def save_daily_review(*, form, user, plan):
         task.updated_by = user
         task.save(update_fields=["carry_forward", "updated_by", "updated_at"])
     from django.conf import settings
-    if getattr(settings, "TASKER_REPORTS_ENABLED", False):
+    if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False):
+        from .day_closure import after_review_save
+        after_review_save(user=user,plan=plan,review=review,form=form)
+    elif getattr(settings, "TASKER_REPORTS_ENABLED", False):
         from tasker.services.reporting import close_day
         close_day(user=user, plan=plan, review=review)
     return review

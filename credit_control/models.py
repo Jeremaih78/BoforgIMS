@@ -3,6 +3,7 @@ from __future__ import annotations
 from core.storage import private_document_storage
 
 from decimal import Decimal
+import uuid
 
 from django.conf import settings
 from django.db import models
@@ -230,12 +231,21 @@ class PromiseToPay(TimeStampedModel):
     actual_paid_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="promises_created")
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="payment_promises_assigned", help_text="Explicit responsible employee; the creator is not inferred as owner.")
+    revision = models.UUIDField(default=uuid.uuid4, editable=False)
 
     class Meta:
         ordering = ["promised_date", "-id"]
 
     def __str__(self):
         return f"{self.customer} {self.promised_amount} on {self.promised_date}"
+
+    def save(self, *args, **kwargs):
+        self.revision = uuid.uuid4()
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | {"revision", "updated_at"}
+        return super().save(*args, **kwargs)
 
 
 class PaymentDispute(TimeStampedModel):
@@ -342,13 +352,53 @@ class CollectionTask(TimeStampedModel):
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="collection_tasks_created")
     completed_at = models.DateTimeField(null=True, blank=True)
+    promise_to_pay = models.ForeignKey(PromiseToPay, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="check_tasks")
+    revision = models.UUIDField(default=uuid.uuid4, editable=False)
 
     class Meta:
         ordering = ["due_date", "-priority", "id"]
+        constraints = [models.UniqueConstraint(fields=("promise_to_pay",),
+            condition=models.Q(task_type="CHECK_PROMISE", promise_to_pay__isnull=False),
+            name="cc_one_check_per_promise")]
 
     def __str__(self):
         target = self.customer or self.supplier or self.invoice or self.bill
         return f"{self.get_task_type_display()} {target}"
+
+    def save(self, *args, **kwargs):
+        self.revision = uuid.uuid4()
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | {"revision", "updated_at"}
+        return super().save(*args, **kwargs)
+
+
+class SourceActionEvent(models.Model):
+    """Source workflow receipt: no messages, contact data or payment bodies."""
+    source_type = models.CharField(max_length=30, choices=(("collection_task", "Collection task"), ("promise_to_pay", "Payment promise")))
+    source_id = models.PositiveBigIntegerField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="credit_source_actions")
+    client_key = models.UUIDField()
+    action = models.CharField(max_length=20)
+    request_digest = models.CharField(max_length=64)
+    previous_revision = models.UUIDField()
+    result_revision = models.UUIDField()
+    details = models.JSONField(default=dict)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("actor", "client_key"), name="cc_source_action_once")]
+        ordering = ("-created_at", "-pk")
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError("Source workflow receipts are immutable.")
+        if set(self.details) - {"status_from", "status_to", "owner_from", "owner_to", "priority_from", "priority_to", "due_from", "due_to"}:
+            raise ValueError("Source workflow receipts contain fixed shared changes only.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("Source workflow receipts are retained.")
 
 
 class ReminderRule(TimeStampedModel):

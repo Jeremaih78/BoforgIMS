@@ -13,6 +13,10 @@ from django.utils.text import slugify
 from tasker.models import AIConfiguration, AIConversation, AIMessage, AIUsageLog, PromptTemplate
 
 from .configuration import AIConfigurationManager
+from .budgets import (
+    AIBudgetAccountingError, MoneyBudget, configuration_fingerprint,
+    request_fingerprint,
+)
 from .conversations import ConversationManager
 from .exceptions import (
     AIConfigurationError,
@@ -45,6 +49,7 @@ class _PreparedRequest:
     output_schema: dict
     safety_identifier: str
     started_monotonic: float
+    before_provider_attempt: object = None
     provider_attempts: int = 0
 
 
@@ -61,6 +66,7 @@ class AIService:
         prompt_manager=None,
         conversation_manager=None,
         rate_limiter=None,
+        money_budget=None,
         provider_factory=None,
         sleep=time.sleep,
         random_source=random.random,
@@ -69,6 +75,7 @@ class AIService:
         self.prompt_manager = prompt_manager or PromptManager()
         self.conversation_manager = conversation_manager or ConversationManager()
         self.rate_limiter = rate_limiter or AIRateLimiter()
+        self.money_budget = money_budget or MoneyBudget()
         self.provider_factory = provider_factory or self._default_provider
         self.sleep = sleep
         self.random_source = random_source
@@ -83,6 +90,7 @@ class AIService:
         conversation=None,
         agent_type="assistant",
         metadata=None,
+        before_provider_attempt=None,
     ) -> AIResult:
         prepared = self._prepare(
             user=user,
@@ -93,6 +101,7 @@ class AIService:
             agent_type=agent_type,
             metadata=metadata,
             streaming=False,
+            before_provider_attempt=before_provider_attempt,
         )
         try:
             provider = self.provider_factory(prepared.configuration)
@@ -131,6 +140,7 @@ class AIService:
         conversation=None,
         agent_type="assistant",
         metadata=None,
+        before_provider_attempt=None,
     ):
         prepared = self._prepare(
             user=user,
@@ -141,6 +151,7 @@ class AIService:
             agent_type=agent_type,
             metadata=metadata,
             streaming=True,
+            before_provider_attempt=before_provider_attempt,
         )
         finalized = False
         emitted = False
@@ -218,6 +229,7 @@ class AIService:
         agent_type,
         metadata,
         streaming,
+        before_provider_attempt=None,
     ):
         started = time.monotonic()
         operation = slugify(str(operation))[:100] or "unknown"
@@ -254,10 +266,15 @@ class AIService:
         try:
             if not getattr(user, "is_authenticated", False) or not user.has_perm("tasker.use_ai"):
                 raise AIPermissionError()
+            from tasker.services.pilot_access import feature_access
+            if not feature_access(user, 'ai'):
+                raise AIPermissionError()
             if not configuration.is_enabled:
                 raise AIDisabledError()
             if streaming and not configuration.allow_streaming:
                 raise AIConfigurationError("Streaming is disabled in the active AI configuration.")
+            if before_provider_attempt is not None and not callable(before_provider_attempt):
+                raise AIConfigurationError("The AI dispatch guard is invalid.")
             rendered = self.prompt_manager.render(
                 key=prompt_key, variables=variables, configuration=configuration
             )
@@ -287,6 +304,21 @@ class AIService:
                 self.rate_limiter.check(
                     user=user, configuration=configuration, usage_log=usage_log, token_budget=token_budget
                 )
+                prompt_fingerprint = request_fingerprint(
+                    instructions=rendered.system, input_items=input_items, output_schema=rendered.output_schema,
+                )
+                self.money_budget.admit(
+                    user=user, configuration=configuration, usage_log=usage_log,
+                    input_bound=token_budget-configuration.max_output_tokens,
+                    output_bound=configuration.max_output_tokens,
+                    prompt_fingerprint=prompt_fingerprint,
+                )
+                usage_log.request_metadata = {
+                    **usage_log.request_metadata,
+                    "effective_prompt_fingerprint": prompt_fingerprint,
+                    "effective_configuration_fingerprint": configuration_fingerprint(configuration),
+                }
+                usage_log.save(update_fields=["request_metadata", "updated_at"])
             return _PreparedRequest(
                 user=user,
                 configuration=configuration,
@@ -298,6 +330,7 @@ class AIService:
                 output_schema=rendered.output_schema,
                 safety_identifier=salted_hmac("tasker.ai.safety", str(user.pk)).hexdigest(),
                 started_monotonic=started,
+                before_provider_attempt=before_provider_attempt,
             )
         except AIServiceError as exc:
             status = (
@@ -334,19 +367,35 @@ class AIService:
                 self._sleep_before_retry(configuration=configuration, attempts=attempts, error=exc)
 
     def _begin_attempt(self, prepared):
-        begin_attempt = getattr(self.rate_limiter, "begin_attempt", None)
-        if begin_attempt is not None:
-            log = begin_attempt(user=prepared.user, configuration=prepared.configuration, usage_log=prepared.usage_log)
-            prepared.provider_attempts = log.quota_provider_attempts
-        else:
-            # Existing explicitly injected test limiters can still bypass
-            # admission without introducing a second production quota path.
-            prepared.provider_attempts += 1
+        from tasker.services.pilot_access import feature_access
+        if not feature_access(prepared.user, 'ai'):
+            raise AIPermissionError()
+        # The worker can fence cancellation/lease loss before every retry.
+        # Its check runs outside our token/money locks and before a reserved
+        # hold is marked dispatched. A rejected first attempt can be released.
+        if prepared.before_provider_attempt is not None:
+            prepared.before_provider_attempt()
+        with transaction.atomic():
+            begin_attempt = getattr(self.rate_limiter, "begin_attempt", None)
+            if begin_attempt is not None:
+                log = begin_attempt(user=prepared.user, configuration=prepared.configuration, usage_log=prepared.usage_log)
+                attempts = log.quota_provider_attempts
+            else:
+                attempts = prepared.provider_attempts+1
+            # An injected legacy token limiter cannot bypass monetary policy.
+            # If money admission fails, its companion token attempt rolls back.
+            self.money_budget.begin_attempt(
+                user=prepared.user, configuration=prepared.configuration, usage_log=prepared.usage_log,
+            )
+        prepared.provider_attempts = attempts
 
-    def _settle_quota(self, prepared, *, usage=None):
+    def _settle_quota(self, prepared, *, usage=None, metadata=None):
         settle = getattr(self.rate_limiter, "settle", None)
         if settle is not None:
             settle(user=prepared.user, usage_log=prepared.usage_log, usage=usage)
+        return self.money_budget.settle(
+            user=prepared.user, usage_log=prepared.usage_log, usage=usage, metadata=metadata,
+        )
 
     @transaction.atomic
     def _prepare_conversation(
@@ -403,20 +452,43 @@ class AIService:
         delay = min(self.RETRYABLE_MAX_DELAY_SECONDS, max(calculated, provider_delay))
         self.sleep(delay)
 
-    @transaction.atomic
     def _succeed(self, prepared, provider_result, attempts):
+        result, accounting = self._persist_success(prepared, provider_result, attempts)
+        if not accounting["safe"]:
+            # The money evidence must commit even when a response cannot be
+            # priced safely. Raising inside its transaction would erase it.
+            raise AIBudgetAccountingError(provider_code=accounting["code"])
+        return result
+
+    @transaction.atomic
+    def _persist_success(self, prepared, provider_result, attempts):
         elapsed = self._elapsed_ms(prepared.started_monotonic)
         usage = provider_result.usage
-        self._settle_quota(prepared, usage=usage)
-        message = AIMessage.objects.select_for_update().get(pk=prepared.assistant_message.pk)
-        message.content = provider_result.text
+        accounting = self._settle_quota(prepared, usage=usage, metadata=provider_result.metadata)
+        if not accounting["safe"]:
+            self._fail(prepared, AIBudgetAccountingError(provider_code=accounting["code"]), attempts=attempts)
+            return None, accounting
+        conversation = AIConversation.all_objects.select_for_update().get(pk=prepared.conversation.pk)
+        message = AIMessage.all_objects.select_for_update().get(pk=prepared.assistant_message.pk)
+        redacted = conversation.is_deleted or message.is_deleted
+        message.content = "" if redacted else provider_result.text
         message.status = AIMessage.Status.COMPLETED
-        message.provider_response_id = provider_result.response_id
+        message.provider_response_id = "" if redacted else provider_result.response_id
         message.input_tokens = usage.input_tokens
         message.output_tokens = usage.output_tokens
         message.total_tokens = usage.total_tokens
         message.latency_ms = elapsed
         message.updated_by = prepared.user
+        if redacted:
+            # A late provider result may account for its charge, but cannot
+            # restore content after the owner erased the local conversation.
+            message.message_metadata = {}
+            message.ai_metadata = {}
+            message.ai_processed_at = None
+            message.error_code = ""
+            message.is_deleted = True
+            message.deleted_at = message.deleted_at or conversation.deleted_at or timezone.now()
+            message.deleted_by = message.deleted_by or conversation.deleted_by or prepared.user
         message.save()
 
         log = AIUsageLog.objects.select_for_update().get(pk=prepared.usage_log.pk)
@@ -443,7 +515,7 @@ class AIService:
             message_id=message.pk,
             usage_log_id=log.pk,
             usage=usage,
-        )
+        ), accounting
 
     @transaction.atomic
     def _fail(self, prepared, error, *, attempts=1, status=None):
@@ -455,13 +527,14 @@ class AIService:
             else AIUsageLog.Status.FAILED
         )
         self._settle_quota(prepared)
-        message = AIMessage.objects.select_for_update().get(pk=prepared.assistant_message.pk)
+        conversation = AIConversation.all_objects.select_for_update().get(pk=prepared.conversation.pk)
+        message = AIMessage.all_objects.select_for_update().get(pk=prepared.assistant_message.pk)
         message.status = (
             AIMessage.Status.INTERRUPTED
             if status == AIUsageLog.Status.INTERRUPTED
             else AIMessage.Status.FAILED
         )
-        message.error_code = error.code
+        message.error_code = "" if conversation.is_deleted or message.is_deleted else error.code
         message.updated_by = prepared.user
         message.save(update_fields=["status", "error_code", "updated_by", "updated_at"])
         self._fail_log_only(
