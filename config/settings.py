@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     # Local apps
     'inventory',
     'sales',
+    'cloud_communications',
     'customers',
     'users',
     'accounting.apps.AccountingConfig',
@@ -113,6 +114,7 @@ TEMPLATES = [
                 'core.context_processors.analytics_allowed',
                 'shop.context_processors.storefront',
                 'core.context_processors.ims_navigation',
+                'cloud_communications.context_processors.navigation',
                 'tasker.context_processors.tasker_ui',
             ],
         },
@@ -317,3 +319,11 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'false').lower() == 'true'
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'false').lower() == 'true'
 EMAIL_TIMEOUT = int(os.environ['EMAIL_TIMEOUT']) if os.environ.get('EMAIL_TIMEOUT') else None
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+
+# Optional external Business Cloud communications. No network calls during invoice creation.
+CLOUD_COMMUNICATIONS_ENABLED = os.environ.get('CLOUD_COMMUNICATIONS_ENABLED', 'false').lower() == 'true'
+CLOUD_COMMUNICATIONS_URL = os.environ.get('CLOUD_COMMUNICATIONS_URL', 'https://cloud.boforg.co.zw')
+CLOUD_COMMUNICATIONS_TOKEN_FILE = os.environ.get('CLOUD_COMMUNICATIONS_TOKEN_FILE', '')
+CLOUD_COMMUNICATIONS_CALLBACK_SECRET = os.environ.get('CLOUD_COMMUNICATIONS_CALLBACK_SECRET', '')
+# IMS document currency is not stored on its current models. Operator must confirm this value.
+CLOUD_COMMUNICATIONS_CURRENCY = os.environ.get('CLOUD_COMMUNICATIONS_CURRENCY', '')

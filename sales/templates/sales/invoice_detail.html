@@ -7,6 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3>Invoice {{ invoice.number }}</h3>
   <div class="d-flex gap-2">
+{% if cloud_communications_enabled %}<a class="btn btn-sm btn-outline-light" href="{% url 'ims:sales:cloud_document_email' 'invoice' invoice.pk %}">Email &amp; history</a>{% endif %}
     <a class="btn btn-sm btn-outline-light" href="{% url 'ims:sales:invoice_compose' invoice.id %}">Edit details & all lines</a>
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:invoice_pdf' invoice.id %}?preview=1" target="_blank">Print PDF</a>
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:invoice_pdf' invoice.id %}">Download PDF</a>

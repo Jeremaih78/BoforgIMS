@@ -1,10 +1,14 @@
 from django.urls import path
 from . import views, scan_views, catalog_views
+from cloud_communications import views as cloud_views
 from .api import InvoiceLineSerialAPIView
 
 app_name = 'sales'
 
 urlpatterns = [
+    path('communications/callback', cloud_views.callback, name='cloud_callback'),
+    path('communications/messages/<uuid:request_id>/', cloud_views.detail, name='cloud_message'),
+    path('<str:kind>/<int:pk>/email/', cloud_views.document, name='cloud_document_email'),
     path('<str:kind>/<int:pk>/scan/', scan_views.scan, name='document_scan'),
     path('', views.sales_home, name='sales_home'),
     path('api/products/search/', views.product_search, name='product_search'),

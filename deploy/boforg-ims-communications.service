@@ -1,0 +1,28 @@
+[Unit]
+Description=Boforg IMS Business Cloud communications outbox
+Wants=network-online.target
+After=network-online.target postgresql.service gunicorn-ims.service
+
+[Service]
+Type=simple
+User=boforg
+Group=boforg
+WorkingDirectory=/home/boforg/BoforgIMS
+EnvironmentFile=/etc/boforg-ims/release.env
+EnvironmentFile=/etc/boforg-ims/communications.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/boforg/ims/bin/python manage.py process_cloud_communications --watch --limit 10
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=360
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+MemoryMax=384M
+CPUQuota=25%
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
