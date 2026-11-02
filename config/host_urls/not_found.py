@@ -12,3 +12,8 @@ urlpatterns = [
     path("", host_not_found),
     path("<path:path>", host_not_found),
 ]
+
+handler400="core.errors.bad_request"
+handler403="core.errors.forbidden"
+handler404="core.errors.not_found"
+handler500="core.errors.server_error"

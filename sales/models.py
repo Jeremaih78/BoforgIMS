@@ -38,6 +38,7 @@ class Quotation(models.Model):
     reference = models.CharField(max_length=120, blank=True)
     terms = models.TextField(blank=True)
     custom_fields = models.JSONField(default=dict, blank=True)
+    tax_added = models.BooleanField(default=True,db_default=False, editable=False)
 
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -53,7 +54,15 @@ class Quotation(models.Model):
 
     @property
     def total(self):
+        return sum((line.line_total + (line.tax_amount if self.tax_added else Decimal('0')) for line in self.lines.all()), Decimal('0.00'))
+
+    @property
+    def subtotal(self):
         return sum((line.line_total for line in self.lines.all()), Decimal('0.00'))
+
+    @property
+    def tax_total(self):
+        return sum((line.tax_amount for line in self.lines.all()), Decimal('0.00')) if self.tax_added else Decimal('0.00')
 
     @property
     def items(self):
@@ -78,13 +87,13 @@ class Quotation(models.Model):
             description=description,
         )
 
-    def add_misc_line(self, description, amount):
+    def add_misc_line(self, description, amount, tax_rate_percent=0):
         amount_decimal = to_decimal(amount)
         return self.lines.create(
             description=description or 'Adjustment',
             quantity=Decimal('1.00'),
             unit_price=amount_decimal,
-            tax_rate_percent=Decimal('0.00'),
+            tax_rate_percent=to_decimal(tax_rate_percent),
             line_total=amount_decimal,
         )
 
@@ -123,6 +132,7 @@ class Invoice(models.Model):
     reference = models.CharField(max_length=120, blank=True)
     terms = models.TextField(blank=True)
     custom_fields = models.JSONField(default=dict, blank=True)
+    tax_added = models.BooleanField(default=True,db_default=False, editable=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
     @transaction.atomic
@@ -139,7 +149,15 @@ class Invoice(models.Model):
 
     @property
     def total(self):
+        return sum((line.line_total + (line.tax_amount if self.tax_added else Decimal('0')) for line in self.lines.all()), Decimal('0.00'))
+
+    @property
+    def subtotal(self):
         return sum((line.line_total for line in self.lines.all()), Decimal('0.00'))
+
+    @property
+    def tax_total(self):
+        return sum((line.tax_amount for line in self.lines.all()), Decimal('0.00')) if self.tax_added else Decimal('0.00')
 
     @property
     def items(self):
@@ -163,13 +181,13 @@ class Invoice(models.Model):
             description=description,
         )
 
-    def add_misc_line(self, description, amount):
+    def add_misc_line(self, description, amount, tax_rate_percent=0):
         amount_decimal = to_decimal(amount)
         return self.lines.create(
             description=description or 'Adjustment',
             quantity=Decimal('1.00'),
             unit_price=amount_decimal,
-            tax_rate_percent=Decimal('0.00'),
+            tax_rate_percent=to_decimal(tax_rate_percent),
             line_total=amount_decimal,
         )
 
@@ -236,6 +254,10 @@ class DocumentLine(models.Model):
         target = self.product or self.combo or self.description or 'Line'
         return f"{target} x {self.quantity}"
 
+    @property
+    def tax_amount(self):
+        return (Decimal(self.line_total or 0) * Decimal(self.tax_rate_percent or 0) / 100).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
+
 
 class Payment(models.Model):
     submission_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
@@ -244,6 +266,11 @@ class Payment(models.Model):
     date = models.DateField(default=timezone.localdate)
     method = models.CharField(max_length=50, default='Cash')
     note = models.CharField(max_length=200, blank=True, null=True)
+    bank = models.ForeignKey('accounting.BankAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='invoice_payments')
+    currency = models.ForeignKey('accounting.Currency', on_delete=models.PROTECT, null=True, blank=True, related_name='invoice_payments')
+    fx_rate = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal('1'),db_default=Decimal('1'))
+    entry = models.OneToOneField('accounting.JournalEntry', on_delete=models.PROTECT, null=True, blank=True, related_name='invoice_payment')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='recorded_invoice_payments')
 
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -255,6 +282,20 @@ class Payment(models.Model):
         # Same invoice -> product -> journal sequence lock order as staff checkout.
         list(Product.objects.select_for_update().filter(pk__in=invoice.lines.values_list('product_id', flat=True)).order_by('pk'))
         super().save(*args, **kwargs)
+
+
+class DocumentSubmission(models.Model):
+    id=models.UUIDField(primary_key=True,default=uuid4,editable=False)
+    kind=models.CharField(max_length=10,choices=[('invoice','Invoice'),('quotation','Quotation')])
+    target_id=models.PositiveBigIntegerField(null=True,blank=True)
+    payload_hash=models.CharField(max_length=64)
+    invoice=models.ForeignKey(Invoice,on_delete=models.PROTECT,null=True,blank=True,related_name='save_submissions')
+    quotation=models.ForeignKey(Quotation,on_delete=models.PROTECT,null=True,blank=True,related_name='save_submissions')
+    created_by=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,related_name='document_submissions')
+    created_at=models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints=[models.CheckConstraint(condition=~(models.Q(invoice__isnull=False)&models.Q(quotation__isnull=False)),name='submission_at_most_one_document')]
 
 
 class StockReservation(models.Model):

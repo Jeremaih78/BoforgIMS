@@ -86,7 +86,7 @@ def dashboard_context(user, params):
     period_invoices = invoices.filter(date__gte=start)
     open_invoices = unpaid_invoices(invoices)
     late_invoices = overdue_invoices(invoices, today)
-    totals = period_invoices.aggregate(invoiced=Sum('workspace_total'), count=Count('pk'))
+    totals = period_invoices.aggregate(invoiced=Sum('workspace_subtotal'), count=Count('pk'))
     unpaid = open_invoices.aggregate(amount=Sum('workspace_balance'), count=Count('pk'))
     overdue = late_invoices.aggregate(amount=Sum('workspace_balance'), count=Count('pk'))
     due_today = open_invoices.filter(due_date=today).count()

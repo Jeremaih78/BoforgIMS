@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
 
@@ -16,6 +16,28 @@ def _validated_quantity(quantity):
     if qty <= 0:
         raise ValueError('Quantity must be a positive integer.')
     return qty
+
+
+def combo_discount_allocations(combo, quantity=1):
+    """Allocate a bundle discount to tax-rate groups without losing a cent."""
+    qty = _validated_quantity(quantity)
+    base = combo.components_total() * qty
+    discount = (base - combo.compute_price() * qty).quantize(TWOPLACES)
+    if discount <= 0 or base <= 0:
+        return []
+    groups = {}
+    for item in combo.items.all():
+        rate = Decimal(item.product.tax_rate or 0)
+        groups[rate] = groups.get(rate, Decimal('0')) + item.product.price * item.quantity * qty
+    groups = sorted((rate, value) for rate, value in groups.items() if value > 0)
+    left = discount
+    allocations = []
+    for index, (rate, value) in enumerate(groups):
+        share = left if index == len(groups)-1 else min(left, (discount * value / base).quantize(TWOPLACES, rounding=ROUND_HALF_UP))
+        left -= share
+        if share:
+            allocations.append((rate, share))
+    return allocations
 
 
 @transaction.atomic
@@ -54,10 +76,11 @@ def add_combo_to_document(document, combo_id, quantity=1, note_prefix='Combo: ')
 
     if discount_amount > Decimal('0.00'):
         if hasattr(document, 'add_misc_line'):
-            discount_line = document.add_misc_line(
-                description=f"{note_prefix}{combo.name} discount",
-                amount=-discount_amount,
-            )
+            allocations = combo_discount_allocations(combo, qty) if getattr(document, 'tax_added', False) else [(Decimal('0'), discount_amount)]
+            for rate, amount in allocations:
+                line = document.add_misc_line(description=f"{note_prefix}{combo.name} discount", amount=-amount, tax_rate_percent=rate)
+                if discount_line is None:
+                    discount_line = line
         else:
             total_value = sum(
                 Decimal(str(line.unit_price)) * Decimal(str(line.quantity))

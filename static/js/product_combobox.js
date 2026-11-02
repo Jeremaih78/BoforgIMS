@@ -61,6 +61,7 @@
       if (isCombo) {
         root.dataset.comboPrice = product.price;
         root.dataset.comboDiscount = product.discount;
+        root.dataset.components = JSON.stringify(product.components);
         if (info) info.textContent = `${product.currency} ${product.price} per combo · Save ${product.discount} per combo · ${product.track_inventory ? product.available_stock + ' available' : 'Services, no stock limit'}`;
         root.querySelector('[data-combo-components]').textContent = 'Each combo: ' + product.components.map(item => `${item.quantity} × ${item.name}`).join(' · ');
       } else if (info) info.textContent = `${product.currency} · ${product.track_inventory ? product.available_stock + ' available' : 'Service'}`;

@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-02T12:14:06.582168+02:00",
+  "candidate_ready": true,
+  "production_deployed": false,
+  "target_preflight": "Run on the deployment target before switching the release.",
+  "source_digest": "00e121ba9f47a90ee76273d02ae897738d1935878dabb0dfa22c4b03f4eb1294",
+  "source_files": 857,
+  "tests": {
+    "passed": 1580,
+    "seconds": 761.048,
+    "parallel_workers": 4,
+    "log_sha256": "f174dafba8c6fbff2b3c2fdaa030a9c4aed8f69225ce05094ea562b394453749"
+  },
+  "dependencies": {
+    "known_vulnerabilities": 0,
+    "scanned_packages": 92,
+    "django": "5.2.18",
+    "rest_framework": "3.18.2"
+  },
+  "release_checks": {
+    "pinned_dependencies": true,
+    "django_configuration": true,
+    "postgresql": true,
+    "schema": true,
+    "stock_and_ledger_integrity": true,
+    "production_mode": true,
+    "hashed_static_assets": true,
+    "private_upload_isolation": true
+  },
+  "restore": {
+    "verified": true,
+    "tables": 177,
+    "rows": 1086,
+    "backup_bytes": 1032369,
+    "source_data": "synthetic audit fixture",
+    "comparison_timezone": "UTC",
+    "production_database_used": false
+  },
+  "browser": {
+    "widths": [
+      320,
+      390,
+      1365
+    ],
+    "external_assets_blocked": true,
+    "expense_receipt_funding_combo_quote_pdf": "passed"
+  },
+  "host_route_checks": 31,
+  "server_errors": 0,
+  "test_data": "synthetic, isolated PostgreSQL; production data unchanged",
+  "full_suite_checkpoint_source": "7412c5f8436550f6024f8f77fe78e0a30516a709e483a746cfe0ead968f73278",
+  "deployment_compatibility": {
+    "tests": 43,
+    "seconds": 46.849,
+    "database_defaults": "Legacy inserts remain valid after additive migration; new ORM documents retain tax on top."
+  }
+}

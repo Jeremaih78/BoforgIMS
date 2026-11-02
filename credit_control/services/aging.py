@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Avg, Count, F, Q, Max
+from django.utils import timezone
 
 from accounting.models import APPayment, SupplierBill
 from customers.models import Customer
@@ -11,7 +12,7 @@ from inventory.models import Supplier
 from sales.models import Invoice, Payment
 
 from credit_control.models import PaymentDispute, PromiseToPay
-from .balances import get_customer_outstanding, get_supplier_outstanding
+from .balances import get_customer_outstanding, get_supplier_outstanding, customer_balance_map, supplier_balance_map
 
 
 ZERO = Decimal("0.00")
@@ -26,7 +27,7 @@ BUCKETS = [
 
 
 def _as_of(as_of_date: date | None = None) -> date:
-    return as_of_date or date.today()
+    return as_of_date or timezone.localdate()
 
 
 def _bucket_for(days_overdue: int) -> str:
@@ -80,11 +81,19 @@ def _avg_days_to_pay_supplier(supplier: Supplier) -> float:
     return round(total / count, 2) if count else 0.0
 
 
-def build_debtor_aging(as_of_date: date | None = None) -> list[dict]:
+def build_debtor_aging(as_of_date: date | None = None, currency=None) -> list[dict]:
     as_of = _as_of(as_of_date)
     rows = []
-    for customer in Customer.objects.all().order_by("name"):
-        data = get_customer_outstanding(customer, as_of_date=as_of)
+    balances=customer_balance_map(as_of,currency)
+    ids=list(balances)
+    last=dict(Payment.objects.filter(invoice__customer_id__in=ids,date__lte=as_of).values('invoice__customer_id').annotate(last=Max('date')).values_list('invoice__customer_id','last'))
+    broken=dict(PromiseToPay.objects.filter(customer_id__in=ids,status=PromiseToPay.Status.BROKEN,promised_date__lte=as_of).values('customer_id').annotate(n=Count('pk')).values_list('customer_id','n'))
+    disputes=dict(PaymentDispute.objects.filter(customer_id__in=ids,status__in=['OPEN','UNDER_REVIEW'],opened_date__lte=as_of).values('customer_id').annotate(n=Count('pk')).values_list('customer_id','n'))
+    pay_days={}
+    for cid,paid,due in Payment.objects.filter(invoice__customer_id__in=ids,date__lte=as_of,invoice__due_date__isnull=False).values_list('invoice__customer_id','date','invoice__due_date'):
+        total,count=pay_days.get(cid,(0,0));pay_days[cid]=(total+(paid-due).days,count+1)
+    for data in sorted(balances.values(),key=lambda item:item['customer'].name.lower()):
+        customer=data['customer']
         if data["outstanding"] <= ZERO:
             continue
         buckets = _empty_bucket_map()
@@ -101,20 +110,25 @@ def build_debtor_aging(as_of_date: date | None = None) -> list[dict]:
                 "overdue_amount": data["overdue"],
                 "buckets": buckets,
                 "oldest_unpaid_invoice_date": oldest_unpaid,
-                "last_payment_date": Payment.objects.filter(invoice__customer=customer).order_by("-date").values_list("date", flat=True).first(),
-                "average_days_to_pay": _avg_days_to_pay_customer(customer),
-                "broken_promises": PromiseToPay.objects.filter(customer=customer, status=PromiseToPay.Status.BROKEN).count(),
-                "disputes": PaymentDispute.objects.filter(customer=customer, status__in=[PaymentDispute.Status.OPEN, PaymentDispute.Status.UNDER_REVIEW]).count(),
+                "last_payment_date": last.get(customer.pk),
+                "average_days_to_pay": round(pay_days[customer.pk][0]/pay_days[customer.pk][1],2) if customer.pk in pay_days else 0,
+                "broken_promises": broken.get(customer.pk,0),
+                "disputes": disputes.get(customer.pk,0),
+                "items": data['items'], 'currency':data['currency'],
             }
         )
     return rows
 
 
-def build_creditor_aging(as_of_date: date | None = None) -> list[dict]:
+def build_creditor_aging(as_of_date: date | None = None, currency=None, company_id=...) -> list[dict]:
     as_of = _as_of(as_of_date)
     rows = []
-    for supplier in Supplier.objects.all().order_by("name"):
-        data = get_supplier_outstanding(supplier, as_of_date=as_of)
+    balances=supplier_balance_map(as_of,currency,company_id=company_id)
+    ids=list(balances)
+    last=dict(APPayment.objects.filter(supplier_id__in=ids,date__lte=as_of).values('supplier_id').annotate(last=Max('date')).values_list('supplier_id','last'))
+    disputes=dict(PaymentDispute.objects.filter(supplier_id__in=ids,status__in=['OPEN','UNDER_REVIEW'],opened_date__lte=as_of).values('supplier_id').annotate(n=Count('pk')).values_list('supplier_id','n'))
+    for data in sorted(balances.values(),key=lambda item:item['supplier'].name.lower()):
+        supplier=data['supplier']
         if data["outstanding"] <= ZERO:
             continue
         buckets = _empty_bucket_map()
@@ -131,10 +145,11 @@ def build_creditor_aging(as_of_date: date | None = None) -> list[dict]:
                 "overdue_amount": data["overdue"],
                 "buckets": buckets,
                 "oldest_unpaid_bill_date": oldest_unpaid,
-                "last_payment_date": APPayment.objects.filter(supplier=supplier).order_by("-date").values_list("date", flat=True).first(),
-                "average_days_to_pay": _avg_days_to_pay_supplier(supplier),
+                "last_payment_date": last.get(supplier.pk),
+                "average_days_to_pay": 0,
                 "broken_promises": 0,
-                "disputes": PaymentDispute.objects.filter(supplier=supplier, status__in=[PaymentDispute.Status.OPEN, PaymentDispute.Status.UNDER_REVIEW]).count(),
+                "disputes": disputes.get(supplier.pk,0),
+                "items": data['items'], 'currency':data['currency'],
             }
         )
     return rows

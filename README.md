@@ -35,6 +35,19 @@ duplicate the demo records.
 
 Visit http://127.0.0.1:8000 to access the IMS dashboard under `/ims/`.
 
+### Current release verification
+
+See the [2 November whole-IMS audit](docs/IMS_WHOLE_AUDIT_2026-11-02.md) for the candidate, migrations and rollout procedure. On an isolated staging copy with production settings, run:
+
+```bash
+python manage.py check_ims_integrity --strict
+python manage.py collectstatic --noinput
+python manage.py check --deploy
+python manage.py check_ims_release --production --fail-on-blockers
+```
+
+The release gate is read-only. `/health/live/` and `/health/ready/` provide liveness and database/schema readiness probes. Apply the reviewed migrations before the final gate.
+
 ### Review and safe configuration
 
 Debug is opt-in (`DJANGO_DEBUG=true` for local development). Configure a persistent

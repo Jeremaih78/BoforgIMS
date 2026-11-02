@@ -23,7 +23,8 @@ def combo_details(combo):
         'price': str(price), 'base_price': str(base), 'discount': str(base - price),
         'currency': next(iter(currencies)), 'available_stock': combo_available_quantity(combo),
         'track_inventory': any(item.product.track_inventory for item in items),
-        'components': [{'name': item.product.name, 'sku': item.product.sku, 'quantity': item.quantity} for item in items],
+        'components': [{'name': item.product.name, 'sku': item.product.sku, 'quantity': item.quantity,
+                        'price': str(item.product.price), 'tax_rate': str(item.product.tax_rate)} for item in items],
     }
 
 

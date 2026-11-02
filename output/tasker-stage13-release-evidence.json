@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "recorded_at": "2026-10-31T03:57:09.951680+00:00",
-  "source_digest": "68b7a129ff772eec0ab1ae7e96d15664185a5b3fb441079aea1889ed7baaebc7",
-  "source_files": 820,
+  "recorded_at": "2026-11-02T14:04:26.467007+02:00",
+  "source_digest": "00e121ba9f47a90ee76273d02ae897738d1935878dabb0dfa22c4b03f4eb1294",
+  "source_files": 857,
   "checks": {
     "regressions": "VERIFIED",
     "postgres_concurrency": "VERIFIED",
@@ -13,31 +13,87 @@
     "degraded_recovery": "VERIFIED"
   },
   "evidence": {
-    "broad_checkpoint": {
-      "reference": "output/stage13-regressions.log",
-      "tests": 1489,
-      "seconds": 1122.981
+    "whole_ims_audit": {
+      "reference": "docs/review-evidence/ims-audit-20261102.json",
+      "tests": 1580,
+      "seconds": 761.048
     },
-    "final_targeted": {
-      "reference": "output/stage13-final-focused-tests.log",
-      "tests": 326,
-      "seconds": 424.379
+    "backup_restore": {
+      "verified": true,
+      "tables": 177,
+      "rows": 1086,
+      "backup_bytes": 1032369,
+      "source_data": "synthetic audit fixture",
+      "comparison_timezone": "UTC",
+      "production_database_used": false
     },
-    "initial_pilot_checkpoint": {
-      "reference": "output/stage13-focused-tests.log",
-      "tests": 33,
-      "seconds": 37.447
+    "production_mode": {
+      "pinned_dependencies": true,
+      "django_configuration": true,
+      "postgresql": true,
+      "schema": true,
+      "stock_and_ledger_integrity": true,
+      "production_mode": true,
+      "hashed_static_assets": true,
+      "private_upload_isolation": true
     },
-    "javascript_tests": 77,
-    "restore": "output/stage13-restore-verification.json",
-    "strict_static": "output/stage13-strict-static.log",
-    "current_source_access": "output/stage13-final-smoke.json",
-    "browser": "output/stage13-ui-verification.json"
+    "browser": {
+      "widths": [
+        320,
+        390,
+        1365
+      ],
+      "external_assets_blocked": true,
+      "expense_receipt_funding_combo_quote_pdf": "passed"
+    },
+    "deployment_compatibility": {
+      "tests": 43,
+      "seconds": 46.849
+    }
   },
-  "scope": "Full-suite checkpoint plus targeted regression and current-source smoke/browser verification after cohort UI/dispatch refinements. Local synthetic data only.",
-  "real_release": "NO_GO_PENDING_OPERATING_EVIDENCE",
-  "real_productivity": "PENDING_REAL_COHORT_AND_REVIEW",
-  "external_sends": 0,
-  "paid_provider_requests": 0,
-  "production_deployment": false
+  "real_pilot_release": false,
+  "production_deployed": false,
+  "previous_evidence": {
+    "schema": 1,
+    "recorded_at": "2026-10-31T03:57:09.951680+00:00",
+    "source_digest": "68b7a129ff772eec0ab1ae7e96d15664185a5b3fb441079aea1889ed7baaebc7",
+    "source_files": 820,
+    "checks": {
+      "regressions": "VERIFIED",
+      "postgres_concurrency": "VERIFIED",
+      "migration_restore": "VERIFIED",
+      "static_manifest": "VERIFIED",
+      "desktop_mobile_keyboard": "VERIFIED",
+      "end_to_end_roles": "VERIFIED",
+      "degraded_recovery": "VERIFIED"
+    },
+    "evidence": {
+      "broad_checkpoint": {
+        "reference": "output/stage13-regressions.log",
+        "tests": 1489,
+        "seconds": 1122.981
+      },
+      "final_targeted": {
+        "reference": "output/stage13-final-focused-tests.log",
+        "tests": 326,
+        "seconds": 424.379
+      },
+      "initial_pilot_checkpoint": {
+        "reference": "output/stage13-focused-tests.log",
+        "tests": 33,
+        "seconds": 37.447
+      },
+      "javascript_tests": 77,
+      "restore": "output/stage13-restore-verification.json",
+      "strict_static": "output/stage13-strict-static.log",
+      "current_source_access": "output/stage13-final-smoke.json",
+      "browser": "output/stage13-ui-verification.json"
+    },
+    "scope": "Full-suite checkpoint plus targeted regression and current-source smoke/browser verification after cohort UI/dispatch refinements. Local synthetic data only.",
+    "real_release": "NO_GO_PENDING_OPERATING_EVIDENCE",
+    "real_productivity": "PENDING_REAL_COHORT_AND_REVIEW",
+    "external_sends": 0,
+    "paid_provider_requests": 0,
+    "production_deployment": false
+  }
 }

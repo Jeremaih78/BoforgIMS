@@ -237,6 +237,7 @@ class AIService:
             configuration = self.configuration_manager.current(require_enabled=False)
         except AIServiceError as exc:
             usage_log = AIUsageLog.objects.create(
+                started_at=timezone.now(),
                 user=user if getattr(user, "is_authenticated", False) else None,
                 provider="OPENAI",
                 operation=operation,
@@ -253,6 +254,7 @@ class AIService:
             )
             raise
         usage_log = AIUsageLog.objects.create(
+            started_at=timezone.now(),
             user=user if getattr(user, "is_authenticated", False) else None,
             configuration=configuration,
             provider=configuration.provider,
@@ -502,7 +504,7 @@ class AIService:
         log.total_tokens = usage.total_tokens
         log.latency_ms = elapsed
         log.attempts = attempts
-        log.completed_at = timezone.now()
+        log.completed_at = max(timezone.now(),log.started_at)
         log.updated_by = prepared.user
         log.save()
         logger.info(
@@ -553,7 +555,7 @@ class AIService:
         log.error_message = error.user_message[:500]
         log.latency_ms = self._elapsed_ms(started_monotonic)
         log.attempts = max(1, attempts)
-        log.completed_at = timezone.now()
+        log.completed_at = max(timezone.now(),log.started_at)
         # A separately loaded quota row may already have settled; never write
         # this potentially older object's reservation fields back over it.
         log.save(update_fields=[

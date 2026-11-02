@@ -20,6 +20,9 @@
 
       const row = form.closest('tr');
       if (row) row.remove();
+      for (const [selector,key] of [['[data-document-subtotal]','subtotal'],['[data-document-tax]','tax']]) {
+        const node=document.querySelector(selector);if(node && data[key]!==undefined)node.textContent=data[key];
+      }
       const totalEl = document.querySelector(form.dataset.totalTarget);
       if (totalEl) totalEl.textContent = data.total;
   });

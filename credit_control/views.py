@@ -5,7 +5,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib import messages
-from core.permissions import ims_permission
+from core.query import csv_cell
+from core.permissions import ims_permission, allowed
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -48,161 +49,17 @@ from .services import (
     sync_debtor_account_summary,
 )
 from .services.messaging import send_whatsapp_reminder
+from .workspace_views import dashboard,debtors_list,creditors_list,debtor_detail,creditor_detail
 
 
-@login_required
-@ims_permission('credit_control.view_debtoraccount', staff=False)
-def dashboard(request):
-    for customer in Customer.objects.all():
-        sync_debtor_account_summary(customer)
-    for supplier in Supplier.objects.all():
-        sync_creditor_account_summary(supplier)
-
-    context = collections_dashboard_data()
-    return render(request, "credit_control/dashboard.html", context)
 
 
-@login_required
-@ims_permission('credit_control.view_debtoraccount', staff=False)
-def debtors_list(request):
-    for customer in Customer.objects.all():
-        sync_debtor_account_summary(customer)
-
-    qs = DebtorAccount.objects.select_related("customer").all()
-    if request.GET.get("risk"):
-        qs = qs.filter(risk_level=request.GET.get("risk"))
-    if request.GET.get("overdue") == "1":
-        qs = qs.filter(overdue_balance__gt=0)
-    if request.GET.get("disputed") == "1":
-        qs = qs.filter(collection_status=DebtorAccount.CollectionStatus.DISPUTED)
-    if request.GET.get("follow_up_due") == "1":
-        qs = qs.filter(next_follow_up_date__lte=timezone.now().date())
-    if request.GET.get("promise_broken") == "1":
-        qs = qs.filter(customer__promises_to_pay__status=PromiseToPay.Status.BROKEN).distinct()
-
-    rows = []
-    aging = {row["customer"].id: row for row in build_debtor_aging()}
-    for acct in qs:
-        age = aging.get(acct.customer_id)
-        buckets = age["buckets"] if age else {}
-        rows.append({"account": acct, "aging": buckets})
-
-    return render(request, "credit_control/debtors_list.html", {"rows": rows})
 
 
-@login_required
-@ims_permission('credit_control.view_debtoraccount', staff=False)
-def debtor_detail(request, customer_id: int):
-    customer = get_object_or_404(Customer, id=customer_id)
-    account = sync_debtor_account_summary(customer)
-    outstanding = get_customer_outstanding(customer)
-
-    recommendation = generate_follow_up_recommendation(customer)
-    followups = DebtorFollowUp.objects.filter(customer=customer).select_related("invoice", "created_by")
-    promises = PromiseToPay.objects.filter(customer=customer).select_related("invoice")
-    disputes = PaymentDispute.objects.filter(customer=customer)
-
-    invoices = Invoice.objects.filter(customer=customer).order_by("-date")
-    payments = Payment.objects.filter(invoice__customer=customer).select_related("invoice").order_by("-date")
-
-    timeline = []
-    for inv in invoices:
-        timeline.append({"when": inv.date, "kind": "INVOICE", "label": inv.number, "amount": inv.total})
-    for pay in payments:
-        timeline.append({"when": pay.date, "kind": "PAYMENT", "label": pay.invoice.number, "amount": pay.amount})
-    for fu in followups[:50]:
-        timeline.append({"when": fu.follow_up_date.date(), "kind": "FOLLOWUP", "label": fu.get_follow_up_type_display(), "amount": None})
-    for p in promises:
-        timeline.append({"when": p.promised_date, "kind": "PROMISE", "label": p.get_status_display(), "amount": p.promised_amount})
-    for d in disputes:
-        timeline.append({"when": d.opened_date, "kind": "DISPUTE", "label": d.get_dispute_type_display(), "amount": None})
-    timeline = sorted(timeline, key=lambda t: t["when"], reverse=True)
-
-    return render(
-        request,
-        "credit_control/debtor_detail.html",
-        {
-            "customer": customer,
-            "account": account,
-            "outstanding": outstanding,
-            "invoices": invoices,
-            "followups": followups,
-            "promises": promises,
-            "disputes": disputes,
-            "recommendation": recommendation,
-            "timeline": timeline[:100],
-        },
-    )
 
 
-@login_required
-@ims_permission('credit_control.view_creditoraccount', staff=False)
-def creditors_list(request):
-    for supplier in Supplier.objects.all():
-        sync_creditor_account_summary(supplier)
-
-    qs = CreditorAccount.objects.select_related("supplier")
-    if request.GET.get("risk"):
-        qs = qs.filter(risk_level=request.GET.get("risk"))
-    if request.GET.get("overdue") == "1":
-        qs = qs.filter(overdue_balance__gt=0)
-    if request.GET.get("critical") == "1":
-        qs = qs.filter(is_critical_supplier=True)
-
-    aging = {row["supplier"].id: row for row in build_creditor_aging()}
-    rows = []
-    for acct in qs:
-        recommendation = generate_creditor_payment_recommendation(acct.supplier)
-        rows.append({
-            "account": acct,
-            "aging": aging.get(acct.supplier_id, {}).get("buckets", {}),
-            "recommendation": recommendation,
-        })
-
-    return render(request, "credit_control/creditors_list.html", {"rows": rows})
 
 
-@login_required
-@ims_permission('credit_control.view_creditoraccount', staff=False)
-def creditor_detail(request, supplier_id: int):
-    supplier = get_object_or_404(Supplier, id=supplier_id)
-    account = sync_creditor_account_summary(supplier)
-    outstanding = get_supplier_outstanding(supplier)
-
-    recommendation = generate_creditor_payment_recommendation(supplier)
-    followups = CreditorFollowUp.objects.filter(supplier=supplier).select_related("bill", "created_by")
-    disputes = PaymentDispute.objects.filter(supplier=supplier)
-    bills = SupplierBill.objects.filter(supplier=supplier).order_by("-date")
-    payments = APPayment.objects.filter(supplier=supplier).order_by("-date")
-
-    stock_dependency = supplier.product_set.filter(reorder_level__gt=0, quantity__lte=3).count()
-
-    timeline = []
-    for bill in bills:
-        timeline.append({"when": bill.date, "kind": "BILL", "label": bill.doc_no, "amount": bill.total})
-    for pay in payments:
-        timeline.append({"when": pay.date, "kind": "PAYMENT", "label": pay.payment_no, "amount": pay.amount})
-    for fu in followups[:50]:
-        timeline.append({"when": fu.follow_up_date.date(), "kind": "FOLLOWUP", "label": fu.get_follow_up_type_display(), "amount": None})
-    for d in disputes:
-        timeline.append({"when": d.opened_date, "kind": "DISPUTE", "label": d.get_dispute_type_display(), "amount": None})
-    timeline = sorted(timeline, key=lambda t: t["when"], reverse=True)
-
-    return render(
-        request,
-        "credit_control/creditor_detail.html",
-        {
-            "supplier": supplier,
-            "account": account,
-            "outstanding": outstanding,
-            "bills": bills,
-            "followups": followups,
-            "disputes": disputes,
-            "recommendation": recommendation,
-            "stock_dependency": stock_dependency,
-            "timeline": timeline[:100],
-        },
-    )
 
 
 @login_required
@@ -355,9 +212,10 @@ def task_create(request):
 @login_required
 @ims_permission('credit_control.view_debtoraccount', staff=False)
 def aging_reports(request):
-    context = {
-        "debtor_rows": build_debtor_aging(),
-        "creditor_rows": build_creditor_aging(),
+    from .workspace_views import controls
+    context = {**controls(request),
+        "debtor_rows": build_debtor_aging(**_aging_filters(request)),
+        "creditor_rows": build_creditor_aging(**_aging_filters(request),company_id=None) if allowed(request.user,"credit_control.view_creditoraccount") else [],
     }
     return render(request, "credit_control/aging_reports.html", context)
 
@@ -365,13 +223,17 @@ def aging_reports(request):
 @login_required
 @ims_permission('credit_control.view_debtoraccount', staff=False)
 def report_export_csv(request, report_name: str):
+    _report_access(request,report_name)
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{report_name}.csv"'
-    writer = csv.writer(response)
+    raw_writer=csv.writer(response)
+    class SafeWriter:
+        def writerow(self,row):raw_writer.writerow([csv_cell(cell) for cell in row])
+    writer=SafeWriter()
 
     if report_name == "ar_aging":
         writer.writerow(["Customer", "Outstanding", "Overdue", "Current", "1-30", "31-60", "61-90", "91-120", "120+"])
-        for row in build_debtor_aging():
+        for row in build_debtor_aging(**_aging_filters(request)):
             b = row["buckets"]
             writer.writerow([
                 row["customer"].name,
@@ -386,7 +248,7 @@ def report_export_csv(request, report_name: str):
             ])
     elif report_name == "ap_aging":
         writer.writerow(["Supplier", "Outstanding", "Overdue", "Current", "1-30", "31-60", "61-90", "91-120", "120+"])
-        for row in build_creditor_aging():
+        for row in build_creditor_aging(**_aging_filters(request),company_id=None):
             b = row["buckets"]
             writer.writerow([
                 row["supplier"].name,
@@ -421,11 +283,11 @@ def report_export_csv(request, report_name: str):
             ])
     elif report_name == "top_debtors":
         writer.writerow(["Customer", "Outstanding", "Overdue", "Risk"])
-        for a in DebtorAccount.objects.order_by("-overdue_balance", "-total_outstanding")[:50]:
+        for a in sorted(_live_accounts(request),key=lambda a:(a.overdue_balance,a.total_outstanding),reverse=True)[:50]:
             writer.writerow([a.customer.name, a.total_outstanding, a.overdue_balance, a.risk_level])
     elif report_name == "debtor_risk":
         writer.writerow(["Customer", "Risk", "Outstanding", "Overdue", "Status"])
-        for a in DebtorAccount.objects.order_by("-risk_level", "-overdue_balance"):
+        for a in sorted(_live_accounts(request),key=lambda a:(a.risk_level,a.overdue_balance),reverse=True):
             writer.writerow([a.customer.name, a.risk_level, a.total_outstanding, a.overdue_balance, a.collection_status])
     elif report_name == "upcoming_payables":
         writer.writerow(["Supplier", "Bill", "Due Date", "Total", "Status"])
@@ -433,7 +295,7 @@ def report_export_csv(request, report_name: str):
             writer.writerow([b.supplier.name, b.doc_no, b.due_date, b.total, b.status])
     elif report_name == "critical_supplier_exposure":
         writer.writerow(["Supplier", "Outstanding", "Overdue", "Payment Status"])
-        for c in CreditorAccount.objects.filter(is_critical_supplier=True):
+        for c in (a for a in _live_accounts(request,creditor=True) if a.is_critical_supplier):
             writer.writerow([c.supplier.name, c.total_outstanding, c.overdue_balance, c.payment_status])
     elif report_name == "creditor_negotiation":
         writer.writerow(["Supplier", "Follow-up Date", "Type", "Outcome", "Next Action Date"])
@@ -468,14 +330,16 @@ def report_export_csv(request, report_name: str):
 @login_required
 @ims_permission('credit_control.view_debtoraccount', staff=False)
 def report_export_pdf(request, report_name: str):
-    context = {
+    _report_access(request,report_name)
+    from .workspace_views import controls
+    context = {**controls(request),
         "report_name": report_name,
-        "debtor_rows": build_debtor_aging(),
-        "creditor_rows": build_creditor_aging(),
+        "debtor_rows": build_debtor_aging(**_aging_filters(request)),
+        "creditor_rows": build_creditor_aging(**_aging_filters(request),company_id=None) if allowed(request.user,"credit_control.view_creditoraccount") else [],
         "promises": PromiseToPay.objects.select_related("customer", "invoice").all(),
         "disputes": PaymentDispute.objects.select_related("customer", "supplier", "invoice", "bill").all(),
-        "debtor_accounts": DebtorAccount.objects.select_related("customer").all(),
-        "creditor_accounts": CreditorAccount.objects.select_related("supplier").all(),
+        "debtor_accounts": _live_accounts(request),
+        "creditor_accounts": _live_accounts(request,creditor=True) if allowed(request.user,"credit_control.view_creditoraccount") else [],
         "dashboard": collections_dashboard_data(),
     }
     html = render_to_string("credit_control/reports/generic_report_pdf.html", context)
@@ -512,8 +376,34 @@ def statement_customer(request, customer_id: int):
 @ims_permission('credit_control.view_notification', staff=False, write_permission='credit_control.change_notification')
 def notifications(request):
     qs = Notification.objects.filter(user=request.user).order_by("-created_at")
-    if request.GET.get("mark_all") == "1":
+    if request.method == "POST" and request.POST.get("mark_all") == "1":
         qs.filter(is_read=False).update(is_read=True, read_at=timezone.now())
         messages.success(request, "Notifications marked as read.")
         return redirect("ims:credit_control:notifications")
     return render(request, "credit_control/notifications.html", {"notifications": qs[:200]})
+
+
+def _aging_filters(request):
+    from .workspace_views import controls
+    data=controls(request)
+    return {"as_of_date":data["as_of"],"currency":data["currency"]}
+
+
+def _report_access(request,report_name):
+    if report_name in {'ap_aging','upcoming_payables','critical_supplier_exposure','creditor_negotiation'} and not allowed(request.user,'credit_control.view_creditoraccount'):
+        raise PermissionDenied
+
+
+def _live_accounts(request,creditor=False):
+    from .services.balances import customer_balance_map,supplier_balance_map
+    filters=_aging_filters(request)
+    data=supplier_balance_map(filters['as_of_date'],filters['currency'],company_id=None) if creditor else customer_balance_map(filters['as_of_date'],filters['currency'])
+    model=CreditorAccount if creditor else DebtorAccount
+    party='supplier' if creditor else 'customer'
+    existing={getattr(item,party+'_id'):item for item in model.objects.filter(**{party+'_id__in':list(data)}).select_related(party)}
+    result=[]
+    for key,row in data.items():
+        account=existing.get(key) or model(**{party:row[party]})
+        account.total_outstanding=row['outstanding'];account.overdue_balance=row['overdue'];account.current_balance=row['outstanding']-row['overdue']
+        result.append(account)
+    return result

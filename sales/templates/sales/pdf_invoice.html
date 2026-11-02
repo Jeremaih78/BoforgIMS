@@ -130,6 +130,10 @@
   <!-- Totals -->
   <table class="table totals mt-12">
     <tbody>
+      {% if inv.tax_added %}
+      <tr><td class="right">Subtotal after discounts</td><td class="right">{{ inv.subtotal|floatformat:2 }}</td></tr>
+      <tr><td class="right">Tax added</td><td class="right">{{ inv.tax_total|floatformat:2 }}</td></tr>
+      {% endif %}
       <tr>
         <td class="right"><strong>Grand Total</strong></td>
         <td class="right" style="width:120px;">{{ inv.total }}</td>

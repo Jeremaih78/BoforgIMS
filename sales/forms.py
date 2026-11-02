@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 
 from django import forms
@@ -68,6 +68,8 @@ class CustomerOrderedFormMixin:
 
 
 class QuotationForm(CustomerOrderedFormMixin, forms.ModelForm):
+    submission_key=forms.UUIDField(initial=uuid4,required=False,widget=forms.HiddenInput)
+    document_signature=forms.CharField(required=False,widget=forms.HiddenInput)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
@@ -80,6 +82,8 @@ class QuotationForm(CustomerOrderedFormMixin, forms.ModelForm):
 
 
 class InvoiceForm(CustomerOrderedFormMixin, forms.ModelForm):
+    submission_key=forms.UUIDField(initial=uuid4,required=False,widget=forms.HiddenInput)
+    document_signature=forms.CharField(required=False,widget=forms.HiddenInput)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
@@ -151,7 +155,7 @@ class DocumentLineForm(forms.ModelForm):
             self.add_error('tax_rate_percent', 'Tax must be between 0 and 100.')
         cleaned['tax_rate_percent'] = Decimal(str(tax_value)).quantize(Decimal('0.01'))
         cleaned['quantity'] = quantity
-        cleaned['line_total'] = (price_decimal * quantity).quantize(Decimal('0.01'))
+        cleaned['line_total'] = (price_decimal * quantity).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         return cleaned
 
 
@@ -248,14 +252,40 @@ class PaymentForm(forms.ModelForm):
         return amount
 
     def __init__(self, *args, **kwargs):
+        invoice=kwargs.pop('invoice',None)
         super().__init__(*args, **kwargs)
+        from accounting.models import BankAccount, JournalEntry
+        from django.conf import settings
+        self.fields['bank'].queryset=BankAccount.objects.filter(company=None,is_active=True,account__is_active=True).select_related('currency').order_by('name')
+        self.fields['bank'].label='Received into'
+        self.fields['fx_rate'].required=False
+        self.fields['fx_rate'].label='Invoice book exchange rate'
+        self.fields['fx_rate'].help_text='Base currency per 1 invoice-currency unit. Use the agreed invoice rate; conversions are separate.'
+        if invoice:
+            from accounting.services.receipts import invoice_currency_code
+            try:
+                code=invoice_currency_code(invoice)
+            except forms.ValidationError:
+                code=None
+            self.fields['bank'].queryset=self.fields['bank'].queryset.filter(currency__code=code)
+            default=self.fields['bank'].queryset.first()
+            if default:
+                self.initial.setdefault('bank',default.pk)
+            previous=JournalEntry.objects.filter(source='INVOICE',source_id=invoice.pk,is_posted=True,lines__account__code='4000').first()
+            if previous:
+                self.initial.setdefault('fx_rate',previous.fx_rate)
+            elif code!=getattr(settings,'BASE_CURRENCY_CODE','USD'):
+                self.initial['fx_rate']=None
+        for field in self.fields.values():
+            if not isinstance(field.widget,forms.HiddenInput):
+                field.widget.attrs.setdefault('class','form-select' if isinstance(field.widget,forms.Select) else 'form-control')
         for name, field in self.fields.items():
             if isinstance(field, forms.DateField):
                 field.widget = forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'})
 
     class Meta:
         model = Payment
-        fields = ['amount', 'date', 'method', 'note']
+        fields = ['amount', 'date', 'bank', 'method', 'note', 'fx_rate']
 
 
 class InvoiceLineSerialAssignmentForm(forms.Form):

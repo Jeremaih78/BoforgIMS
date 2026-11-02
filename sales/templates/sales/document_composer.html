@@ -8,8 +8,9 @@
     <a class="btn btn-outline-light" href="{% url 'ims:sales:sales_home' %}">Back to sales</a>
   </div>
   {% include 'sales/includes/customer_quick_create_modal.html' with customer_select_id=form.customer.id_for_label %}
-  <form method="post" id="document-composer" data-document-composer>
+  <form method="post" id="document-composer" data-document-composer data-tax-added="{{ form.instance.tax_added|yesno:'true,false' }}">
     {% csrf_token %}
+    {{ form.submission_key }}{{ form.submission_key.errors }}{{ form.document_signature }}
     {% if form.errors or line_set.errors or line_set.non_form_errors or combo_set.errors or combo_set.non_form_errors %}<div class="alert alert-danger" role="alert"><strong>The document was not saved.</strong> Correct the highlighted fields below. {{ form.non_field_errors }}{{ line_set.non_form_errors }}{{ combo_set.non_form_errors }}</div>{% endif %}
     <section class="card form-card p-4 mb-3" aria-labelledby="customer-heading">
       <h2 class="h5 mb-3" id="customer-heading">Customer & dates</h2>
@@ -46,7 +47,7 @@
       </details>
     </section>
     <div class="document-savebar">
-      <div><small class="d-block text-secondary">Total before tax <span data-total-currency></span></small><strong class="h3 mb-0" data-document-total data-fixed-total="{{ fixed_total }}" role="status">0.00</strong><small class="d-block text-secondary">Combo totals include their discounts.</small></div>
+      <div><small class="d-block text-secondary">Total <span data-total-currency></span></small><strong class="h3 mb-0" data-document-total data-fixed-total="{{ fixed_total }}" data-fixed-tax="{{ fixed_tax }}" role="status">0.00</strong><small class="d-block text-secondary">Subtotal <span data-document-subtotal>0.00</span> · Tax <span data-document-tax>0.00</span></small><small class="d-block text-secondary">{% if form.instance.tax_added %}Tax is added after combo discounts.{% else %}Existing document: agreed total retained.{% endif %}</small></div>
       <div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-outline-primary" name="save_action" value="save">Save {{ kind }}</button><button type="submit" class="btn btn-primary" name="save_action" value="pdf">Save & download PDF</button></div>
     </div>
     <p class="small text-secondary mt-3">Ctrl / ⌘ + Enter to save. {% if kind == 'invoice' %}Saving reserves stock. Payments and physical unit selection are available on the saved invoice.{% else %}Quotations do not reserve stock. Convert the saved quotation to an invoice in one click.{% endif %}</p>
@@ -54,4 +55,4 @@
   </form>
 </div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/product_combobox.js' %}"></script><script src="{% static 'js/document_composer.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/product_combobox.js' %}"></script><script src="{% static 'js/money_math.js' %}"></script><script src="{% static 'js/document_composer.js' %}"></script>{% endblock %}

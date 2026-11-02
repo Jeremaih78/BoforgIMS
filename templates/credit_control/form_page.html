@@ -1,12 +1,4 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="card form-card p-3">
-  <h5 class="mb-3">{{ title }}</h5>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary">Save</button>
-    <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
-  </form>
-</div>
-{% endblock %}
+{% extends 'base.html' %}{% load static %}
+{% block title %}{{ title }} | Boforg IMS{% endblock %}{% block extra_css %}<link rel="stylesheet" href="{% static 'css/money.css' %}">{% endblock %}
+{% block content %}<div class="money-workspace money-form"><a href="{% url 'ims:credit_control:dashboard' %}">← Collections & bills</a><div class="money-kicker mt-3">Credit control / Action</div><h1 class="h2 mb-3">{{ title }}</h1><form method="post" enctype="multipart/form-data" data-money-form>{% csrf_token %}{{ form.non_field_errors }}{% for hidden in form.hidden_fields %}{{ hidden }}{{ hidden.errors }}{% endfor %}<div class="money-card"><div class="row g-3">{% for field in form.visible_fields %}{% if field.name != 'full_message' and field.name != 'direction' and field.name != 'next_action_type' and field.name != 'attachment' and field.name != 'status' %}<div class="{% if field.name == 'message_summary' or field.name == 'subject' or field.name == 'notes' or field.name == 'description' %}col-12{% else %}col-md-6{% endif %}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <small>(optional)</small>{% endif %}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<p class="form-text">{{ field.help_text }}</p>{% endif %}</div>{% endif %}{% endfor %}</div></div><details class="money-card mt-3" {% if form.errors %}open{% endif %}><summary>Extra details</summary><div class="row g-3 mt-2">{% for field in form.visible_fields %}{% if field.name == 'full_message' or field.name == 'direction' or field.name == 'next_action_type' or field.name == 'attachment' or field.name == 'status' %}<div class="col-md-6"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}</div></details><div class="money-savebar"><a class="btn btn-outline-light" href="{% url 'ims:credit_control:dashboard' %}">Cancel</a><button type="submit" class="btn btn-primary">Save</button></div></form></div>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/money_capture.js' %}"></script>{% endblock %}

@@ -43,15 +43,10 @@ class FinalizationTests(TestCase):
         return finalize_document(user=self.user, kind=kind, document_id=doc.pk)
 
     def pay(self, amount, key=None):
-        with (
-            patch("accounting.signals.posting.post_sales_invoice"),
-            patch("accounting.signals.posting.post_ar_receipt"),
-            patch("accounting.signals.posting.post_cogs_for_invoice"),
-        ):
-            return record_payment(
-                invoice_id=self.invoice.pk, user=self.user, amount=Decimal(amount),
-                date=timezone.localdate(), method="CASH", note="", submission_key=key or uuid.uuid4(),
-            )
+        return record_payment(
+            invoice_id=self.invoice.pk,user=self.user,amount=Decimal(amount),
+            date=timezone.localdate(),method='CASH',note='',submission_key=key or uuid.uuid4(),
+        )
 
     def dispatch(self, row):
         remote = Mock()

@@ -7,15 +7,18 @@
   const comboRows = form.querySelector('[data-document-combos]');
   const comboCount = form.querySelector('[name="combos-TOTAL_FORMS"]');
   const total = form.querySelector('[data-document-total]');
+  const M=window.imsMoney;
   const recalculate = () => {
-    let sum = Number(total.dataset.fixedTotal || 0);
+    let sum = M.cents(total.dataset.fixedTotal), tax=M.cents(total.dataset.fixedTax);
+    const addTax=form.dataset.taxAdded==='true';
     const currencies = new Set();
     rows.querySelectorAll('[data-document-line]').forEach(row => {
       if (row.hidden) return;
       const selected = row.querySelector('[name$="product"]').value;
-      const amount = selected ? Math.round(Number(row.querySelector('[name$="quantity"]').value || 0) * Number(row.querySelector('[name$="unit_price"]').value || 0) * 100) / 100 : 0;
-      row.querySelector('[data-line-total]').textContent = amount.toFixed(2);
+      const amount = selected ? M.line(row.querySelector('[name$="unit_price"]').value,row.querySelector('[name$="quantity"]').value) : 0n;
+      row.querySelector('[data-line-total]').textContent = M.text(amount);
       sum += amount;
+      if (selected && addTax) tax+=M.tax(amount,row.querySelector('[name$="tax_rate_percent"]').value);
       const picker = row.querySelector('[data-product-combobox]');
       if (selected && picker.dataset.currency) currencies.add(picker.dataset.currency);
     });
@@ -24,15 +27,35 @@
       const picker = row.querySelector('[data-product-combobox]');
       const selected = row.querySelector('[name$="combo"]').value;
       const quantity = Number(row.querySelector('[name$="quantity"]').value || 0);
-      const amount = selected ? Math.round(Number(picker.dataset.comboPrice || 0) * quantity * 100) / 100 : 0;
-      const saving = selected ? Math.round(Number(picker.dataset.comboDiscount || 0) * quantity * 100) / 100 : 0;
-      row.querySelector('[data-combo-total]').textContent = amount.toFixed(2);
-      row.querySelector('[data-combo-saving]').textContent = saving > 0 ? `Save ${saving.toFixed(2)}` : '';
+      const amount = selected ? M.line(picker.dataset.comboPrice,quantity) : 0n;
+      const saving = selected ? M.line(picker.dataset.comboDiscount,quantity) : 0n;
+      row.querySelector('[data-combo-total]').textContent = M.text(amount);
+      row.querySelector('[data-combo-saving]').textContent = saving > 0n ? `Save ${M.text(saving)}` : '';
+      if (selected && addTax) {
+        const payload=picker.dataset.components || picker.querySelector('script[type="application/json"]')?.textContent;
+        const parsed=payload ? JSON.parse(payload) : [];
+        const components=Array.isArray(parsed)?parsed:parsed.components;
+        const groups=new Map(); let base=0n;
+        for (const item of components || []) {
+          const net=M.line(item.price,Number(item.quantity)*quantity);
+          base+=net;tax+=M.tax(net,item.tax_rate);
+          groups.set(item.tax_rate,(groups.get(item.tax_rate)||0n)+net);
+        }
+        let left=saving;
+        const rates=[...groups.keys()].sort((a,b)=>Number(a)-Number(b));
+        rates.forEach((rate,index)=>{
+          let share=index===rates.length-1?left:(base?M.rounded(saving*groups.get(rate),base):0n);
+          if(share>left)share=left; left-=share;
+          tax+=M.tax(-share,rate);
+        });
+      }
       if (selected && picker.dataset.currency) currencies.add(picker.dataset.currency);
       sum += amount;
     });
     form.querySelector('[data-combo-empty]').hidden = [...comboRows.children].some(row => !row.hidden);
-    total.textContent = sum.toFixed(2);
+    total.textContent = M.text(sum+tax);
+    form.querySelector('[data-document-subtotal]').textContent=M.text(sum);
+    form.querySelector('[data-document-tax]').textContent=M.text(tax);
     form.querySelector('[data-total-currency]').textContent = [...currencies].join(' / ');
   };
   form.querySelectorAll('[data-add-document-line]').forEach(button => button.addEventListener('click', () => {

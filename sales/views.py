@@ -277,7 +277,7 @@ def quotation_to_invoice(request, pk):
         with transaction.atomic():
             invoice = Invoice.objects.create(customer=quotation.customer, quotation=quotation,
                 notes=quotation.notes, reference=quotation.reference, terms=quotation.terms,
-                custom_fields=quotation.custom_fields, created_by=request.user)
+                custom_fields=quotation.custom_fields, tax_added=quotation.tax_added, created_by=request.user)
             for line in quotation.lines.all():
                 DocumentLine.objects.create(invoice=invoice, product=line.product, combo=line.combo,
                     description=line.description, quantity=line.quantity, unit_price=line.unit_price,
@@ -354,7 +354,7 @@ def invoice_edit(request, pk):
     line_form = DocumentLineForm(request.POST if adding_line else None)
     detail_form = InvoiceForm(request.POST if updating_details else None, instance=invoice)
     combo_form = ComboSelectionForm(request.POST if adding_combo else None, prefix='combo')
-    pay_form = PaymentForm(request.POST if adding_payment else None)
+    pay_form = PaymentForm(request.POST if adding_payment else None,invoice=invoice)
 
     if request.method == 'POST':
         if 'update_invoice' in request.POST and detail_form.is_valid():
@@ -476,7 +476,7 @@ def quotation_line_delete(request, pk, line_id):
     line = get_object_or_404(DocumentLine, pk=line_id, quotation=quotation)
     line.delete()
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'ok': True, 'total': str(quotation.total)})
+        return JsonResponse({'ok': True, 'total': str(quotation.total), 'subtotal':str(quotation.subtotal),'tax':str(quotation.tax_total)})
     messages.success(request, 'Quotation line removed.')
     return redirect('ims:sales:quotation_edit', pk)
 
@@ -510,7 +510,7 @@ def invoice_line_delete(request, pk, line_id):
         messages.error(request, f'Line removal cancelled; stock reservation failed: {exc}')
     else:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'ok': True, 'total': str(invoice.total)})
+            return JsonResponse({'ok': True, 'total': str(invoice.total), 'subtotal':str(invoice.subtotal),'tax':str(invoice.tax_total)})
         messages.success(request, 'Invoice line removed.')
     return redirect('ims:sales:invoice_edit', pk)
 

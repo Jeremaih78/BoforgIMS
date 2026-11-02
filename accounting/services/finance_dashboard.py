@@ -4,11 +4,13 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import DecimalField, ExpressionWrapper, F, Sum
-from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncWeek, TruncYear
+from django.db.models import DecimalField, ExpressionWrapper, F, Sum, Q, Case, When, Value, OuterRef, Subquery
+from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncWeek, TruncYear, Round
 from django.utils import timezone
+from django.conf import settings
+from sales.workspace import with_invoice_balances
 
-from accounting.models import APPayment, ARPayment, Expense, SupplierBill
+from accounting.models import APPayment, ARPayment, Expense, SupplierBill, MoneyMovement, JournalLine
 from sales.models import DocumentLine, Invoice, Payment
 
 
@@ -71,8 +73,12 @@ def pct_change(current: Decimal, previous: Decimal) -> Decimal | None:
     return money(((current - previous) / previous) * Decimal("100"))
 
 
+def _currency(filters=None):
+    return (filters or {}).get('currency') or getattr(settings,'BASE_CURRENCY_CODE','USD')
+
+
 def invoice_queryset(period: Period, filters: dict | None = None):
-    qs = Invoice.objects.filter(date__gte=period.start, date__lte=period.end, status__in=VALID_INVOICE_STATUSES)
+    qs = with_invoice_balances().filter(date__gte=period.start, date__lte=period.end, status__in=VALID_INVOICE_STATUSES,workspace_currency=_currency(filters))
     filters = filters or {}
     if filters.get("customer"):
         qs = qs.filter(customer_id=filters["customer"])
@@ -90,10 +96,13 @@ def invoice_line_queryset(period: Period, filters: dict | None = None):
 
 
 def expense_queryset(period: Period, filters: dict | None = None):
-    qs = Expense.objects.filter(date__gte=period.start, date__lte=period.end).filter(
+    qs = Expense.objects.filter(company=None,date__gte=period.start, date__lte=period.end).filter(
         posted=True
-    ) | Expense.objects.filter(date__gte=period.start, date__lte=period.end, **POSTED_EXPENSE_FILTER)
-    qs = qs.distinct().select_related("category", "category__default_account")
+    ) | Expense.objects.filter(company=None,date__gte=period.start, date__lte=period.end, **POSTED_EXPENSE_FILTER)
+    qs = qs.exclude(status=Expense.VOID).filter(currency__code=_currency(filters)).distinct().select_related('category','category__default_account','tax')
+    posted=JournalLine.objects.filter(entry__source='EXPENSE',entry__source_id=OuterRef('pk'),entry__is_posted=True,account__type='EXPENSE').order_by().values('entry__source_id').annotate(net=Sum(F('debit')-F('credit'))).values('net')
+    legacy=Case(When(tax__is_claimable=True,tax__rate__gt=0,then=Round(F('amount')/(Value(Decimal('1'))+F('tax__rate')/Value(Decimal('100'))),2)),default=F('amount'),output_field=DecimalField(max_digits=18,decimal_places=6))
+    qs=qs.annotate(expense_net=Coalesce(Subquery(posted[:1]),legacy,output_field=DecimalField(max_digits=18,decimal_places=6)))
     filters = filters or {}
     if filters.get("expense_category"):
         qs = qs.filter(category_id=filters["expense_category"])
@@ -105,7 +114,7 @@ def expense_queryset(period: Period, filters: dict | None = None):
 
 
 def supplier_bill_queryset(period: Period, filters: dict | None = None):
-    qs = SupplierBill.objects.filter(date__gte=period.start, date__lte=period.end, status__in=POSTED_BILL_STATUSES)
+    qs = SupplierBill.objects.filter(company=None,date__gte=period.start, date__lte=period.end, status__in=POSTED_BILL_STATUSES,currency__code=_currency(filters))
     filters = filters or {}
     if filters.get("supplier"):
         qs = qs.filter(supplier_id=filters["supplier"])
@@ -114,39 +123,42 @@ def supplier_bill_queryset(period: Period, filters: dict | None = None):
 
 def get_total_revenue(period: Period, basis: str = "accrual", filters: dict | None = None) -> Decimal:
     if basis == "cash":
-        return get_cash_in(period, filters)
+        total=ZERO
+        for payment in _cash_sources(period,filters)[0][0][0].select_related('invoice').prefetch_related('invoice__lines'):
+            gross=payment.invoice.total
+            if gross: total+=payment.amount*payment.invoice.subtotal/gross
+        return money(total)
     total = invoice_line_queryset(period, filters).aggregate(total=Coalesce(Sum("line_total"), ZERO))["total"]
     return money(total)
 
 
+def _cash_sources(period,filters=None):
+    filters=filters or {};code=_currency(filters)
+    payments=Payment.objects.filter(date__range=[period.start,period.end]).filter(Q(currency__code=code)|Q(currency=None,invoice_id__in=with_invoice_balances().filter(workspace_currency=code).values('pk')))
+    ar=ARPayment.objects.filter(company=None,date__range=[period.start,period.end],currency__code=code)
+    ap=APPayment.objects.filter(company=None,date__range=[period.start,period.end],currency__code=code)
+    movement=MoneyMovement.objects.filter(entry__company=None,date__range=[period.start,period.end],entry__currency__code=code)
+    if filters.get('customer'):
+        payments=payments.filter(invoice__customer_id=filters['customer']);ar=ar.filter(customer_id=filters['customer'])
+    if filters.get('supplier'): ap=ap.filter(supplier_id=filters['supplier'])
+    if filters.get('account'):
+        payments=payments.filter(bank__account_id=filters['account']);ar=ar.filter(bank__account_id=filters['account']);ap=ap.filter(bank__account_id=filters['account'])
+        movement=movement.filter(Q(source_account__account_id=filters['account'])|Q(destination_account__account_id=filters['account']))
+    return ([(payments,'amount'),(ar,'amount'),(movement.filter(kind=MoneyMovement.IN),'amount')],[(expense_queryset(period,filters),'amount'),(ap,'amount'),(movement.filter(kind=MoneyMovement.OUT),'amount')])
+
+
 def get_cash_in(period: Period, filters: dict | None = None) -> Decimal:
-    filters = filters or {}
-    legacy_payments = Payment.objects.filter(date__gte=period.start, date__lte=period.end)
-    if filters.get("customer"):
-        legacy_payments = legacy_payments.filter(invoice__customer_id=filters["customer"])
-    legacy_total = legacy_payments.aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
-
-    ar_payments = ARPayment.objects.filter(date__gte=period.start, date__lte=period.end)
-    if filters.get("customer"):
-        ar_payments = ar_payments.filter(customer_id=filters["customer"])
-    ar_total = ar_payments.aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
-    return money(legacy_total + ar_total)
-
-
-def get_total_expenses(period: Period, filters: dict | None = None) -> Decimal:
-    expenses = expense_queryset(period, filters).aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
-    bills = supplier_bill_queryset(period, filters).aggregate(total=Coalesce(Sum("total"), ZERO))["total"]
-    return money(expenses + bills)
+    return money(sum((qs.aggregate(n=Coalesce(Sum(field),ZERO))['n'] for qs,field in _cash_sources(period,filters)[0]),ZERO))
 
 
 def get_cash_out(period: Period, filters: dict | None = None) -> Decimal:
-    expenses = expense_queryset(period, filters).aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
-    ap_payments = APPayment.objects.filter(date__gte=period.start, date__lte=period.end)
-    filters = filters or {}
-    if filters.get("supplier"):
-        ap_payments = ap_payments.filter(supplier_id=filters["supplier"])
-    ap_total = ap_payments.aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
-    return money(expenses + ap_total)
+    return money(sum((qs.aggregate(n=Coalesce(Sum(field),ZERO))['n'] for qs,field in _cash_sources(period,filters)[1]),ZERO))
+
+
+def get_total_expenses(period: Period, filters: dict | None = None) -> Decimal:
+    expenses=expense_queryset(period,filters).aggregate(n=Coalesce(Sum('expense_net'),ZERO))['n']
+    bills=supplier_bill_queryset(period,filters).aggregate(n=Coalesce(Sum(F('total')-F('tax')),ZERO))['n']
+    return money(expenses+bills)
 
 
 def get_net_cashflow(period: Period, filters: dict | None = None) -> Decimal:
@@ -169,7 +181,7 @@ def get_total_cogs(period: Period, filters: dict | None = None) -> Decimal:
         F("quantity") * Coalesce(F("cost_unit_snapshot"), F("product__avg_cost")),
         output_field=DecimalField(max_digits=18, decimal_places=6),
     )
-    total = invoice_line_queryset(period, filters).filter(product__isnull=False).aggregate(total=Coalesce(Sum(amount), ZERO))["total"]
+    total = invoice_line_queryset(period, filters).filter(product__isnull=False,product__track_inventory=True).aggregate(total=Coalesce(Sum(amount), ZERO))["total"]
     return money(total)
 
 
@@ -205,15 +217,18 @@ def revenue_trend(period: Period, group_by: str = "month", filters: dict | None 
 
 def expense_trend(period: Period, group_by: str = "month", filters: dict | None = None):
     qs = expense_queryset(period, filters).annotate(period=_trunc(group_by, "date"))
-    return list(qs.values("period").annotate(total=Coalesce(Sum("amount"), ZERO)).order_by("period"))
+    return list(qs.values("period").annotate(total=Coalesce(Sum("expense_net"), ZERO)).order_by("period"))
 
 
 def cashflow_trend(period: Period, group_by: str = "month", filters: dict | None = None):
     def key(value):
         return value.date() if hasattr(value, "date") else value
 
-    inflows = {key(row["period"]): money(row["total"]) for row in Payment.objects.filter(date__gte=period.start, date__lte=period.end).annotate(period=_trunc(group_by, "date")).values("period").annotate(total=Coalesce(Sum("amount"), ZERO))}
-    outflows = {key(row["period"]): money(row["total"]) for row in expense_queryset(period, filters).annotate(period=_trunc(group_by, "date")).values("period").annotate(total=Coalesce(Sum("amount"), ZERO))}
+    inflows,outflows={},{}
+    for sources,target in zip(_cash_sources(period,filters),(inflows,outflows)):
+        for qs,field in sources:
+            for row in qs.annotate(period=_trunc(group_by,'date')).values('period').annotate(total=Coalesce(Sum(field),ZERO)):
+                day=key(row['period']);target[day]=target.get(day,ZERO)+money(row['total'])
     keys = sorted(set(inflows) | set(outflows))
     balance = get_opening_cash_balance(period.start, filters)
     rows = []
@@ -226,15 +241,15 @@ def cashflow_trend(period: Period, group_by: str = "month", filters: dict | None
 
 
 def expenses_by_category(period: Period, filters: dict | None = None):
-    return list(expense_queryset(period, filters).values("category__name").annotate(total=Coalesce(Sum("amount"), ZERO)).order_by("-total"))
+    return list(expense_queryset(period, filters).values("category__name").annotate(total=Coalesce(Sum("expense_net"), ZERO)).order_by("-total"))
 
 
 def expenses_by_account(period: Period, filters: dict | None = None):
-    return list(expense_queryset(period, filters).values("category__default_account__name", "category__default_account__code").annotate(total=Coalesce(Sum("amount"), ZERO)).order_by("-total"))
+    return list(expense_queryset(period, filters).values("category__default_account__name", "category__default_account__code").annotate(total=Coalesce(Sum("expense_net"), ZERO)).order_by("-total"))
 
 
 def expenses_by_payee(period: Period, filters: dict | None = None):
-    return list(expense_queryset(period, filters).values("payee").annotate(total=Coalesce(Sum("amount"), ZERO)).order_by("-total")[:10])
+    return list(expense_queryset(period, filters).values("payee").annotate(total=Coalesce(Sum("expense_net"), ZERO)).order_by("-total")[:10])
 
 
 def revenue_by_customer(period: Period, filters: dict | None = None):
@@ -265,16 +280,16 @@ def top_expenses(period: Period, filters: dict | None = None):
     return list(expense_queryset(period, filters).order_by("-amount")[:10])
 
 
-def outstanding_debtors() -> Decimal:
-    invoiced = Invoice.objects.filter(status__in=VALID_INVOICE_STATUSES).aggregate(total=Coalesce(Sum("lines__line_total"), ZERO))["total"]
-    paid = Payment.objects.aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
-    return money(invoiced - paid)
+def outstanding_debtors(filters=None,as_of=None) -> Decimal:
+    from credit_control.services.balances import customer_balance_map
+    rows=customer_balance_map(as_of,_currency(filters),(filters or {}).get('customer'))
+    return money(sum((data['outstanding'] for data in rows.values()),ZERO))
 
 
-def outstanding_creditors() -> Decimal:
-    billed = SupplierBill.objects.filter(status__in=POSTED_BILL_STATUSES).aggregate(total=Coalesce(Sum("total"), ZERO))["total"]
-    paid = APPayment.objects.aggregate(total=Coalesce(Sum("amount"), ZERO))["total"]
-    return money(billed - paid)
+def outstanding_creditors(filters=None,as_of=None) -> Decimal:
+    from credit_control.services.balances import supplier_balance_map
+    rows=supplier_balance_map(as_of,_currency(filters),(filters or {}).get('supplier'),company_id=None)
+    return money(sum((data['outstanding'] for data in rows.values()),ZERO))
 
 
 def dashboard_summary(period: Period, filters: dict | None = None):
@@ -300,8 +315,8 @@ def dashboard_summary(period: Period, filters: dict | None = None):
         "net_margin": margin(net_profit, revenue),
         "revenue_change": pct_change(revenue, prev_revenue),
         "expense_change": pct_change(expenses, prev_expenses),
-        "outstanding_debtors": outstanding_debtors(),
-        "outstanding_creditors": outstanding_creditors(),
+        "outstanding_debtors": outstanding_debtors(filters,period.end),
+        "outstanding_creditors": outstanding_creditors(filters,period.end),
     }
 
 

@@ -1,20 +1,21 @@
 from django.urls import path
 
 from . import views
+from . import workspace_views
 from . import source_views
 
 app_name = "credit_control"
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
-    path("dashboard/", views.dashboard, name="collections_dashboard"),
-    path("debtors/", views.debtors_list, name="debtors_list"),
-    path("debtors/<int:customer_id>/", views.debtor_detail, name="debtor_detail"),
+    path("", workspace_views.dashboard, name="dashboard"),
+    path("dashboard/", workspace_views.dashboard, name="collections_dashboard"),
+    path("debtors/", workspace_views.debtors_list, name="debtors_list"),
+    path("debtors/<int:customer_id>/", workspace_views.debtor_detail, name="debtor_detail"),
     path("debtors/<int:customer_id>/follow-up/", views.add_debtor_followup, name="add_debtor_followup"),
     path("debtors/<int:customer_id>/whatsapp/", views.send_debtor_whatsapp, name="send_debtor_whatsapp"),
     path("debtors/<int:customer_id>/statement/", views.statement_customer, name="statement_customer"),
-    path("creditors/", views.creditors_list, name="creditors_list"),
-    path("creditors/<int:supplier_id>/", views.creditor_detail, name="creditor_detail"),
+    path("creditors/", workspace_views.creditors_list, name="creditors_list"),
+    path("creditors/<int:supplier_id>/", workspace_views.creditor_detail, name="creditor_detail"),
     path("creditors/<int:supplier_id>/follow-up/", views.add_creditor_followup, name="add_creditor_followup"),
     path("followups/", views.followups, name="followups"),
     path("promises/", views.promises, name="promises"),

@@ -1,5 +1,7 @@
 # IMS reliability review — 2026-09-10
 
+Current candidate: [2 November 2026 audit](IMS_WHOLE_AUDIT_2026-11-02.md). The VAT decision below was subsequently resolved: new prices add tax on top while existing document totals are preserved. This earlier review records the historical state, not the current release status.
+
 Work branch: `review/ims-reliability`. Existing user edits to
 `tasker/README_AI_Extensions.md` are preserved. No production access or deployment.
 No AGENTS.md was found in the repository or inspected ancestor directories.

@@ -31,9 +31,10 @@ class Currency(models.Model):
     symbol = models.CharField(max_length=5, blank=True, null=True)
     is_base = models.BooleanField(default=False)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self.is_base:
-            Currency.objects.exclude(pk=self.pk).update(is_base=False)
+            Currency.objects.filter(company_id=self.company_id).exclude(pk=self.pk).update(is_base=False)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -58,9 +59,10 @@ class TaxRate(models.Model):
     is_default = models.BooleanField(default=False)
     is_claimable = models.BooleanField(default=True)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self.is_default:
-            TaxRate.objects.exclude(pk=self.pk).update(is_default=False)
+            TaxRate.objects.filter(company_id=self.company_id).exclude(pk=self.pk).update(is_default=False)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -138,6 +140,8 @@ class JournalEntry(models.Model):
         ("EXPENSE", "Expense"),
         ("SHIPMENT", "Shipment"),
         ("ADJUSTMENT", "Adjustment"),
+        ("MONEY", "Money movement"),
+        ("SUPPLIER_PAYMENT", "Supplier payment"),
     ]
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
@@ -151,6 +155,12 @@ class JournalEntry(models.Model):
     is_posted = models.BooleanField(default=False)
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="ADJUSTMENT")
     source_id = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        indexes=[
+            models.Index(fields=['company','is_posted','date'],name='journal_company_posted_date'),
+            models.Index(fields=['source','source_id'],condition=models.Q(is_posted=True),name='journal_posted_source'),
+        ]
 
     def clean(self):
         if self.is_posted:
@@ -197,6 +207,8 @@ class BankAccount(models.Model):
     name = models.CharField(max_length=100)
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
+    kind = models.CharField(max_length=10, choices=[('BANK','Bank'),('CASH','Cash'),('MOBILE','Mobile money')], default='BANK',db_default='BANK')
+    is_active = models.BooleanField(default=True,db_default=True)
 
     def __str__(self):
         return self.name
@@ -234,6 +246,9 @@ class Expense(models.Model):
     attachment = models.FileField(storage=private_document_storage, upload_to="expenses/", blank=True, null=True)
     posted = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=DRAFT)
+    bank = models.ForeignKey(BankAccount, on_delete=models.PROTECT, null=True, blank=True, related_name='expenses')
+    reference = models.CharField(max_length=120, blank=True,db_default='')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='recorded_expenses')
 
     def save(self, *args, **kwargs):
         if not self.doc_no:
@@ -257,6 +272,9 @@ class SupplierBill(models.Model):
     total = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("0"))
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=DRAFT)
     status_changed_at = models.DateTimeField(null=True,blank=True,editable=False)
+    submission_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    reference = models.CharField(max_length=120, blank=True,db_default='')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='recorded_supplier_bills')
 
     def save(self, *args, **kwargs):
         fields=kwargs.get('update_fields')
@@ -312,12 +330,67 @@ class APPayment(models.Model):
     amount = models.DecimalField(max_digits=18, decimal_places=6)
     method = models.CharField(max_length=50, default="Cash")
     notes = models.CharField(max_length=255, blank=True, null=True)
+    submission_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    entry = models.OneToOneField(JournalEntry, on_delete=models.PROTECT, null=True, blank=True, related_name='supplier_payment')
 
     def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk, entry__isnull=False).exists():
+            raise ValidationError('Posted supplier payments cannot be edited. Record a correcting transaction instead.')
         if not self.payment_no:
             seq, _ = NumberSequence.objects.get_or_create(company=self.company, key="APPAY", defaults={"prefix": "PAY-"})
             self.payment_no = seq.next()
         super().save(*args, **kwargs)
+
+
+class SupplierPaymentAllocation(models.Model):
+    payment = models.ForeignKey(APPayment, on_delete=models.PROTECT, related_name='allocations')
+    bill = models.ForeignKey(SupplierBill, on_delete=models.PROTECT, related_name='payment_allocations')
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['payment','bill'], name='supplier_payment_bill_once'),
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name='supplier_allocation_positive'),
+        ]
+
+
+class MoneyMovement(models.Model):
+    TRANSFER = 'TRANSFER'
+    IN = 'IN'
+    OUT = 'OUT'
+    KIND_CHOICES = [(TRANSFER,'Transfer between accounts'),(IN,'Owner funding / loan received'),(OUT,'Owner withdrawal / loan repayment')]
+    submission_key = models.UUIDField(unique=True, editable=False)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    date = models.DateField(default=timezone.localdate)
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    fx_rate = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal('1'))
+    source_account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, null=True, blank=True, related_name='outgoing_movements')
+    destination_account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, null=True, blank=True, related_name='incoming_movements')
+    counter_account = models.ForeignKey(Account, on_delete=models.PROTECT, null=True, blank=True)
+    reference = models.CharField(max_length=120, blank=True)
+    notes = models.CharField(max_length=500, blank=True)
+    entry = models.OneToOneField(JournalEntry, on_delete=models.PROTECT, related_name='money_movement')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date','-pk']
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0, fx_rate__gt=0), name='money_movement_positive'),
+            models.CheckConstraint(condition=(
+                models.Q(kind='TRANSFER',source_account__isnull=False,destination_account__isnull=False,counter_account__isnull=True)
+                | models.Q(kind='IN',source_account__isnull=True,destination_account__isnull=False,counter_account__isnull=False)
+                | models.Q(kind='OUT',source_account__isnull=False,destination_account__isnull=True,counter_account__isnull=False)
+            ), name='money_movement_accounts'),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('Posted money movements cannot be edited. Record a correcting transaction instead.')
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Posted money movements cannot be deleted.')
 
 
 class AuditLog(models.Model):

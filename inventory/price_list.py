@@ -24,7 +24,7 @@ def build_price_list(products, search='', low=False):
         story.extend([text(f'Search: {search}'), Spacer(1, 3*mm)])
     if low:
         story.extend([text('Selection: low stock products'), Spacer(1, 3*mm)])
-    rows = [[text('Product / SKU'), text('Category'), text('Availability'), text('Price', 'PriceCell')]]
+    rows = [[text('Product / SKU'), text('Category'), text('Availability'), text('Price before tax', 'PriceCell')]]
     count = 0
     for product in products.iterator(chunk_size=500):
         count += 1
@@ -47,7 +47,7 @@ def build_price_list(products, search='', low=False):
         story.append(table)
     else:
         story.append(text('No active products match this selection.'))
-    story.extend([Spacer(1, 5*mm), text(f'{count} products. Prices are listed in each product currency. Availability and prices may change; contact us to confirm your order.')])
+    story.extend([Spacer(1, 5*mm), text(f'{count} products. Prices exclude tax and are listed in each product currency. Applicable tax is added on invoices and quotations. Availability and prices may change; contact us to confirm your order.')])
 
     def footer(canvas, document):
         canvas.saveState()

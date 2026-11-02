@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect
 from django.db.models import Sum
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
+from core.query import date_filter,id_filter,csv_cell
 from core.permissions import ims_permission
 from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
@@ -18,7 +19,7 @@ from sales.models import Invoice
 from customers.models import Customer
 from inventory.models import Category, Product, Supplier
 from .models import JournalLine
-from .models import Account, Expense, ExpenseCategory
+from .models import Account, Expense, ExpenseCategory, Currency
 from .forms import ExpenseForm
 from .services.posting import post_expense
 from .services.finance_dashboard import (
@@ -80,13 +81,15 @@ def _finance_controls(request):
     group_by = request.GET.get('group_by', 'month')
     if group_by not in {'day', 'week', 'month', 'year'}:
         group_by = 'month'
+    from django.conf import settings
     filters = {
-        'account': request.GET.get('account') or None,
-        'expense_category': request.GET.get('expense_category') or None,
-        'customer': request.GET.get('customer') or None,
-        'supplier': request.GET.get('supplier') or None,
-        'product': request.GET.get('product') or None,
-        'category': request.GET.get('category') or None,
+        'currency': request.GET.get('currency') or getattr(settings,'BASE_CURRENCY_CODE','USD'),
+        'account': id_filter(request.GET.get('account'),'account'),
+        'expense_category': id_filter(request.GET.get('expense_category'),'expense category'),
+        'customer': id_filter(request.GET.get('customer'),'customer'),
+        'supplier': id_filter(request.GET.get('supplier'),'supplier'),
+        'product': id_filter(request.GET.get('product'),'product'),
+        'category': id_filter(request.GET.get('category'),'category'),
         'payee': request.GET.get('payee') or None,
     }
     return period, group_by, filters
@@ -95,11 +98,14 @@ def _finance_controls(request):
 def _clean_date(value):
     if not value or str(value).lower() == 'none':
         return None
-    return parse_date(value)
+    return date_filter(value)
 
 
 def _finance_filter_context(period, group_by, filters, request):
     return {
+        'period_key':request.GET.get('period','this_month'),
+        'report_currency':filters['currency'],
+        'currencies':Currency.objects.filter(company=None),
         'period': period,
         'group_by': group_by,
         'filters': filters,
@@ -279,7 +285,7 @@ def finance_export(request, report_name, fmt):
         writer = csv.writer(response)
     writer.writerow(headers)
     for row in rows:
-        writer.writerow(row)
+        writer.writerow([csv_cell(cell) for cell in row])
     return response
 
 
@@ -311,12 +317,16 @@ def expense_list(request):
             return None
         if isinstance(val, str) and val.lower() == 'none':
             return None
-        return parse_date(val) or None
+        return date_filter(val)
 
     q_from = clean_date_param(q_from_raw)
     q_to = clean_date_param(q_to_raw)
 
-    qs = Expense.objects.all().order_by('-date')
+    qs = Expense.objects.filter(company=None).select_related('currency','category','bank').order_by('-date','-pk')
+    q=request.GET.get('q','').strip()[:120]
+    if q:
+        from django.db.models import Q
+        qs=qs.filter(Q(payee__icontains=q)|Q(category__name__icontains=q)|Q(reference__icontains=q)|Q(doc_no__icontains=q))
     if q_from:
         qs = qs.filter(date__gte=q_from)
     if q_to:
@@ -324,35 +334,62 @@ def expense_list(request):
     paginator = Paginator(qs, 25)
     page = request.GET.get('page')
     expenses = paginator.get_page(page)
-    return render(request, 'accounting/expense_list.html', {'expenses': expenses, 'q_from': q_from, 'q_to': q_to})
+    return render(request, 'accounting/expense_list.html', {'expenses': expenses, 'q_from': q_from, 'q_to': q_to,'q':q,'querystring':request.GET.urlencode()})
 
 
 @login_required
 @ims_permission('accounting.add_expense', staff=False)
 def expense_create(request):
-    form = ExpenseForm(request.POST or None, request.FILES or None)
+    from django.core.exceptions import ValidationError
+    from django.contrib import messages
+    from .models import AuditLog
+    initial={}
+    repeat=request.GET.get('repeat','')
+    if repeat.isdigit():
+        previous=Expense.objects.filter(pk=repeat,company=None).first()
+        if previous:
+            initial={name:getattr(previous,name) for name in ['payee','category','amount','bank','currency','fx_rate','tax']}
+    form = ExpenseForm(request.POST or None, request.FILES or None,initial=initial)
+    def replay(existing):
+        for name in ['date','payee','category','amount','bank','currency','fx_rate','tax','reference','notes']:
+            if (getattr(existing,name) or '') != (form.cleaned_data.get(name) or ''):
+                # Older clients may omit the bank: posting resolved its default.
+                if name=='bank' and not form.cleaned_data.get(name): continue
+                raise ValidationError('This save key was already used with different expense details. Reload the form.')
+        return existing
     if request.method == 'POST' and form.is_valid():
         key = form.cleaned_data['submission_key']
-        if Expense.objects.filter(submission_key=key).exists():
-            return redirect('ims:accounting:expense_list')
         try:
             with transaction.atomic():
-                exp = form.save(commit=False)
-                exp.submission_key = key
-                exp.save()
-                post_expense(exp.id)
-                exp.posted = True
-                exp.save(update_fields=['posted'])
+                existing=Expense.objects.filter(submission_key=key).first()
+                if existing:
+                    replay(existing)
+                else:
+                    exp = form.save(commit=False)
+                    exp.submission_key = key
+                    exp.created_by=request.user
+                    exp.save()
+                    post_expense(exp.id)
+                    AuditLog.objects.create(model='Expense',object_id=exp.pk,action='POSTED',user=request.user)
         except IntegrityError:
-            if Expense.objects.filter(submission_key=key).exists():
-                return redirect('ims:accounting:expense_list')
-            form.add_error(None, 'Expense was not saved. Ask a manager to review accounting configuration.')
+            existing=Expense.objects.filter(submission_key=key).first()
+            if existing:
+                try: replay(existing)
+                except ValidationError as exc: form.add_error(None,exc)
+                else: return redirect('ims:accounting:expense_list')
+            else: form.add_error(None, 'Expense was not saved. Ask a manager to review accounting configuration.')
+        except ValidationError as exc:
+            form.add_error(None,exc)
         except Exception:
             logging.getLogger(__name__).exception('Expense posting failed')
             form.add_error(None, 'Expense was not saved. Ask a manager to review accounting configuration.')
         else:
+            messages.success(request,'Expense recorded and account balance updated.')
+            from core.permissions import allowed
+            if request.POST.get('save_action')=='another' or not allowed(request.user,'accounting.view_journalentry'):return redirect(request.path)
             return redirect('ims:accounting:expense_list')
-    return render(request, 'accounting/expense_form.html', {'form': form})
+    return render(request, 'accounting/expense_form.html', {'form': form,'recent_expenses':Expense.objects.filter(company=None).select_related('category','currency').order_by('-pk')[:5]})
+
 
 
 @login_required
@@ -459,7 +496,7 @@ def expenses_report(request):
             return None
         if isinstance(val, str) and val.lower() == 'none':
             return None
-        return parse_date(val) or None
+        return date_filter(val)
     q_from = clean_date_param(q_from_raw)
     q_to = clean_date_param(q_to_raw)
     qs = Expense.objects.all()
@@ -483,7 +520,7 @@ def expenses_report_pdf(request):
             return None
         if isinstance(val, str) and val.lower() == 'none':
             return None
-        return parse_date(val) or None
+        return date_filter(val)
     q_from = clean_date_param(q_from_raw)
     q_to = clean_date_param(q_to_raw)
     qs = Expense.objects.all()

@@ -1,18 +1,12 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card p-4 form-card">
-      <h4 class="mb-3">New Expense</h4>
-      <form method="post" enctype="multipart/form-data">{% csrf_token %}
-        {{ form.as_p }}
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary">Save & Post</button>
-          <a class="btn btn-secondary" href="{% url 'ims:accounting:expense_list' %}">Cancel</a>
-        </div>
-      </form>
-    </div>
-  </div>
-  </div>
-{% endblock %}
-
+{% extends 'base.html' %}{% load static %}
+{% block title %}Record expense | Boforg IMS{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/money.css' %}">{% endblock %}
+{% block content %}<div class="money-workspace money-form"><a href="{% url 'ims:accounting:accounting_dashboard' %}">← Money workspace</a><div class="money-kicker mt-3">Accounting / Quick capture</div><h1 class="h2">Record an expense</h1><p class="text-secondary">What you paid, who you paid and where the money came from.</p>
+<form method="post" enctype="multipart/form-data" data-money-form>{% csrf_token %}{{ form.submission_key }}{{ form.submission_key.errors }}{{ form.currency }}{{ form.currency.errors }}{{ form.non_field_errors }}<div class="money-card"><div class="row g-3">
+<div class="col-12 money-primary-amount"><label class="form-label" for="{{ form.amount.id_for_label }}">{{ form.amount.label }}</label>{{ form.amount }}{{ form.amount.errors }}</div>
+<div class="col-md-6"><label for="{{ form.bank.id_for_label }}" class="form-label">Paid from</label>{{ form.bank }}{{ form.bank.errors }}</div><div class="col-md-6"><label for="{{ form.category.id_for_label }}" class="form-label">Category</label>{{ form.category }}{{ form.category.errors }}</div>
+<div class="col-md-6"><label for="{{ form.payee.id_for_label }}" class="form-label">Paid to</label>{{ form.payee }}{{ form.payee.errors }}</div><div class="col-md-6"><label for="{{ form.date.id_for_label }}" class="form-label">Date</label>{{ form.date }}{{ form.date.errors }}</div>
+<div class="col-12"><label for="{{ form.attachment.id_for_label }}" class="form-label">Receipt <small class="fw-normal">(optional · photo or PDF)</small></label>{{ form.attachment }}{{ form.attachment.errors }}<div class="form-text">On your phone, take a photo directly from the camera.</div></div>
+</div></div><details class="money-card mt-3" {% if form.fx_rate.errors or form.tax.errors or form.reference.errors or form.notes.errors %}open{% endif %}><summary>Tax, exchange rate & extra details</summary><div class="row g-3 mt-2">{% for field in form.visible_fields %}{% if field.name == 'tax' or field.name == 'fx_rate' or field.name == 'reference' or field.name == 'notes' %}<div class="{% if field.name == 'notes' %}col-12{% else %}col-md-6{% endif %}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}</div><p class="small money-muted mt-3 mb-0">Recoverable tax is split out of the amount paid. It is never added to the payment again.</p></details><div class="money-savebar"><button type="submit" class="btn btn-outline-light" name="save_action" value="another">Save & add another</button><button type="submit" class="btn btn-primary">Save expense</button></div></form>
+{% if recent_expenses %}<section class="money-section"><h2>Repeat a recent expense</h2><div class="money-activity">{% for expense in recent_expenses %}<a class="money-row" href="?repeat={{ expense.pk }}"><time>{{ expense.date|date:'j M' }}</time><div><strong>{{ expense.payee }}</strong><small class="d-block">{{ expense.category }}</small></div><span>{{ expense.currency.code }} {{ expense.amount|floatformat:2 }} ↻</span></a>{% endfor %}</div></section>{% endif %}</div>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/money_capture.js' %}"></script>{% endblock %}

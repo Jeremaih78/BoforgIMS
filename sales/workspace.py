@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db.models import Case, CharField, Count, DecimalField, F, Min, OuterRef, Q, Subquery, Sum, Value, When
-from django.db.models.functions import Coalesce, Greatest
+from django.db.models.functions import Coalesce, Greatest, Round
 
 from .models import DocumentLine, Invoice, Payment
 
@@ -11,19 +11,23 @@ VALID_STATUSES = [Invoice.PENDING, Invoice.CONFIRMED, Invoice.PAID, Invoice.OVER
 ZERO = Decimal('0.00')
 
 
-def with_invoice_balances(queryset=None):
+def with_invoice_balances(queryset=None, as_of=None):
     """Separate subqueries avoid multiplying totals when there are several payments."""
     money = DecimalField(max_digits=20, decimal_places=2)
     lines = DocumentLine.objects.filter(invoice_id=OuterRef('pk')).order_by().values('invoice_id')
     payments = Payment.objects.filter(invoice_id=OuterRef('pk')).order_by().values('invoice_id')
+    if as_of:
+        payments = payments.filter(date__lte=as_of)
     base_currency = getattr(settings, 'BASE_CURRENCY_CODE', 'USD')
     qs = Invoice.objects.all() if queryset is None else queryset
     qs = qs.annotate(
-        workspace_total=Coalesce(Subquery(lines.annotate(value=Sum('line_total')).values('value')), Value(ZERO), output_field=money),
+        workspace_subtotal=Coalesce(Subquery(lines.annotate(value=Sum('line_total')).values('value')), Value(ZERO), output_field=money),
+        workspace_line_tax=Coalesce(Subquery(lines.annotate(value=Sum(Round(F('line_total') * F('tax_rate_percent') / Value(Decimal('100.0')), 2))).values('value')), Value(ZERO), output_field=money),
         workspace_paid=Coalesce(Subquery(payments.annotate(value=Sum('amount')).values('value')), Value(ZERO), output_field=money),
         workspace_currency_count=Coalesce(Subquery(lines.annotate(value=Count('product__currency', distinct=True)).values('value')), Value(0)),
         workspace_single_currency=Coalesce(Subquery(lines.annotate(value=Min('product__currency')).values('value')), Value(base_currency), output_field=CharField()),
     )
+    qs = qs.annotate(workspace_total=F('workspace_subtotal') + Case(When(tax_added=True, then=F('workspace_line_tax')), default=Value(ZERO), output_field=money))
     return qs.annotate(
         workspace_balance=Greatest(F('workspace_total') - F('workspace_paid'), Value(ZERO), output_field=money),
         workspace_currency=Case(When(workspace_currency_count__gt=1, then=Value('MIXED')), default=F('workspace_single_currency'), output_field=CharField()),

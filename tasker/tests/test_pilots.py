@@ -290,7 +290,8 @@ class PilotTests(TestCase):
         budget.begin_attempt.assert_not_called();limiter.begin_attempt.assert_not_called();guard.assert_not_called()
 
     @override_settings(TASKER_PILOT_ACCESS_ENFORCED=True,TASKER_IMPROVEMENT_ENABLED=True,TASKER_RECURRENCE_ENABLED=True)
-    def test_unreleased_recurring_job_preserves_cursor_and_creates_no_task(self):
+    @patch('django.utils.timezone.now',return_value=NOW)
+    def test_unreleased_recurring_job_preserves_cursor_and_creates_no_task(self,clock):
         from tasker.services.improvement import publish_sop
         from tasker.services.routines import save_routine,generate
         from tasker.models import Task

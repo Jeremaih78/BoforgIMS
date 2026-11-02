@@ -1,10 +1,12 @@
 <form class="card p-3 mb-3" method="get">
+  <p class="small text-secondary">Amounts in {{ report_currency }} only. Balances and trends use the selected currency; internal transfers are excluded from cashflow.</p>
   <div class="row g-2 align-items-end">
+    <div class="col-md-2"><label class="form-label" for="finance-currency">Currency</label><select id="finance-currency" name="currency" class="form-select">{% for cur in currencies %}<option {% if cur.code == report_currency %}selected{% endif %}>{{ cur.code }}</option>{% endfor %}</select></div>
     <div class="col-md-2">
       <label class="form-label">Period</label>
       <select class="form-select" name="period">
         {% for value,label in period_presets %}
-        <option value="{{ value }}">{{ label }}</option>
+        <option value="{{ value }}" {% if period_key == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
@@ -29,7 +31,7 @@
       <select class="form-select" name="customer">
         <option value="">All</option>
         {% for customer in customers %}
-        <option value="{{ customer.id }}">{{ customer.name }}</option>
+        <option value="{{ customer.id }}" {% if filters.customer == customer.pk %}selected{% endif %}>{{ customer.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -38,7 +40,7 @@
       <select class="form-select" name="expense_category">
         <option value="">All</option>
         {% for category in expense_categories %}
-        <option value="{{ category.id }}">{{ category.name }}</option>
+        <option value="{{ category.id }}" {% if filters.expense_category == category.pk %}selected{% endif %}>{{ category.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -47,7 +49,7 @@
       <select class="form-select" name="account">
         <option value="">All</option>
         {% for account in accounts %}
-        <option value="{{ account.id }}">{{ account.code }} {{ account.name }}</option>
+        <option value="{{ account.id }}" {% if filters.account == account.pk %}selected{% endif %}>{{ account.code }} {{ account.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -56,7 +58,7 @@
       <select class="form-select" name="product">
         <option value="">All</option>
         {% for product in products %}
-        <option value="{{ product.id }}">{{ product.name }}</option>
+        <option value="{{ product.id }}" {% if filters.product == product.pk %}selected{% endif %}>{{ product.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -65,7 +67,7 @@
       <select class="form-select" name="category">
         <option value="">All</option>
         {% for category in product_categories %}
-        <option value="{{ category.id }}">{{ category.name }}</option>
+        <option value="{{ category.id }}" {% if filters.category == category.pk %}selected{% endif %}>{{ category.name }}</option>
         {% endfor %}
       </select>
     </div>

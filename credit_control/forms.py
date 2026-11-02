@@ -1,9 +1,42 @@
 from django import forms
+from django.utils import timezone
 
 from .models import CollectionTask, CreditorFollowUp, DebtorFollowUp, PaymentDispute, PromiseToPay
 
 
-class DebtorFollowUpForm(forms.ModelForm):
+class FollowUpCapture:
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class','form-select' if isinstance(field.widget,forms.Select) else 'form-control')
+            if isinstance(field.widget,forms.Textarea):field.widget.attrs['rows']=3
+        self.fields['follow_up_date'].initial=timezone.localtime
+        self.fields['follow_up_date'].widget.format='%Y-%m-%dT%H:%M'
+        self.fields['follow_up_type'].initial='CALL'
+        party_name='customer' if 'customer' in self.fields else 'supplier'
+        doc_name='invoice' if party_name=='customer' else 'bill'
+        account_name='debtor_account' if party_name=='customer' else 'creditor_account'
+        selected=self.initial.get(party_name)
+        if selected:
+            self.fields[party_name].queryset=self.fields[party_name].queryset.filter(pk=getattr(selected,'pk',selected))
+            self.fields[doc_name].queryset=self.fields[doc_name].queryset.filter(**{party_name:selected})
+        self.fields[account_name].disabled=True
+        self.fields[account_name].widget=forms.HiddenInput()
+
+    def clean(self):
+        data=super().clean()
+        party_name='customer' if 'customer' in self.fields else 'supplier'
+        doc_name='invoice' if party_name=='customer' else 'bill'
+        doc=data.get(doc_name);party=data.get(party_name)
+        if doc and party and getattr(doc,party_name+'_id')!=party.pk:
+            self.add_error(doc_name,'This document belongs to a different account.')
+        amount=data.get('promised_amount');day=data.get('promised_payment_date')
+        if amount is not None and amount<=0:self.add_error('promised_amount','Enter a positive promised amount.')
+        if bool(amount)!=bool(day):self.add_error('promised_amount','Enter both a promised amount and a payment date.')
+        return data
+
+
+class DebtorFollowUpForm(FollowUpCapture,forms.ModelForm):
     class Meta:
         model = DebtorFollowUp
         fields = [
@@ -31,7 +64,7 @@ class DebtorFollowUpForm(forms.ModelForm):
         }
 
 
-class CreditorFollowUpForm(forms.ModelForm):
+class CreditorFollowUpForm(FollowUpCapture,forms.ModelForm):
     class Meta:
         model = CreditorFollowUp
         fields = [

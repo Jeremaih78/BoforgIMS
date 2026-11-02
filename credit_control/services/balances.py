@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.conf import settings
+from django.db.models import Exists, OuterRef
+from django.utils import timezone
 
 from accounting.models import APPayment, SupplierBill
 from sales.models import Invoice, Payment
+from sales.workspace import VALID_STATUSES, with_invoice_balances
 
-
-ZERO = Decimal("0.00")
+ZERO=Decimal('0.00')
 
 
 @dataclass
@@ -23,169 +26,137 @@ class OutstandingItem:
     paid: Decimal
     outstanding: Decimal
     days_overdue: int
+    currency: str = ''
 
 
-def _as_of(as_of_date: date | None) -> date:
-    return as_of_date or date.today()
+def _as_of(value=None):
+    return value or timezone.localdate()
 
 
-def invoice_total(invoice: Invoice) -> Decimal:
-    total = invoice.lines.aggregate(total=Sum("line_total")).get("total") or ZERO
-    return Decimal(total).quantize(Decimal("0.01"))
+def _currency(value=None):
+    return value or getattr(settings,'BASE_CURRENCY_CODE','USD')
 
 
-def invoice_paid(invoice: Invoice, as_of_date: date | None = None) -> Decimal:
-    qs = Payment.objects.filter(invoice=invoice)
-    if as_of_date:
-        qs = qs.filter(date__lte=as_of_date)
-    total = qs.aggregate(total=Sum("amount")).get("total") or ZERO
-    return Decimal(total).quantize(Decimal("0.01"))
+def invoice_total(invoice):
+    lines=list(invoice.lines.all())
+    return sum((line.line_total for line in lines),ZERO) + (sum((line.tax_amount for line in lines),ZERO) if invoice.tax_added else ZERO)
 
 
-def invoice_outstanding_balance(invoice: Invoice, as_of_date: date | None = None) -> Decimal:
-    outstanding = invoice_total(invoice) - invoice_paid(invoice, as_of_date=as_of_date)
-    return max(outstanding, ZERO)
+def invoice_paid(invoice, as_of_date=None):
+    day=_as_of(as_of_date)
+    return sum((p.amount for p in invoice.payments.all() if p.date<=day),ZERO)
 
 
-def customer_total_outstanding(customer, as_of_date: date | None = None) -> Decimal:
-    total = ZERO
-    invoices = Invoice.objects.filter(customer=customer).prefetch_related("lines", "payments")
-    if as_of_date:
-        invoices = invoices.filter(date__lte=as_of_date)
-    for invoice in invoices:
-        total += invoice_outstanding_balance(invoice, as_of_date=as_of_date)
-    return total.quantize(Decimal("0.01"))
+def open_invoice_queryset(as_of_date=None,currency=None):
+    day=_as_of(as_of_date)
+    qs=with_invoice_balances(as_of=day).filter(date__lte=day,status__in=VALID_STATUSES,workspace_currency=_currency(currency),workspace_balance__gt=0)
+    # A later receipt can explain a currently-paid status in a historical report.
+    later=Payment.objects.filter(invoice_id=OuterRef('pk'),date__gt=day,date__lte=timezone.localdate())
+    return qs.annotate(later_receipt=Exists(later)).exclude(status=Invoice.PAID,later_receipt=False)
 
 
-def _build_supplier_bill_rows(supplier, as_of_date: date | None = None) -> list[dict]:
-    bills = SupplierBill.objects.filter(supplier=supplier).order_by("date", "id")
-    if as_of_date:
-        bills = bills.filter(date__lte=as_of_date)
-    rows = []
-    for bill in bills:
-        total = Decimal(bill.total or ZERO).quantize(Decimal("0.01"))
-        rows.append({"bill": bill, "total": total, "paid": ZERO})
+def invoice_outstanding_balance(invoice, as_of_date=None):
+    if invoice.date>_as_of(as_of_date) or invoice.status not in VALID_STATUSES:
+        return ZERO
+    if invoice.status==Invoice.PAID and not invoice.payments.filter(date__gt=_as_of(as_of_date),date__lte=timezone.localdate()).exists():
+        return ZERO
+    return max(invoice_total(invoice)-invoice_paid(invoice,as_of_date),ZERO)
 
-    payments = APPayment.objects.filter(supplier=supplier).order_by("date", "id")
-    if as_of_date:
-        payments = payments.filter(date__lte=as_of_date)
 
+def _data(day,code):
+    return {'as_of_date':day,'currency':code,'outstanding':ZERO,'overdue':ZERO,'oldest_doc_date':None,'items':[]}
+
+
+def customer_balance_map(as_of_date=None,currency=None,customer_id=None):
+    day,code=_as_of(as_of_date),_currency(currency)
+    invoices=open_invoice_queryset(day,code).select_related('customer').order_by('date','pk')
+    if customer_id is not None:
+        invoices=invoices.filter(customer_id=customer_id)
+    result={}
+    for inv in invoices:
+        data=result.setdefault(inv.customer_id,{**_data(day,code),'customer':inv.customer})
+        days=max((day-inv.due_date).days,0) if inv.due_date else 0
+        balance=inv.workspace_balance
+        data['outstanding']+=balance
+        if days:
+            data['overdue']+=balance
+        data['oldest_doc_date']=data['oldest_doc_date'] or inv.date
+        data['items'].append(OutstandingItem(inv.pk,inv.number,inv.date,inv.due_date,inv.workspace_total,inv.workspace_paid,balance,days,code))
+    return result
+
+
+def get_customer_outstanding(customer,as_of_date=None,currency=None):
+    return customer_balance_map(as_of_date,currency,customer.pk).get(customer.pk,_data(_as_of(as_of_date),_currency(currency)))
+
+
+def customer_total_outstanding(customer,as_of_date=None,currency=None):
+    return get_customer_outstanding(customer,as_of_date,currency)['outstanding']
+
+
+def _supplier_rows(as_of_date=None,currency=None,supplier_id=None,company_id=...):
+    day,code=_as_of(as_of_date),_currency(currency)
+    bills=SupplierBill.objects.filter(date__lte=day,currency__code=code,status__in=[SupplierBill.POSTED,SupplierBill.PARTIAL,SupplierBill.PAID]).select_related('supplier','currency').order_by('date','pk')
+    payments=APPayment.objects.filter(date__lte=day,currency__code=code).prefetch_related('allocations__bill').order_by('date','pk')
+    if supplier_id is not None:
+        bills=bills.filter(supplier_id=supplier_id);payments=payments.filter(supplier_id=supplier_id)
+    if company_id is not ...:
+        bills=bills.filter(company_id=company_id);payments=payments.filter(company_id=company_id)
+    rows=[{'bill':b,'total':Decimal(b.total or ZERO).quantize(Decimal('.01')),'paid':ZERO} for b in bills]
+    by_id={row['bill'].pk:row for row in rows}
+    pools=defaultdict(lambda:ZERO)
     for payment in payments:
-        amount_left = Decimal(payment.amount or ZERO)
-        if amount_left <= ZERO:
-            continue
-        for row in rows:
-            remaining = row["total"] - row["paid"]
-            if remaining <= ZERO:
-                continue
-            allocation = min(remaining, amount_left)
-            row["paid"] += allocation
-            amount_left -= allocation
-            if amount_left <= ZERO:
-                break
-
+        allocated=ZERO
+        for allocation in payment.allocations.all():
+            allocated+=allocation.amount
+            row=by_id.get(allocation.bill_id)
+            if row and (row['bill'].supplier_id,row['bill'].company_id,row['bill'].currency_id)==(payment.supplier_id,payment.company_id,payment.currency_id):
+                row['paid']+=allocation.amount
+        pools[(payment.supplier_id,payment.company_id,payment.currency_id)]+=max(payment.amount-allocated,ZERO)
+    for row in rows:
+        bill=row['bill'];key=(bill.supplier_id,bill.company_id,bill.currency_id)
+        row['paid']=min(row['paid'],row['total'])
+        share=min(max(row['total']-row['paid'],ZERO),pools[key])
+        row['paid']+=share;pools[key]-=share
+        if bill.status==SupplierBill.PAID and (bill.status_changed_at is None or timezone.localtime(bill.status_changed_at).date()<=day):
+            row['paid']=row['total']
     return rows
 
 
-def bill_paid_fifo(bill: SupplierBill, as_of_date: date | None = None) -> Decimal:
-    rows = _build_supplier_bill_rows(bill.supplier, as_of_date=as_of_date)
-    for row in rows:
-        if row["bill"].id == bill.id:
-            return Decimal(row["paid"]).quantize(Decimal("0.01"))
-    return ZERO
+def _build_supplier_bill_rows(supplier,as_of_date=None,currency=None):
+    return _supplier_rows(as_of_date,currency,supplier.pk)
 
 
-def bill_outstanding_balance(bill: SupplierBill, as_of_date: date | None = None) -> Decimal:
-    total = Decimal(bill.total or ZERO).quantize(Decimal("0.01"))
-    paid = bill_paid_fifo(bill, as_of_date=as_of_date)
-    return max(total - paid, ZERO)
+def bill_paid_fifo(bill,as_of_date=None):
+    rows=_supplier_rows(as_of_date,bill.currency.code,bill.supplier_id,bill.company_id)
+    return next((row['paid'] for row in rows if row['bill'].pk==bill.pk),ZERO)
 
 
-def supplier_total_outstanding(supplier, as_of_date: date | None = None) -> Decimal:
-    total = ZERO
-    rows = _build_supplier_bill_rows(supplier, as_of_date=as_of_date)
-    for row in rows:
-        total += max(row["total"] - row["paid"], ZERO)
-    return total.quantize(Decimal("0.01"))
+def bill_outstanding_balance(bill,as_of_date=None):
+    if bill.date>_as_of(as_of_date) or bill.status==SupplierBill.DRAFT:
+        return ZERO
+    return max(Decimal(bill.total)-bill_paid_fifo(bill,as_of_date),ZERO)
 
 
-def get_customer_outstanding(customer, as_of_date: date | None = None) -> dict:
-    as_of = _as_of(as_of_date)
-    outstanding = customer_total_outstanding(customer, as_of_date=as_of)
-    overdue = ZERO
-    oldest = None
-    items: list[OutstandingItem] = []
-
-    invoices = Invoice.objects.filter(customer=customer).order_by("date", "id")
-    for inv in invoices:
-        balance = invoice_outstanding_balance(inv, as_of_date=as_of)
-        if balance <= ZERO:
+def supplier_balance_map(as_of_date=None,currency=None,supplier_id=None,company_id=...):
+    day,code=_as_of(as_of_date),_currency(currency)
+    result={}
+    for row in _supplier_rows(day,code,supplier_id,company_id):
+        bill=row['bill'];balance=max(row['total']-row['paid'],ZERO)
+        if balance<=0:
             continue
-        days_overdue = 0
-        if inv.due_date and inv.due_date < as_of:
-            days_overdue = (as_of - inv.due_date).days
-            overdue += balance
-        if oldest is None or inv.date < oldest:
-            oldest = inv.date
-        items.append(
-            OutstandingItem(
-                obj_id=inv.id,
-                number=inv.number,
-                doc_date=inv.date,
-                due_date=inv.due_date,
-                total=invoice_total(inv),
-                paid=invoice_paid(inv, as_of_date=as_of),
-                outstanding=balance,
-                days_overdue=days_overdue,
-            )
-        )
-
-    return {
-        "as_of_date": as_of,
-        "outstanding": outstanding,
-        "overdue": overdue.quantize(Decimal("0.01")),
-        "oldest_doc_date": oldest,
-        "items": items,
-    }
+        data=result.setdefault(bill.supplier_id,{**_data(day,code),'supplier':bill.supplier})
+        days=max((day-bill.due_date).days,0) if bill.due_date else 0
+        data['outstanding']+=balance
+        if days:
+            data['overdue']+=balance
+        data['oldest_doc_date']=data['oldest_doc_date'] or bill.date
+        data['items'].append(OutstandingItem(bill.pk,bill.doc_no,bill.date,bill.due_date,row['total'],row['paid'],balance,days,code))
+    return result
 
 
-def get_supplier_outstanding(supplier, as_of_date: date | None = None) -> dict:
-    as_of = _as_of(as_of_date)
-    rows = _build_supplier_bill_rows(supplier, as_of_date=as_of)
-    outstanding = ZERO
-    overdue = ZERO
-    oldest = None
-    items: list[OutstandingItem] = []
+def get_supplier_outstanding(supplier,as_of_date=None,currency=None,company_id=...):
+    return supplier_balance_map(as_of_date,currency,supplier.pk,company_id).get(supplier.pk,_data(_as_of(as_of_date),_currency(currency)))
 
-    for row in rows:
-        bill = row["bill"]
-        open_bal = max(row["total"] - row["paid"], ZERO)
-        if open_bal <= ZERO:
-            continue
-        outstanding += open_bal
-        days_overdue = 0
-        if bill.due_date and bill.due_date < as_of:
-            days_overdue = (as_of - bill.due_date).days
-            overdue += open_bal
-        if oldest is None or bill.date < oldest:
-            oldest = bill.date
-        items.append(
-            OutstandingItem(
-                obj_id=bill.id,
-                number=bill.doc_no,
-                doc_date=bill.date,
-                due_date=bill.due_date,
-                total=row["total"],
-                paid=row["paid"],
-                outstanding=open_bal,
-                days_overdue=days_overdue,
-            )
-        )
 
-    return {
-        "as_of_date": as_of,
-        "outstanding": outstanding.quantize(Decimal("0.01")),
-        "overdue": overdue.quantize(Decimal("0.01")),
-        "oldest_doc_date": oldest,
-        "items": items,
-    }
+def supplier_total_outstanding(supplier,as_of_date=None,currency=None):
+    return get_supplier_outstanding(supplier,as_of_date,currency)['outstanding']
