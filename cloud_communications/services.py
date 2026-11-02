@@ -32,7 +32,7 @@ def sendable(document, kind):
     return document.stock_finalized or document.status in {Invoice.CONFIRMED, Invoice.PAID}
 
 
-def document_digest(document):
+def document_digest(document, *, finalized=False):
     fields = {
         name: getattr(document, name, None)
         for name in (
@@ -53,6 +53,14 @@ def document_digest(document):
         "email": document.customer.email,
     }
     fields["lines"] = list(document.lines.order_by("id").values())
+    if finalized:
+        # Payment and stock/quotation conversion change state after the original
+        # finalization email. They do not invalidate its financial PDF snapshot.
+        fields.pop("status", None)
+        fields.pop("stock_finalized", None)
+        for line in fields["lines"]:
+            line.pop("cost_unit_snapshot", None)
+            line.pop("scan_generated", None)
     return hashlib.sha256(
         json.dumps(fields, sort_keys=True, default=str, separators=(",", ":")).encode()
     ).hexdigest()
@@ -86,6 +94,23 @@ def approve_document(*, user, kind, document_id, approval_id, expected_digest, r
         raise ValidationError(
             "Approve/finalize this document and reload its preview before sending."
         )
+    automatic = CommunicationRequest.objects.filter(
+        **{kind: document}, trigger="finalized",
+        document_digest=document_digest(document, finalized=True),
+    ).exclude(status__in=["blocked", "cancelled"]).first()
+    if automatic:
+        return automatic
+    payload = build_payload(document, kind, approval_id, render_pdf)
+    return CommunicationRequest.objects.create(
+        id=approval_id,
+        **{kind: document},
+        document_digest=digest,
+        payload=payload,
+        approved_by=user,
+    )
+
+
+def build_payload(document, kind, approval_id, render_pdf):
     recipient = document.customer.email or ""
     validate_email(recipient)
     pdf = render_pdf(document)
@@ -96,7 +121,7 @@ def approve_document(*, user, kind, document_id, approval_id, expected_digest, r
         or len(pdf) > 2 * 1024 * 1024
     ):
         raise ValidationError("A valid approved PDF up to 2 MiB is required.")
-    payload = {
+    return {
         "template": kind,
         "event_type": f"{kind}.approved",
         "recipients": [recipient],
@@ -112,12 +137,76 @@ def approve_document(*, user, kind, document_id, approval_id, expected_digest, r
             {"filename": f"{document.number}.pdf", "content_base64": base64.b64encode(pdf).decode()}
         ],
     }
+
+
+def automatic_enabled(kind):
+    model_for(kind)
+    return settings.CLOUD_COMMUNICATIONS_ENABLED and getattr(
+        settings, f"CLOUD_COMMUNICATIONS_AUTO_{kind.upper()}", False
+    )
+
+
+def render_document_pdf(document, kind):
+    from django.template.loader import render_to_string
+    from sales.invoice_status import get_invoice_status_context
+    from sales.pdf_utils import render_pdf_from_html
+
+    context = {"lines": list(document.lines.select_related("product").order_by("id"))}
+    if kind == "invoice":
+        context.update(inv=document, **get_invoice_status_context(document))
+    else:
+        context["q"] = document
+    html = render_to_string(f"sales/pdf_{kind}.html", context)
+    try:
+        return render_pdf_from_html(html, base_url=str(settings.BASE_DIR))
+    except Exception:
+        raise ValidationError("PDF snapshot could not be generated.") from None
+
+
+@transaction.atomic
+def queue_finalized_document(*, user, kind, document_id):
+    """Called by successful finalization services, never by model-save signals.
+
+    One automatic request per document, in the same transaction as finalization.
+    Missing email/PDF errors are retained for staff review without losing a payment.
+    """
+    if not automatic_enabled(kind):
+        return None
+    if user is None:
+        raise ValidationError("An active staff member must finalize this document.")
+    permitted = allowed(user, f"sales.change_{kind}", staff=True)
+    if kind == "invoice":
+        permitted = permitted or allowed(user, "sales.add_payment", staff=True)
+    if not permitted:
+        raise PermissionDenied()
+    document = model_for(kind).objects.select_for_update().select_related("customer").get(pk=document_id)
+    list(document.lines.select_for_update())
+    existing = CommunicationRequest.objects.filter(**{kind: document}, trigger="finalized").first()
+    if existing:
+        return existing
+    if not sendable(document, kind):
+        raise ValidationError("Finalize the document before queuing its email.")
+    # An already approved manual request also fulfils this document's first send.
+    manual = CommunicationRequest.objects.filter(
+        **{kind: document}, document_digest=document_digest(document),
+    ).exclude(status__in=["blocked", "cancelled"]).first()
+    if manual:
+        return manual
+    identifier = uuid.uuid5(uuid.NAMESPACE_URL, f"boforg:ims:{kind}:{document.pk}:finalized:v1")
+    error, payload = "", {}
+    try:
+        if not re.fullmatch(r"[A-Z]{3}", settings.CLOUD_COMMUNICATIONS_CURRENCY):
+            raise ValidationError("IMS currency is not configured.")
+        payload = build_payload(
+            document, kind, identifier, lambda doc: render_document_pdf(doc, kind)
+        )
+    except (ValidationError, ValueError):
+        error = "finalization_email_needs_review"
     return CommunicationRequest.objects.create(
-        id=approval_id,
-        **{kind: document},
-        document_digest=digest,
-        payload=payload,
-        approved_by=user,
+        id=identifier, **{kind: document}, trigger="finalized",
+        document_digest=document_digest(document, finalized=True),
+        payload=payload, approved_by=user, status="blocked" if error else "queued",
+        error_code=error,
     )
 
 
@@ -169,7 +258,12 @@ def process_requests(*, limit=50, client=None):
                 ("invoice", row.invoice) if row.invoice_id else ("quotation", row.quotation)
             )
             document = model_for(kind).objects.select_for_update().get(pk=document.pk)
-            if not sendable(document, kind) or document_digest(document) != row.document_digest:
+            list(document.lines.select_for_update())
+            finalized = row.trigger == "finalized"
+            eligible = sendable(document, kind)
+            if finalized:
+                eligible = kind == "invoice" or document.status in {Quotation.SENT, Quotation.CONVERTED}
+            if not eligible or document_digest(document, finalized=finalized) != row.document_digest:
                 row.status, row.error_code = "cancelled", "approved_document_changed"
                 row.save(update_fields=["status", "error_code"])
                 continue

@@ -3,6 +3,7 @@ import uuid
 from django import forms
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import Http404, JsonResponse
@@ -16,7 +17,7 @@ from django.views.decorators.http import require_POST
 from core.permissions import allowed
 from .client import APIError, verify_callback
 from .models import CallbackReceipt, CommunicationRequest
-from .services import approve_document, apply_remote, document_digest, model_for, sendable
+from .services import approve_document, apply_remote, automatic_enabled, document_digest, model_for, sendable
 
 
 class ApprovalForm(forms.Form):
@@ -25,6 +26,29 @@ class ApprovalForm(forms.Form):
     approved = forms.BooleanField(
         label="I approve this document and its customer email for delivery."
     )
+
+
+@login_required
+@require_POST
+def finalize(request, kind, pk):
+    if not settings.CLOUD_COMMUNICATIONS_ENABLED or kind not in {"invoice", "quotation"}:
+        raise Http404
+    from .finalization import finalize_document
+
+    try:
+        row = finalize_document(user=request.user, kind=kind, document_id=pk)
+    except model_for(kind).DoesNotExist:
+        raise Http404 from None
+    except ValidationError as error:
+        messages.error(request, " ".join(error.messages))
+    else:
+        if row and row.status == "blocked":
+            messages.warning(request, "Document finalized. Its email needs review in Email & history; check the customer email and PDF.")
+        elif row:
+            messages.success(request, "Document finalized. Its email is queued; see Email & history.")
+        else:
+            messages.success(request, "Document finalized. See Email & history for any existing delivery.")
+    return redirect(f"ims:sales:{kind}_edit", pk)
 
 
 @login_required
@@ -72,6 +96,7 @@ def document(request, kind, pk):
             "form": form,
             "history": history,
             "sendable": sendable(doc, kind),
+            "automatic_email": automatic_enabled(kind),
         },
     )
 

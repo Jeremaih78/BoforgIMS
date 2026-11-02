@@ -322,6 +322,8 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
 
 # Optional external Business Cloud communications. No network calls during invoice creation.
 CLOUD_COMMUNICATIONS_ENABLED = os.environ.get('CLOUD_COMMUNICATIONS_ENABLED', 'false').lower() == 'true'
+CLOUD_COMMUNICATIONS_AUTO_INVOICE = os.environ.get('CLOUD_COMMUNICATIONS_AUTO_INVOICE', 'false').lower() == 'true'
+CLOUD_COMMUNICATIONS_AUTO_QUOTATION = os.environ.get('CLOUD_COMMUNICATIONS_AUTO_QUOTATION', 'false').lower() == 'true'
 CLOUD_COMMUNICATIONS_URL = os.environ.get('CLOUD_COMMUNICATIONS_URL', 'https://cloud.boforg.co.zw')
 CLOUD_COMMUNICATIONS_TOKEN_FILE = os.environ.get('CLOUD_COMMUNICATIONS_TOKEN_FILE', '')
 CLOUD_COMMUNICATIONS_CALLBACK_SECRET = os.environ.get('CLOUD_COMMUNICATIONS_CALLBACK_SECRET', '')

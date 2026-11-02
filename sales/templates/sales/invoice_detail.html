@@ -8,6 +8,7 @@
   <h3>Invoice {{ invoice.number }}</h3>
   <div class="d-flex gap-2">
 {% if cloud_communications_enabled %}<a class="btn btn-sm btn-outline-light" href="{% url 'ims:sales:cloud_document_email' 'invoice' invoice.pk %}">Email &amp; history</a>{% endif %}
+{% if cloud_communications_enabled and not invoice.stock_finalized and invoice.status != 'CONFIRMED' and invoice.status != 'PAID' %}<form method="post" action="{% url 'ims:sales:document_finalize' 'invoice' invoice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success">Finalize invoice{% if cloud_auto_invoice %} &amp; email{% endif %}</button></form>{% endif %}
     <a class="btn btn-sm btn-outline-light" href="{% url 'ims:sales:invoice_compose' invoice.id %}">Edit details & all lines</a>
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:invoice_pdf' invoice.id %}?preview=1" target="_blank">Print PDF</a>
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:invoice_pdf' invoice.id %}">Download PDF</a>

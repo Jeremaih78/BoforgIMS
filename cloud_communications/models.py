@@ -10,6 +10,7 @@ class CommunicationRequest(models.Model):
     invoice = models.ForeignKey("sales.Invoice", null=True, on_delete=models.PROTECT)
     quotation = models.ForeignKey("sales.Quotation", null=True, on_delete=models.PROTECT)
     document_digest = models.CharField(max_length=64)
+    trigger = models.CharField(max_length=20, default="manual")
     payload = models.JSONField()
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     approved_at = models.DateTimeField(auto_now_add=True)
@@ -26,6 +27,16 @@ class CommunicationRequest(models.Model):
     class Meta:
         ordering = ["-approved_at"]
         indexes = [models.Index(fields=["status", "available_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["invoice"], condition=models.Q(trigger="finalized"),
+                name="comms_auto_invoice_once",
+            ),
+            models.UniqueConstraint(
+                fields=["quotation"], condition=models.Q(trigger="finalized"),
+                name="comms_auto_quotation_once",
+            ),
+        ]
 
 
 class CallbackReceipt(models.Model):

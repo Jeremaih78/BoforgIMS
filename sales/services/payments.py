@@ -10,6 +10,7 @@ from sales.services import StockService
 @transaction.atomic
 def record_payment(*, invoice_id, amount, date, method, note, submission_key, user):
     invoice = Invoice.objects.select_for_update().get(pk=invoice_id)
+    was_finalized = invoice.stock_finalized or invoice.status in {Invoice.CONFIRMED, Invoice.PAID}
     existing = Payment.objects.filter(submission_key=submission_key).first()
     if existing:
         if (existing.invoice_id, existing.amount, existing.date, existing.method, existing.note or '') != (
@@ -32,5 +33,9 @@ def record_payment(*, invoice_id, amount, date, method, note, submission_key, us
     if not invoice.created_by_id:
         invoice.created_by = user
     invoice.save(update_fields=['status', 'created_by'])
-    return Payment.objects.create(invoice=invoice, amount=amount, date=date,
+    payment = Payment.objects.create(invoice=invoice, amount=amount, date=date,
         method=method, note=note, submission_key=submission_key)
+    if not was_finalized and invoice.stock_finalized:
+        from cloud_communications.services import queue_finalized_document
+        queue_finalized_document(user=user, kind="invoice", document_id=invoice.pk)
+    return payment

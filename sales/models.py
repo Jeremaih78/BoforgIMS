@@ -184,13 +184,21 @@ class Invoice(models.Model):
         self.notes = combined
         self.save(update_fields=['notes'])
 
+    @transaction.atomic
     def confirm(self, user=None):
+        locked = Invoice.objects.select_for_update().get(pk=self.pk)
+        if locked.stock_finalized or locked.status in {self.CONFIRMED, self.PAID}:
+            self.status, self.stock_finalized = locked.status, locked.stock_finalized
+            return self
+        self.created_by = locked.created_by
         self.status = self.CONFIRMED
         updated_fields = ['status']
         if user and not self.created_by:
             self.created_by = user
             updated_fields.append('created_by')
         self.save(update_fields=updated_fields)
+        from cloud_communications.services import queue_finalized_document
+        queue_finalized_document(user=user or self.created_by, kind="invoice", document_id=self.pk)
         return self
 
 

@@ -409,6 +409,9 @@ def invoice_edit(request, pk):
                 pay_form.add_error(None, 'Payment was not saved. Ask a manager to check accounting configuration and try again.')
             else:
                 messages.success(request, 'Payment recorded.')
+                from cloud_communications.models import CommunicationRequest
+                if CommunicationRequest.objects.filter(invoice=invoice, trigger='finalized', status='blocked').exists():
+                    messages.warning(request, 'The invoice email needs review in Email & history; check the customer email and PDF.')
                 return redirect('ims:sales:invoice_edit', pk)
 
     combo_options = []

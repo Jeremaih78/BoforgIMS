@@ -8,6 +8,7 @@
   <h3>Quotation {{ quotation.number }}</h3>
   <div class="d-flex gap-2">
 {% if cloud_communications_enabled %}<a class="btn btn-sm btn-outline-light" href="{% url 'ims:sales:cloud_document_email' 'quotation' quotation.pk %}">Email &amp; history</a>{% endif %}
+{% if cloud_communications_enabled and quotation.status == 'DRAFT' %}<form method="post" action="{% url 'ims:sales:document_finalize' 'quotation' quotation.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success">Finalize quotation{% if cloud_auto_quotation %} &amp; email{% endif %}</button></form>{% endif %}
     <a class="btn btn-sm btn-outline-light" href="{% url 'ims:sales:quotation_compose' quotation.id %}">Edit details & all lines</a>
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:quotation_pdf' quotation.id %}?preview=1" target="_blank">Print PDF</a>
     <a class="btn btn-sm btn-primary text-white" href="{% url 'ims:sales:quotation_pdf' quotation.id %}">Download PDF</a>
