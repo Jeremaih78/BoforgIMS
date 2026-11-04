@@ -400,7 +400,7 @@ def save_report_policy(*, user, company, expected_revision="unconfigured-v1", ti
         setattr(policy, key, value)
     policy.configured = bool(cutoff_time is not None and policy.weekdays and consolidation != "UNCONFIGURED" and
         correction_policy == "APPEND_REVISION" and missing_policy == "SHOW_MISSING" and email_mode in (
-            ('TEST','SMTP') if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) else ('TEST',)))
+            ('TEST','SMTP','CLOUD') if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) else ('TEST',)))
     policy.revision, policy.updated_by = uuid.uuid4(), actor
     policy.save()
     OrganizationEvent.objects.create(company=company, actor=actor, action="report.policy_saved", object_type="ReportPolicy",
@@ -455,6 +455,9 @@ def handle_report_delivery(payload, job=None, adapter=None):
         return JobCancelled("report_delivery_missing")
     if delivery.state in {"TEST_ACCEPTED", "PROVIDER_ACCEPTED", "DELIVERED", "CANCELLED", "UNKNOWN"}:
         return None
+    from .cloud_email import transport_bound
+    if transport_bound(delivery.pk):
+        return JobCancelled("cloud_transport_bound")
     report, actor = delivery.report_snapshot, delivery.recipient
     def settle(state, code="", run_after=None):
         delivery.state, delivery.error_code, delivery.next_attempt_at = state, code, run_after
@@ -548,7 +551,7 @@ def reconcile_reports(*, now=None, limit=100):
     for team_id, day in pairs:
         EndDaySubmission.objects.filter(team_id=team_id, report_date=day).update(last_checked_at=now)
 
-    policies = list(ReportPolicy.objects.filter(configured=True, email_mode__in=(('TEST','SMTP') if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) else ('TEST',)), consolidation="AT_CUTOFF",
+    policies = list(ReportPolicy.objects.filter(configured=True, email_mode__in=(('TEST','SMTP','CLOUD') if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) else ('TEST',)), consolidation="AT_CUTOFF",
         company__is_active=True).order_by(F("last_checked_at").asc(nulls_first=True), "pk")[:limit])
     due_policies = []
     for policy in policies:

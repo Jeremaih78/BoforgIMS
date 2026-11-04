@@ -14,9 +14,14 @@ from .views import improvement
 from .views import pilot
 from .views import business
 
+from .views import email as email_views
+
 app_name = "tasker"
 
 urlpatterns = [
+    path('email/', email_views.centre, name='email_centre'),
+    path('email/eligibility', email_views.authorize, name='email_eligibility'),
+    path('email/receipts', email_views.receipts, name='email_receipts'),
     path('pilot/',pilot.pilot_list,name='pilot_list'),
     path('pilot/new/',pilot.pilot_edit,name='pilot_create'),
     path('pilot/<int:pk>/',pilot.pilot_detail,name='pilot_detail'),

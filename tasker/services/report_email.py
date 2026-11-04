@@ -20,6 +20,8 @@ from .jobs import JobCancelled,JobDeferred,assert_current_job_lease,fence_curren
 
 def job_kind(report):
     policy=reporting._policy(report.team)
+    if policy and policy.email_mode == 'CLOUD':
+        return 'email.cloud'
     if getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) and policy and policy.email_mode=='SMTP':
         return 'reports.smtp'
     return 'reports.deliver'
@@ -86,6 +88,9 @@ def handle_smtp_delivery(payload,job=None,adapter=None):
         delivery=_locked_delivery(payload['delivery_id'])
         if not delivery:return JobCancelled('report_delivery_missing')
         if delivery.state in ('UNKNOWN','FAILED','CANCELLED','DELIVERED','PROVIDER_ACCEPTED','TEST_ACCEPTED'):return {'noop':1}
+        from .cloud_email import transport_bound
+        if transport_bound(delivery.pk):
+            return JobCancelled('cloud_transport_bound')
         error=_check(delivery)
         if error:
             delivery.state='CANCELLED';delivery.error_code=error;delivery.save(update_fields=['state','error_code'])

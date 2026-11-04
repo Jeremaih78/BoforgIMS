@@ -1,0 +1,36 @@
+{
+  "envelope": {
+    "schema_version": "2",
+    "guard": {
+      "delivery_id": "22222222-2222-4222-8222-222222222222",
+      "company_id": "synthetic-company"
+    },
+    "template": "ims.staff.assignment",
+    "external_reference": "ims:staff:22222222-2222-4222-8222-222222222222",
+    "recipients": [
+      "employee@example.invalid"
+    ],
+    "context": {
+      "notification_title": "Synthetic task",
+      "action_url": "https://ims.example.invalid/task/1/",
+      "assigned_by": "Synthetic manager",
+      "priority": "MEDIUM",
+      "due_date": "2026-11-05"
+    }
+  },
+  "digest": "56ab6219f0fca50018e4e13ebbfff26ffe7cccbc02a3a14d86c820a5968e6376",
+  "receipt": {
+    "schema_version": "2",
+    "id": "33333333-3333-4333-8333-333333333333",
+    "tenant_id": "synthetic-tenant",
+    "client_id": "11111111-1111-4111-8111-111111111111",
+    "delivery_id": "22222222-2222-4222-8222-222222222222",
+    "payload_digest": "56ab6219f0fca50018e4e13ebbfff26ffe7cccbc02a3a14d86c820a5968e6376",
+    "state_version": 1,
+    "status": "queued",
+    "submitted_at": null,
+    "provider_acceptance": "NOT_CONFIRMED",
+    "delivery_evidence": "NONE",
+    "attempt_id": null
+  }
+}

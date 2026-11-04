@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container py-4">
+  <h1>Email notification centre</h1>
+  <p>Preview current eligibility and delivery evidence. This page never sends email.</p>
+  <p>Staff email deployment gate: {{ enabled|yesno:"enabled,disabled" }}. Provider acceptance does not mean inbox delivery or acknowledgement.</p>
+  <form method="post" class="mb-4">{% csrf_token %}
+    <fieldset><legend>Email preferences</legend>
+      <label><input type="checkbox" name="assignments" {% if preference.assignments %}checked{% endif %}> Task assignments</label><br>
+      <label><input type="checkbox" name="requests" {% if preference.requests %}checked{% endif %}> Action requests and escalations</label><br>
+      <label><input type="checkbox" name="updates" {% if preference.updates %}checked{% endif %}> Important updates</label><br>
+      <label><input type="checkbox" name="reminders" {% if preference.reminders %}checked{% endif %}> Due reminders</label>
+      <br><label><input type="checkbox" name="reports" {% if preference.reports %}checked{% endif %}> Cloud manager reports where I have an explicit audience grant</label>
+      <br><label><input type="checkbox" name="digest_reminders" {% if preference.digest_reminders %}checked{% endif %}> Group due reminders into a concise hourly summary</label>
+    </fieldset><button type="submit" class="btn btn-primary">Save preferences</button>
+  </form>
+  <form method="get" class="mb-3"><label for="email-state">Delivery state</label>
+    <select id="email-state" name="state"><option value="">All states</option><option>HELD</option><option>EXTERNAL_QUEUED</option><option>PROVIDER_ACCEPTED</option><option>UNKNOWN</option><option>FAILED</option><option>CANCELLED</option></select>
+    <button type="submit" class="btn btn-secondary">Filter</button>
+  </form>
+  <div class="table-responsive"><table class="table"><caption>Latest 100 intents; references remain available after source access changes.</caption>
+    <thead><tr><th>Category</th><th>Intent</th><th>Current eligibility</th><th>Transport evidence</th><th>Receipt count</th></tr></thead>
+    <tbody>{% for row in rows %}<tr><td>{{ row.category }}{% if row.preview %}<details><summary>Current preview</summary><p>{{ row.preview.notification_title }}</p><a href="{{ row.preview.action_url }}">Open securely in IMS</a></details>{% endif %}</td><td>{{ row.state }}<br><small>{{ row.id }}</small></td><td>{{ row.decision }}: {{ row.reason }}{% if row.next_at %}<br>{{ row.next_at }}{% endif %}</td><td>{{ row.remote_state|default:"Not submitted" }}</td><td>{{ row.receipts }}<details><summary>Receipt timeline</summary><ul>{% for fact in row.timeline %}<li>{{ fact.at }}: {{ fact.state }}, version {{ fact.version }}{% if fact.quarantined %} (quarantined){% endif %}</li>{% empty %}<li>No transport receipts.</li>{% endfor %}</ul></details></td></tr>{% empty %}<tr><td colspan="5">No staff email intents yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</main>
+{% endblock %}

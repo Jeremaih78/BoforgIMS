@@ -179,6 +179,8 @@ def create_notification(*, owner, kind, dedupe_key, task=None, request=None, rep
         raise ValueError("The attention deduplication key belongs to another source.")
     if created or (not notification.cancelled_at and not notification.published_at):
         enqueue_delivery(recipient=owner, channel="IN_APP", dedupe_key=f"notify:{notification.pk}:in-app", notification=notification)
+    from .cloud_email import queue_notification_email
+    queue_notification_email(notification)
     return notification
 
 
@@ -256,9 +258,21 @@ def enqueue_delivery(*, recipient, channel, dedupe_key, notification=None, repor
             recipient.pk, channel, getattr(notification, "pk", None), getattr(report_snapshot, "pk", None)):
         raise ValueError("The delivery deduplication key belongs to another source.")
     if delivery.state not in TERMINAL_DELIVERIES:
+        if channel == "EMAIL":
+            from .cloud_email import transport_bound
+            if transport_bound(delivery.pk):
+                return delivery
         from tasker.services.jobs import enqueue_job
         from .report_email import job_kind
-        enqueue_job(kind="notification.deliver" if channel == "IN_APP" else job_kind(report_snapshot),
+        selected_kind = "notification.deliver" if channel == "IN_APP" else job_kind(report_snapshot)
+        if selected_kind == "email.cloud":
+            from tasker.cloud_email_models import StaffEmailPolicy
+            from .cloud_email import bind_delivery
+            policy = StaffEmailPolicy.objects.filter(company_id=report_snapshot.team.company_id).first()
+            if policy:
+                bind_delivery(delivery, policy, "report", dedupe_key)
+            return delivery
+        enqueue_job(kind=selected_kind,
             dedupe_key=f"delivery:{delivery.pk}", payload={"delivery_id": delivery.pk}, run_after=run_after, owner=recipient)
     return delivery
 

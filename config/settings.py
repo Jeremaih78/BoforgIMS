@@ -1,5 +1,6 @@
 ﻿import os
 from pathlib import Path
+import json as _staff_email_json
 import sys
 
 import dj_database_url
@@ -306,6 +307,13 @@ TASKER_PILOT_ENABLED = os.environ.get('TASKER_PILOT_ENABLED', 'false').lower() =
 TASKER_PILOT_ACCESS_ENFORCED = os.environ.get('TASKER_PILOT_ACCESS_ENFORCED', 'false').lower() == 'true'
 TASKER_ROLLOUT_WRITES_ENABLED = os.environ.get('TASKER_ROLLOUT_WRITES_ENABLED', 'false').lower() == 'true'
 TASKER_RECURRENCE_ENABLED = os.environ.get('TASKER_RECURRENCE_ENABLED', 'false').lower() == 'true'
+# Staff email is independent of the existing report activation gate.
+TASKER_CLOUD_EMAIL_ENABLED = os.environ.get('TASKER_CLOUD_EMAIL_ENABLED', 'false').lower() == 'true'
+TASKER_EMAIL_ORIGIN = os.environ.get('TASKER_EMAIL_ORIGIN', 'https://ai.boforg.co.zw')
+TASKER_EMAIL_URLCONF = os.environ.get('TASKER_EMAIL_URLCONF', 'config.host_urls.ai')
+TASKER_CLOUD_EMAIL_CLIENTS = _staff_email_json.loads(os.environ.get('TASKER_CLOUD_EMAIL_CLIENTS', '{}'))
+TASKER_CLOUD_EMAIL_KEYS = _staff_email_json.loads(os.environ.get('TASKER_CLOUD_EMAIL_KEYS', '{}'))
+TASKER_CLOUD_EMAIL_RECEIPT_KEYS = _staff_email_json.loads(os.environ.get('TASKER_CLOUD_EMAIL_RECEIPT_KEYS', '{}'))
 TASKER_REPORT_EMAIL_LIVE_ENABLED = os.environ.get('TASKER_REPORT_EMAIL_LIVE_ENABLED', 'false').lower() == 'true'
 
 # Report transport remains gated separately from company policy and recipient grants.

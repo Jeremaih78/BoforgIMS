@@ -76,6 +76,7 @@ class NotificationDelivery(models.Model):
     class State(models.TextChoices):
         QUEUED = "QUEUED", "Queued"
         HELD = "HELD", "Held for delivery window"
+        EXTERNAL_QUEUED = "EXTERNAL_QUEUED", "Queued in Cloud; no provider acceptance"
         TEST_ACCEPTED = "TEST_ACCEPTED", "Accepted by test adapter"
         PROVIDER_ACCEPTED = "PROVIDER_ACCEPTED", "Accepted by provider"
         DELIVERED = "DELIVERED", "Delivered in app"

@@ -26,6 +26,7 @@ from tasker.job_models import JobWorkerHeartbeat, OutboxJob
 
 
 HANDLERS = {
+    "email.cloud": ("tasker.services.cloud_email", "handle_cloud_delivery"),
     "coordination.dispatch": ("tasker.services.coordination", "dispatch_event"),
     "notification.deliver": ("tasker.services.notifications", "deliver_notification"),
     "notification.digest": ("tasker.services.notifications", "deliver_digest"),
@@ -37,7 +38,7 @@ HANDLERS = {
     "routine.generate": ("tasker.services.routines", "handle_generate"),
     "reports.smtp": ("tasker.services.report_email", "handle_smtp_delivery"),
 }
-EXTERNAL_HANDLERS = frozenset({"ai.generate", "reports.smtp"})
+EXTERNAL_HANDLERS = frozenset({"ai.generate", "reports.smtp", "email.cloud"})
 TERMINAL = (OutboxJob.State.SUCCEEDED, OutboxJob.State.FAILED, OutboxJob.State.CANCELLED)
 _current_lease = ContextVar("tasker_job_lease", default=None)
 SAFE_CODE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
@@ -431,10 +432,13 @@ def scheduler_tick(*, scheduler_id="local-scheduler", limit=100, prune=False, re
     for module_name, function_name, label in (
         ("tasker.services.coordination", "reconcile_coordination", "coordination"),
         ("tasker.services.notifications", "reconcile_notifications", "notifications"),
+        ("tasker.services.cloud_email", "schedule_reminders", "staff_reminders"),
         ("tasker.services.reporting", "reconcile_reports", "reports"),
         ("tasker.services.business_links", "reconcile_business_links", "business"),
         ("tasker.services.routines", "reconcile_routines", "routines"),
     ):
+        if label == 'staff_reminders' and not getattr(settings, 'TASKER_CLOUD_EMAIL_ENABLED', False):
+            continue
         if label=='routines' and not (getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False) and getattr(settings,'TASKER_RECURRENCE_ENABLED',False)):
             continue
         function = getattr(importlib.import_module(module_name), function_name)

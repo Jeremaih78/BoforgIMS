@@ -20,6 +20,7 @@ class ReportPolicy(models.Model):
         UNCONFIGURED = "UNCONFIGURED", "Not configured"
         TEST = "TEST", "Local test adapter only"
         SMTP = "SMTP", "SMTP reporting (activation required)"
+        CLOUD = "CLOUD", "Business Cloud reporting (separate activation required)"
 
     company = models.OneToOneField("accounting.Company", on_delete=models.PROTECT, related_name="tasker_report_policy")
     configured = models.BooleanField(default=False)
@@ -40,15 +41,21 @@ class ReportPolicy(models.Model):
 
     def clean(self):
         super().clean()
+        if self.pk:
+            previous_mode = type(self).objects.filter(pk=self.pk).values_list("email_mode", flat=True).first()
+            if previous_mode and previous_mode != self.email_mode:
+                from .services.cloud_email import unsettled_report_transport
+                if unsettled_report_transport(self.company_id):
+                    raise ValidationError("Reconcile or confirm cancellation of pending/uncertain Cloud reports before changing transport.")
         validate_zone(self.timezone_name)
         if not isinstance(self.weekdays, list) or len(self.weekdays) > 7 or any(type(day) is not int or day not in range(7) for day in self.weekdays) or len(set(self.weekdays)) != len(self.weekdays):
             raise ValidationError({"weekdays": "Choose distinct working weekdays."})
         from django.conf import settings
         supported=getattr(settings,'TASKER_IMPROVEMENT_ENABLED',False)
-        if self.email_enabled and (not supported or self.email_mode!='SMTP'):
+        if self.email_enabled and (not supported or self.email_mode not in ('SMTP', 'CLOUD')):
             raise ValidationError("Live email requires the improvement workflow and SMTP reporting mode.")
-        if self.email_mode=='SMTP' and not supported:raise ValidationError('Enable the improvement workflow before preparing SMTP reports.')
-        if self.configured and (self.cutoff_time is None or not self.weekdays or self.consolidation == "UNCONFIGURED" or self.correction_policy != "APPEND_REVISION" or self.missing_policy != "SHOW_MISSING" or self.email_mode not in (("TEST","SMTP") if supported else ("TEST",))):
+        if self.email_mode in ('SMTP', 'CLOUD') and not supported:raise ValidationError('Enable the improvement workflow before preparing SMTP reports.')
+        if self.configured and (self.cutoff_time is None or not self.weekdays or self.consolidation == "UNCONFIGURED" or self.correction_policy != "APPEND_REVISION" or self.missing_policy != "SHOW_MISSING" or self.email_mode not in (("TEST","SMTP","CLOUD") if supported else ("TEST",))):
             raise ValidationError("Agree the cutoff, weekdays, consolidation, correction/missing policy and test adapter before configuring report delivery.")
         if self.pk and type(self).objects.filter(pk=self.pk).exclude(company_id=self.company_id).exists():
             raise ValidationError("A reporting policy keeps its original company.")

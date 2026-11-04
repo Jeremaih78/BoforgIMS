@@ -778,6 +778,7 @@ from .arrival_models import ArrivalCorrection, ArrivalDeclaration  # noqa: E402,
 from .operator_models import OperatorOverride, OperatorPolicy, OperatorSnapshot, OperatorState  # noqa: E402,F401
 from .job_models import JobWorkerHeartbeat, OutboxJob  # noqa: E402,F401
 from .coordination_models import CoordinationEvent, CoordinationRequest  # noqa: E402,F401
+from .cloud_email_models import StaffEmailPolicy, StaffEmailPreference, StaffEmailBinding, StaffEmailReceipt, StaffEmailAuthorization  # noqa: E402,F401
 from .notification_models import Notification, NotificationDelivery, NotificationPreference  # noqa: E402,F401
 from .report_models import EndDaySubmission, ManagerReportSnapshot, ReportPolicy  # noqa: E402,F401
 from .ai_workflow_models import AIWorkRequest  # noqa: E402,F401

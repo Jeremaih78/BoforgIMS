@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from . import cloud_email_admin  # noqa: F401
 from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import PermissionDenied

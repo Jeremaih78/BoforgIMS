@@ -83,6 +83,8 @@ def save_task(*, form, user, preserve_notes=False):
                      "company_from": current.company_id, "company_to": task.company_id,
                      "team_from": current.team_id, "team_to": task.team_id},
         )
+    from .cloud_email import record_task_change
+    record_task_change(task, current)
     return task
 
 

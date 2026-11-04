@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: Boforg guarded staff email extension
+  version: '2.0'
+  description: >-
+    Protocol 2 extends the existing v1 API without changing invoice/quotation
+    requests. Queue admission is not SMTP acceptance. Remote delivery evidence
+    remains NONE until an independently verified provider adapter exists.
+servers:
+  - url: https://cloud.example.invalid
+security:
+  - serviceToken: []
+paths:
+  /api/v1/communications/messages:
+    post:
+      summary: Atomically admit an immutable guarded email
+      description: >-
+        Requires existing signed method/path/body headers, a fresh nonce and an
+        application-bound token with messages:submit. Tenant and source company
+        are registered server-side. The same application/key/payload returns the
+        original message; a changed payload returns 409. Never creates another
+        provider attempt for an existing key, including UNKNOWN.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - {$ref: '#/components/parameters/timestamp'}
+        - {$ref: '#/components/parameters/nonce'}
+        - {$ref: '#/components/parameters/signature'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Envelope'}
+      responses:
+        '202':
+          description: New durable admission; no provider acceptance
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Receipt'}
+        '200': {description: Original admission replayed with its current state}
+        '400': {description: Invalid schema; existing v1 validation convention retained}
+        '401': {description: Invalid credential, scope, signature, timestamp or nonce}
+        '403': {description: Unauthorized mapping, template, sender or action origin}
+        '409': {description: Same key with different immutable payload}
+        '413': {description: Body exceeds existing API limit}
+        '429': {description: Application rate limit}
+        '503': {description: Communications module unavailable}
+  /api/v1/communications/messages/lookup:
+    get:
+      summary: Scoped primary-database lookup by the original admission key
+      description: >-
+        Uses messages:read and existing signed GET authentication. A concurrent
+        404 does not prove nonadmission/nonacceptance. Recovery may replay only
+        the original immutable payload with its original key, never a new key.
+      parameters:
+        - in: query
+          name: key
+          required: true
+          schema: {type: string, maxLength: 128}
+      responses:
+        '200':
+          description: Current authoritative transport fact
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Receipt'}
+        '404': {description: Missing within this authenticated application and tenant}
+  /api/v1/communications/messages/{id}/cancel:
+    post:
+      summary: Conditionally cancel provably pending work
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason, expected_state_version]
+              properties:
+                reason: {type: string, minLength: 1, maxLength: 500}
+                expected_state_version: {type: integer, minimum: 1}
+      responses:
+        '200': {description: confirmed_unsent, including an exact already-cancelled replay}
+        '409': {description: Stale version or acceptance possible including an earlier uncertain attempt; no recall promised}
+  /registered-ims-eligibility-route:
+    post:
+      summary: Registered IMS endpoint, resolved by ims:tasker:email_eligibility
+      description: >-
+        Separate source HMAC, not a Cloud bearer token. Request and response use
+        X-Boforg-Key-ID, X-Boforg-Timestamp and X-Boforg-Signature. Signing bytes
+        are timestamp UTF-8 + period + exact body. Timestamp tolerance is 60
+        seconds. request_id is durable and unique. Grants last at most 5 seconds.
+        Registered HTTPS hostname only, public IP pinning, no redirects, 5-second
+        network timeout and an 8-KiB response limit.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AuthorizationRequest'}
+      responses:
+        '200':
+          description: Signed allow/deny/defer decision bound to the complete challenge
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/AuthorizationRequest'}
+                  - type: object
+                    required: [decision, reason, expires_at, authorization_ref]
+                    properties:
+                      decision: {enum: [allow, deny, defer]}
+                      reason: {type: string}
+                      expires_at: {type: string, format: date-time}
+                      authorization_ref: {type: string, format: uuid}
+        '403': {description: Invalid signature, replay, binding or unavailable source}
+  /registered-ims-receipt-route:
+    post:
+      summary: Registered IMS endpoint, resolved by ims:tasker:email_receipts
+      description: >-
+        Existing durable Cloud callback outbox with an independent receipt HMAC.
+        Uses exact-body signing plus timestamp and key ID. Event ID is in the
+        signed body. Timestamp tolerance is 60 seconds. Store before 2xx, dedupe
+        event IDs, apply monotonic state versions and quarantine contradictions.
+        Polling recovers missed callbacks without another provider send.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/Receipt'}
+                - type: object
+                  required: [event_id, event_type]
+                  properties:
+                    event_id: {type: string, format: uuid}
+                    event_type: {const: communication.status}
+      responses:
+        '200': {description: Stored, duplicate acknowledged or contradictory event quarantined}
+        '403': {description: Invalid/unmapped receipt; no delivery mutation}
+components:
+  securitySchemes:
+    serviceToken: {type: http, scheme: bearer}
+  parameters:
+    timestamp: {in: header, name: X-Boforg-Timestamp, required: true, schema: {type: string}}
+    nonce: {in: header, name: X-Boforg-Nonce, required: true, schema: {type: string}}
+    signature: {in: header, name: X-Boforg-Signature, required: true, schema: {type: string}}
+  schemas:
+    Envelope:
+      type: object
+      additionalProperties: false
+      required: [schema_version, guard, template, recipients, context, external_reference]
+      properties:
+        schema_version: {const: '2'}
+        guard:
+          type: object
+          additionalProperties: false
+          required: [delivery_id, company_id]
+          properties:
+            delivery_id: {type: string, format: uuid}
+            company_id: {type: string, maxLength: 64}
+        template:
+          enum: [ims.staff.assignment, ims.staff.request, ims.staff.escalation, ims.staff.update, ims.staff.business, ims.staff.due_soon, ims.staff.overdue, ims.staff.report, ims.staff.digest]
+        external_reference: {type: string, maxLength: 128}
+        recipients: {type: array, minItems: 1, maxItems: 1, items: {type: string, format: email}}
+        context:
+          type: object
+          additionalProperties: false
+          required: [notification_title, action_url, assigned_by, priority, due_date]
+          properties:
+            notification_title: {type: string, maxLength: 200}
+            action_url: {type: string, format: uri}
+            assigned_by: {type: string, maxLength: 1000}
+            priority: {type: string, maxLength: 1000}
+            due_date: {type: string, description: ISO date or empty; no fabricated time}
+    Receipt:
+      type: object
+      required: [schema_version, id, tenant_id, client_id, delivery_id, payload_digest, status, state_version]
+      properties:
+        schema_version: {const: '2'}
+        id: {type: string, format: uuid}
+        tenant_id: {type: string}
+        client_id: {type: string, format: uuid}
+        delivery_id: {type: string, format: uuid}
+        payload_digest: {type: string, pattern: '^[a-f0-9]{64}$'}
+        status: {enum: [scheduled, queued, processing, deferred, smtp_accepted, rejected, failed, cancelled, unknown]}
+        state_version: {type: integer, minimum: 1}
+        submitted_at: {type: [string, 'null'], format: date-time}
+        provider_acceptance:
+          enum: [NOT_CONFIRMED, UNKNOWN, ACCEPTED]
+          description: Earlier uncertain attempts remain UNKNOWN even during an explicitly reviewed queued retry.
+        delivery_evidence: {const: NONE}
+        attempt_id: {type: [string, 'null'], format: uuid}
+    AuthorizationRequest:
+      type: object
+      required: [schema_version, request_id, message_id, tenant_id, client_id, company_id, delivery_id, payload_digest]
+      properties:
+        schema_version: {const: '2'}
+        request_id: {type: string, format: uuid}
+        message_id: {type: string, format: uuid}
+        tenant_id: {type: string}
+        client_id: {type: string, format: uuid}
+        company_id: {type: string}
+        delivery_id: {type: string, format: uuid}
+        payload_digest: {type: string, pattern: '^[a-f0-9]{64}$'}
