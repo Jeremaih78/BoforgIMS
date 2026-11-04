@@ -59,8 +59,10 @@ class ProductForm(forms.ModelForm):
                 widget.attrs['class'] = ' '.join(filter(None, classes))
         if self.instance.pk:
             for name in ('quantity', 'reserved', 'avg_cost'):
-                self.fields[name].disabled = True
-                self.fields[name].help_text = 'Updated by stock movements and reservations.'
+                field = self.fields.get(name)
+                if field is not None:
+                    field.disabled = True
+                    field.help_text = 'Updated by stock movements and reservations.'
         image_field = self.fields.get('image')
         if image_field:
             image_field.widget.attrs.update({'accept': 'image/*'})
