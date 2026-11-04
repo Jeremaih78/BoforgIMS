@@ -12,6 +12,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 
 from inventory.models import Category, Product, Supplier
 from shop.selectors import public_products
@@ -19,6 +21,7 @@ from shop.packages import public_packages
 from sales.models import DocumentLine
 
 
+@method_decorator(never_cache, name='dispatch')
 class HomeView(TemplateView):
     template_name = 'website/home.html'
 
@@ -32,7 +35,8 @@ class HomeView(TemplateView):
         ctx.update(payload)
 
         ctx['structured_data'] = mark_safe(json.dumps({'@context': 'https://schema.org', '@type': 'Organization', 'name': 'Boforg Technologies (Private) Limited', 'url': self.request.build_absolute_uri(reverse('website:home')), 'address': {'@type': 'PostalAddress', 'addressLocality': 'Harare', 'addressCountry': 'ZW'}}).replace('<', chr(92) + 'u003c'))
-        ctx['packages'] = public_packages()
+        from .homepage import homepage_context
+        ctx.update(homepage_context(self.request))
         ctx['wa_phone_clean'] = settings.BOFORG_WHATSAPP_NUMBER
         ctx['wa_text_general'] = 'Hello Boforg, please help me choose a printing business starter package.'
         return ctx

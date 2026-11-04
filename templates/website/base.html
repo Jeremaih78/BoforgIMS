@@ -1,1 +1,8 @@
-{% extends 'public/base.html' %}{% load static %}{% block title %}Start your printing business | Boforg Technologies{% endblock %}{% block extra_css %}<link rel="stylesheet" href="{% static 'css/home.css' %}">{% endblock %}{% block extra_js %}<script defer src="{% static 'js/home.js' %}"></script>{% endblock %}
+{% extends 'public/base.html' %}{% load static %}
+{% block title %}Boforg | Printing equipment. Bigger possibilities.{% endblock %}
+{% block body_class %}boforg-home{% endblock %}
+{% block extra_css %}<link rel="icon" type="image/svg+xml" href="{% static 'website/favicon.svg' %}"><meta property="og:image" content="{{ home_share_image }}"><meta property="og:image:alt" content="Printing equipment from Boforg Technologies"><link rel="stylesheet" href="{% static 'css/website_home.css' %}">{% endblock %}
+{% block public_header %}{% include 'website/header.html' %}{% endblock %}
+{% block public_footer %}{% include 'website/footer.html' %}{% endblock %}
+{% block floating_help %}<div class="bh-mobile-contact"><a href="{{ store_shop }}?department=printing">Browse the shop <span aria-hidden="true">↗</span></a><a href="{{ home_general_whatsapp }}" data-event="whatsapp_click">Talk to Boforg <span aria-hidden="true">↗</span></a></div>{% endblock %}
+{% block extra_js %}{{ home_guide_config|json_script:'home-guide-config' }}<script defer src="{% static 'js/website_home.js' %}"></script>{% endblock %}
